@@ -35,7 +35,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-_default_origins = "http://localhost:80002,http://frontend:80002"
+_default_origins = "http://localhost:8002,http://frontend:8002"
 _cors_origins = os.getenv("CORS_ORIGINS", _default_origins).split(",")
 
 app.add_middleware(

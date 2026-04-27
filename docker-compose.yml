@@ -3,7 +3,7 @@ services:
     build: .
     container_name: talentpulse-dashboard-api
     ports:
-      - "80001:80001"
+      - "8001:8001"
     environment:
       DATABASE_URL: postgresql://metabase_ro:metabase_ro@postgres:5432/warehouse
     networks:
