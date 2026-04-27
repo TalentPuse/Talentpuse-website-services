@@ -1,19 +1,10 @@
 services:
   backend:
     build: .
-    container_name: talentpulse-dashboard-api
+    container_name: tp-backend
     ports:
       - "8001:8001"
     environment:
-      DATABASE_URL: postgresql://metabase_ro:metabase_ro@postgres:5432/warehouse
-    networks:
-      - default
-      - pipeline_net
+      DATABASE_URL: ${DATABASE_URL:-postgresql://metabase_ro:metabase_ro@localhost:5432/warehouse}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8002}
     restart: unless-stopped
-
-
-networks:
-  default:
-  pipeline_net:
-    external: true
-    name: pipeline_data_default

@@ -128,8 +128,8 @@ jobs:
             docker pull ${REGISTRY}/${IMAGE_NAME}-backend:${IMAGE_TAG}
           fi
 
-          docker compose -f docker-compose.prod.yml up -d
+          docker compose up -d
           docker image prune -f
 
           echo "Deployment successful!"
-          docker compose -f docker-compose.prod.yml ps
+          docker compose ps
