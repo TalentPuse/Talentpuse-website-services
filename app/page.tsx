@@ -9,10 +9,10 @@ export default function LandingPage() {
           <span className="text-xl font-bold text-brand-600">TalentPulse</span>
           <div className="flex items-center gap-6">
             <a href="#features" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
-              Features
+              Tính năng
             </a>
             <a href="#how-it-works" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
-              How it works
+              Cách hoạt động
             </a>
             <Link
               href="/dashboard"
@@ -29,16 +29,16 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-brand-50 via-white to-blue-50" />
         <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-24 text-center">
           <div className="inline-block mb-4 px-3 py-1 bg-brand-100 text-brand-700 text-xs font-medium rounded-full">
-            Open Data Platform for Vietnam Job Market
+            Nền tảng dữ liệu mở cho thị trường tuyển dụng Việt Nam
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight max-w-4xl mx-auto">
-            Nam bat thi truong tuyen dung{" "}
-            <span className="text-brand-600">IT/AI Viet Nam</span>
-            {" "}— truoc tat ca moi nguoi
+            Nắm bắt thị trường tuyển dụng{" "}
+            <span className="text-brand-600">IT/AI Việt Nam</span>
+            {" "}&mdash; trước tất cả mọi người
           </h1>
           <p className="mt-6 text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            TalentPulse thu thap va phan tich du lieu tu 10+ trang tuyen dung lon nhat Viet Nam.
-            Giup ban theo doi xu huong, so sanh luong, va nhan alert job phu hop voi profile cua ban.
+            TalentPulse thu thập và phân tích dữ liệu từ 10+ trang tuyển dụng lớn nhất Việt Nam.
+            Giúp bạn theo dõi xu hướng, so sánh lương, và nhận alert job phù hợp với profile của bạn.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
@@ -51,7 +51,7 @@ export default function LandingPage() {
               href="#features"
               className="w-full sm:w-auto px-8 py-3.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-lg border border-slate-300 transition-colors"
             >
-              Tim hieu them
+              Tìm hiểu thêm
             </a>
           </div>
         </div>
@@ -62,15 +62,15 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
           <div>
             <div className="text-3xl font-bold text-brand-600">10+</div>
-            <div className="mt-1 text-sm text-slate-600">Nguon du lieu tuyen dung</div>
+            <div className="mt-1 text-sm text-slate-600">Nguồn dữ liệu tuyển dụng</div>
           </div>
           <div>
             <div className="text-3xl font-bold text-brand-600">24/7</div>
-            <div className="mt-1 text-sm text-slate-600">Cap nhat du lieu lien tuc</div>
+            <div className="mt-1 text-sm text-slate-600">Cập nhật dữ liệu liên tục</div>
           </div>
           <div>
             <div className="text-3xl font-bold text-brand-600">AI-Powered</div>
-            <div className="mt-1 text-sm text-slate-600">Smart job matching & alert</div>
+            <div className="mt-1 text-sm text-slate-600">Smart job matching &amp; alert</div>
           </div>
         </div>
       </section>
@@ -78,9 +78,9 @@ export default function LandingPage() {
       {/* Features */}
       <section id="features" className="max-w-6xl mx-auto px-6 py-20">
         <div className="text-center mb-14">
-          <h2 className="text-3xl font-bold text-slate-900">Hai tinh nang cot loi</h2>
+          <h2 className="text-3xl font-bold text-slate-900">Hai tính năng cốt lõi</h2>
           <p className="mt-3 text-slate-600 max-w-xl mx-auto">
-            Tat ca nhung gi ban can de nam bat thi truong tuyen dung IT/AI tai Viet Nam
+            Tất cả những gì bạn cần để nắm bắt thị trường tuyển dụng IT/AI tại Việt Nam
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -93,21 +93,21 @@ export default function LandingPage() {
             </div>
             <h3 className="text-xl font-semibold text-slate-900 mb-3">Market Intelligence</h3>
             <p className="text-slate-600 leading-relaxed">
-              Thu thap va phan tich du lieu real-time tu hon 10 trang tuyen dung lon tai Viet Nam.
-              Dashboard truc quan giup ban theo doi skills hot, muc luong trung binh, va xu huong tuyen dung theo khu vuc.
+              Thu thập và phân tích dữ liệu real-time từ hơn 10 trang tuyển dụng lớn tại Việt Nam.
+              Dashboard trực quan giúp bạn theo dõi skills hot, mức lương trung bình, và xu hướng tuyển dụng theo khu vực.
             </p>
             <ul className="mt-5 space-y-2 text-sm text-slate-500">
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-                Phan tich skills dang duoc san don nhat
+                Phân tích skills đang được săn đón nhất
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-                So sanh luong theo level va thanh pho
+                So sánh lương theo level và thành phố
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-                Top companies dang tuyen nhieu nhat
+                Top công ty đang tuyển nhiều nhất
               </li>
             </ul>
           </div>
@@ -121,13 +121,13 @@ export default function LandingPage() {
             </div>
             <h3 className="text-xl font-semibold text-slate-900 mb-3">AI Job Alert</h3>
             <p className="text-slate-600 leading-relaxed">
-              AI Agent tu dong phan tich va match job phu hop voi profile cua ban.
-              Nhan thong bao nhanh nhat qua Telegram, Zalo, Discord hoac truc tiep tren website.
+              AI Agent tự động phân tích và match job phù hợp với profile của bạn.
+              Nhận thông báo nhanh nhất qua Telegram, Zalo, Discord hoặc trực tiếp trên website.
             </p>
             <ul className="mt-5 space-y-2 text-sm text-slate-500">
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                AI phan tich muc do phu hop voi profile
+                AI phân tích mức độ phù hợp với profile
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -135,7 +135,7 @@ export default function LandingPage() {
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Khong bo lo job hot tren thi truong
+                Không bỏ lỡ job hot trên thị trường
               </li>
             </ul>
           </div>
@@ -146,35 +146,35 @@ export default function LandingPage() {
       <section id="how-it-works" className="bg-slate-50 border-y border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-20">
           <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-slate-900">Cach hoat dong</h2>
-            <p className="mt-3 text-slate-600">Don gian 3 buoc</p>
+            <h2 className="text-3xl font-bold text-slate-900">Cách hoạt động</h2>
+            <p className="mt-3 text-slate-600">Đơn giản 3 bước</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-14 h-14 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-xl font-bold mx-auto">
                 1
               </div>
-              <h3 className="mt-5 text-lg font-semibold text-slate-900">Thu thap</h3>
+              <h3 className="mt-5 text-lg font-semibold text-slate-900">Thu thập</h3>
               <p className="mt-2 text-sm text-slate-600">
-                He thong crawl du lieu tu 10+ trang tuyen dung lon o Viet Nam, cap nhat lien tuc moi ngay.
+                Hệ thống crawl dữ liệu từ 10+ trang tuyển dụng lớn ở Việt Nam, cập nhật liên tục mỗi ngày.
               </p>
             </div>
             <div className="text-center">
               <div className="w-14 h-14 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-xl font-bold mx-auto">
                 2
               </div>
-              <h3 className="mt-5 text-lg font-semibold text-slate-900">Phan tich</h3>
+              <h3 className="mt-5 text-lg font-semibold text-slate-900">Phân tích</h3>
               <p className="mt-2 text-sm text-slate-600">
-                Pipeline dbt xu ly va tong hop du lieu thanh cac gold marts — skills, salary, companies, trends.
+                Pipeline dbt xử lý và tổng hợp dữ liệu thành các gold marts &mdash; skills, salary, companies, trends.
               </p>
             </div>
             <div className="text-center">
               <div className="w-14 h-14 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-xl font-bold mx-auto">
                 3
               </div>
-              <h3 className="mt-5 text-lg font-semibold text-slate-900">Alert & Insight</h3>
+              <h3 className="mt-5 text-lg font-semibold text-slate-900">Alert &amp; Insight</h3>
               <p className="mt-2 text-sm text-slate-600">
-                Xem dashboard truc quan hoac nhan AI alert job match voi ban qua Telegram, Zalo, Discord.
+                Xem dashboard trực quan hoặc nhận AI alert job match với bạn qua Telegram, Zalo, Discord.
               </p>
             </div>
           </div>
@@ -184,10 +184,10 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="max-w-6xl mx-auto px-6 py-20 text-center">
         <h2 className="text-3xl font-bold text-slate-900">
-          San sang kham pha thi truong?
+          Sẵn sàng khám phá thị trường?
         </h2>
         <p className="mt-4 text-slate-600 max-w-lg mx-auto">
-          Truy cap dashboard de xem du lieu moi nhat ve thi truong tuyen dung IT/AI tai Viet Nam.
+          Truy cập dashboard để xem dữ liệu mới nhất về thị trường tuyển dụng IT/AI tại Việt Nam.
         </p>
         <Link
           href="/dashboard"
@@ -208,7 +208,7 @@ export default function LandingPage() {
               Dashboard
             </Link>
             <a href="#features" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">
-              Features
+              Tính năng
             </a>
           </div>
         </div>
