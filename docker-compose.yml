@@ -1,5 +1,6 @@
 services:
   frontend:
+    image: ${FRONTEND_IMAGE:-tp-frontend-local}
     build: .
     container_name: tp-frontend-standalone
     ports:

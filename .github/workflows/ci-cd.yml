@@ -123,7 +123,8 @@ jobs:
             docker pull ${REGISTRY}/${IMAGE_NAME}-frontend:${IMAGE_TAG}
           fi
 
-          docker compose up -d
+          export FRONTEND_IMAGE=${REGISTRY}/${IMAGE_NAME}-frontend:${IMAGE_TAG}
+          docker compose up -d --no-build
           docker image prune -f
 
           echo "Deployment successful!"
