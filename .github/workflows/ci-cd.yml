@@ -96,16 +96,11 @@ jobs:
           echo "Working directory: $(pwd)"
           rm -f .env
 
-          cat > .env <<EOF
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          DB_NAME=${{ vars.DB_NAME || 'warehouse' }}
-          METABASE_RO_PASSWORD=${{ secrets.METABASE_RO_PASSWORD }}
-          MINIO_ROOT_USER=${{ secrets.MINIO_ROOT_USER }}
-          MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}
-          PUBLIC_API_URL=${{ secrets.PUBLIC_API_URL }}
+          cat > .env <<'EOF'
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
           CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
           EOF
+          sed -i 's/^[[:space:]]*//' .env
 
           if [ ! -f .env ]; then
             echo "Failed to create .env"
