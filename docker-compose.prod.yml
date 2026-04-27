@@ -61,41 +61,6 @@ services:
           memory: 200M
     restart: unless-stopped
 
-  frontend:
-    build: ../frontend
-    container_name: tp-frontend
-    environment:
-      API_BASE_INTERNAL: http://backend:8000
-      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_URL:-http://localhost:8000}
-    depends_on:
-      - backend
-    deploy:
-      resources:
-        limits:
-          memory: 300M
-    restart: unless-stopped
-
-  caddy:
-    image: caddy:2-alpine
-    container_name: tp-caddy
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - frontend
-      - backend
-    deploy:
-      resources:
-        limits:
-          memory: 50M
-    restart: unless-stopped
-
 volumes:
   pgdata:
   miniodata:
-  caddy_data:
-  caddy_config:
