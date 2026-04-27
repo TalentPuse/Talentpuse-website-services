@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: tp-postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: warehouse
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-metabase-ro.sql:/docker-entrypoint-initdb.d/init-metabase-ro.sql:ro
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - effective_cache_size=256MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - max_connections=30
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d warehouse"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: tp-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-changeme123}
+    volumes:
+      - miniodata:/data
+    command: server /data --console-address ":9001"
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+    restart: unless-stopped
+
+  backend:
+    build: .
+    container_name: tp-backend
+    environment:
+      DATABASE_URL: postgresql://metabase_ro:${METABASE_RO_PASSWORD:-metabase_ro}@postgres:5432/warehouse
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+    restart: unless-stopped
+
+  frontend:
+    build: ../frontend
+    container_name: tp-frontend
+    environment:
+      API_BASE_INTERNAL: http://backend:8000
+      NEXT_PUBLIC_API_BASE: ${PUBLIC_API_URL:-http://localhost:8000}
+    depends_on:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: tp-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 50M
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  miniodata:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,32 @@
+services:
+  backend:
+    build: .
+    container_name: talentpulse-dashboard-api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://metabase_ro:metabase_ro@postgres:5432/warehouse
+    networks:
+      - default
+      - pipeline_net
+    restart: unless-stopped
+
+  frontend:
+    build: ../frontend
+    container_name: talentpulse-dashboard-web
+    ports:
+      - "3001:3001"
+    environment:
+      # Server-side (SSR fetch inside docker network)
+      API_BASE_INTERNAL: http://backend:8000
+      # Client-side (browser → host)
+      NEXT_PUBLIC_API_BASE: http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  default:
+  pipeline_net:
+    external: true
+    name: pipeline_data_default
