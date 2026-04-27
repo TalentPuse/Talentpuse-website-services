@@ -17,6 +17,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-EXPOSE 3001
-ENV PORT=3001
+EXPOSE 80002
+ENV PORT=80002
 CMD ["node", "server.js"]
