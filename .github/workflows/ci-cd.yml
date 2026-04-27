@@ -1,0 +1,128 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: talentpulse-frontend-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    name: Build & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (type check + compile)
+        run: npm run build
+
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-
+            type=raw,value=sha-${{ github.sha }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Server
+    runs-on: [self-hosted, Linux, X64, talentpulse_pa]
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create runtime .env
+        run: |
+          echo "Working directory: $(pwd)"
+          rm -f .env
+
+          cat > .env <<EOF
+          API_BASE_INTERNAL=${{ secrets.API_BASE_INTERNAL }}
+          NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }}
+          EOF
+
+          if [ ! -f .env ]; then
+            echo "Failed to create .env"
+            exit 1
+          fi
+          echo ".env created successfully"
+
+      - name: Deploy with Docker Compose
+        run: |
+          export REGISTRY=${{ env.REGISTRY }}
+          export IMAGE_NAME=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          export IMAGE_TAG=sha-${{ github.sha }}
+          export IMAGE_TAG_FALLBACK=${{ github.ref_name }}
+
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          if ! docker pull ${REGISTRY}/${IMAGE_NAME}-frontend:${IMAGE_TAG}; then
+            echo "Fallback to ${IMAGE_TAG_FALLBACK}"
+            export IMAGE_TAG=${IMAGE_TAG_FALLBACK}
+            docker pull ${REGISTRY}/${IMAGE_NAME}-frontend:${IMAGE_TAG}
+          fi
+
+          docker compose up -d
+          docker image prune -f
+
+          echo "Deployment successful!"
+          docker compose ps
