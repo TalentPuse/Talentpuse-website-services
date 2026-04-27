@@ -31,7 +31,7 @@ export default async function HomePage() {
             </p>
           </div>
           <a
-            href={`${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:80001"}/docs`}
+            href={`${process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001"}/docs`}
             target="_blank"
             rel="noopener"
             className="text-sm text-brand-600 hover:underline"

@@ -9,7 +9,7 @@
 const API_BASE =
   process.env.API_BASE_INTERNAL ||
   process.env.NEXT_PUBLIC_API_BASE ||
-  "http://localhost:80001";
+  "http://localhost:8001";
 
 async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });

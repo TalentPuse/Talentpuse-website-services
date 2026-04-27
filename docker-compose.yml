@@ -3,8 +3,8 @@ services:
     build: .
     container_name: tp-frontend-standalone
     ports:
-      - "80002:80002"
+      - "8002:8002"
     environment:
-      API_BASE_INTERNAL: ${API_BASE_INTERNAL:-http://localhost:80001}
-      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:80001}
+      API_BASE_INTERNAL: ${API_BASE_INTERNAL:-http://localhost:8001}
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8001}
     restart: unless-stopped
