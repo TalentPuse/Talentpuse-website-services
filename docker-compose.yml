@@ -6,6 +6,12 @@ services:
       - "8002:8002"
     environment:
       PORT: "8002"
-      API_BASE_INTERNAL: ${API_BASE_INTERNAL:-http://localhost:8001}
+      API_BASE_INTERNAL: ${API_BASE_INTERNAL:-http://tp-backend:8001}
       NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8001}
+    networks:
+      - talentpulse
     restart: unless-stopped
+
+networks:
+  talentpulse:
+    external: true

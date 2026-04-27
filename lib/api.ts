@@ -11,12 +11,14 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ||
   "http://localhost:8001";
 
-async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`API ${path} failed: ${res.status}`);
+async function fetchJson<T>(path: string, fallback: T): Promise<T> {
+  try {
+    const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+    if (!res.ok) return fallback;
+    return res.json() as Promise<T>;
+  } catch {
+    return fallback;
   }
-  return res.json() as Promise<T>;
 }
 
 export type Overview = {
@@ -51,12 +53,14 @@ export type CompanyRow = {
   avg_salary_million: number | null;
 };
 
+const EMPTY_OVERVIEW: Overview = { total_jobs: 0, pct_with_salary: 0, avg_salary_million: null };
+
 export const api = {
-  overview: () => fetchJson<Overview>("/api/overview"),
-  topSkills: (limit = 15) => fetchJson<SkillRow[]>(`/api/skills/top?limit=${limit}`),
+  overview: () => fetchJson<Overview>("/api/overview", EMPTY_OVERVIEW),
+  topSkills: (limit = 15) => fetchJson<SkillRow[]>(`/api/skills/top?limit=${limit}`, []),
   highestPayingSkills: (limit = 10) =>
-    fetchJson<HighestPayingSkillRow[]>(`/api/skills/highest-paying?limit=${limit}`),
-  salaryByLevel: () => fetchJson<SalaryByLevelRow[]>("/api/salary/by-level"),
+    fetchJson<HighestPayingSkillRow[]>(`/api/skills/highest-paying?limit=${limit}`, []),
+  salaryByLevel: () => fetchJson<SalaryByLevelRow[]>("/api/salary/by-level", []),
   topCompanies: (limit = 20) =>
-    fetchJson<CompanyRow[]>(`/api/companies/top?limit=${limit}`),
+    fetchJson<CompanyRow[]>(`/api/companies/top?limit=${limit}`, []),
 };
