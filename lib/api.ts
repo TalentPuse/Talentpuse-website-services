@@ -1,0 +1,62 @@
+/**
+ * Typed fetch wrappers for the dashboard API.
+ *
+ * Server components run inside Docker network → use API_BASE_INTERNAL.
+ * Client components run in browser → use NEXT_PUBLIC_API_BASE.
+ *
+ * Cache: `no-store` so refresh-on-load reflects latest gold marts.
+ */
+const API_BASE =
+  process.env.API_BASE_INTERNAL ||
+  process.env.NEXT_PUBLIC_API_BASE ||
+  "http://localhost:8000";
+
+async function fetchJson<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`API ${path} failed: ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export type Overview = {
+  total_jobs: number;
+  pct_with_salary: number;
+  avg_salary_million: number | null;
+};
+
+export type SkillRow = { skill: string; n_jobs: number; pct_of_jobs: number };
+
+export type HighestPayingSkillRow = {
+  skill: string;
+  n_jobs: number;
+  avg_salary_million: number;
+};
+
+export type SalaryByLevelRow = {
+  level_city: string;
+  job_level: string;
+  city_canonical: string;
+  p25_million: number;
+  p50_million: number;
+  p75_million: number;
+  n_visible_jobs: number;
+};
+
+export type CompanyRow = {
+  company_name: string;
+  n_jobs: number;
+  primary_city: string | null;
+  avg_views: number | null;
+  avg_salary_million: number | null;
+};
+
+export const api = {
+  overview: () => fetchJson<Overview>("/api/overview"),
+  topSkills: (limit = 15) => fetchJson<SkillRow[]>(`/api/skills/top?limit=${limit}`),
+  highestPayingSkills: (limit = 10) =>
+    fetchJson<HighestPayingSkillRow[]>(`/api/skills/highest-paying?limit=${limit}`),
+  salaryByLevel: () => fetchJson<SalaryByLevelRow[]>("/api/salary/by-level"),
+  topCompanies: (limit = 20) =>
+    fetchJson<CompanyRow[]>(`/api/companies/top?limit=${limit}`),
+};
