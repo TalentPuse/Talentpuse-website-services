@@ -2,9 +2,9 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TalentPulse — DE/AI Job Market VN",
+  title: "TalentPulse — IT/AI Job Market Vietnam",
   description:
-    "Dashboard cho job seekers Data Engineer / AI tại Vietnam. Skills hot, salary range, top companies.",
+    "Thu thap va phan tich du lieu tuyen dung IT/AI tu 10+ nguon tai Viet Nam. Dashboard truc quan, AI job alert qua Telegram/Zalo/Discord.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
