@@ -5,16 +5,16 @@ type Props = {
   accent?: "blue" | "green" | "amber";
 };
 
-const accents = {
-  blue: "border-l-brand-500 text-brand-700",
-  green: "border-l-emerald-500 text-emerald-700",
-  amber: "border-l-amber-500 text-amber-700",
+const styles = {
+  blue: "from-brand-50 via-white to-white border-brand-100 before:from-brand-500 before:to-brand-400 text-brand-700",
+  green: "from-emerald-50 via-white to-white border-emerald-100 before:from-emerald-500 before:to-emerald-400 text-emerald-700",
+  amber: "from-amber-50 via-white to-white border-amber-100 before:from-amber-500 before:to-amber-400 text-amber-700",
 } as const;
 
 export default function KpiCard({ label, value, hint, accent = "blue" }: Props) {
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm border border-slate-200 border-l-4 p-5 ${accents[accent]}`}
+      className={`relative overflow-hidden bg-gradient-to-br rounded-xl shadow-sm border p-5 before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-gradient-to-r before:rounded-t-xl ${styles[accent]}`}
     >
       <div className="text-xs uppercase tracking-wide text-slate-500 font-medium">
         {label}

@@ -44,10 +44,16 @@ export default function LandingPage() {
               Dữ liệu
             </a>
             <Link
-              href="/dashboard"
+              href="/signin"
+              className="hidden sm:block text-sm text-slate-600 hover:text-slate-900 transition-colors"
+            >
+              Đăng nhập
+            </Link>
+            <Link
+              href="/signup"
               className="text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 px-5 py-2 rounded-lg transition-all hover:shadow-lg hover:shadow-brand-600/25"
             >
-              Xem Dashboard
+              Đăng ký miễn phí
             </Link>
           </div>
         </div>
@@ -98,17 +104,17 @@ export default function LandingPage() {
           transition={{ delay: 0.7, duration: 0.6 }}
           className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 px-6"
         >
-          <a
-            href="#ai-alert"
+          <Link
+            href="/signup"
             className="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-600/25 transition-all hover:shadow-xl hover:shadow-emerald-600/40 hover:-translate-y-0.5 glow-brand text-center"
           >
             Đăng ký Alert miễn phí &rarr;
-          </a>
+          </Link>
           <Link
-            href="/dashboard"
+            href="/signin"
             className="w-full sm:w-auto px-8 py-3.5 bg-white/80 hover:bg-white text-slate-700 font-semibold rounded-xl border border-slate-300 transition-all hover:shadow-md text-center"
           >
-            Xem Dashboard
+            Đăng nhập
           </Link>
         </motion.div>
 
@@ -222,12 +228,12 @@ export default function LandingPage() {
                     </span>
                   </li>
                 </ul>
-                <a
-                  href="#"
+                <Link
+                  href="/signup"
                   className="mt-8 inline-block px-8 py-3.5 bg-white text-emerald-700 font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 text-base"
                 >
                   Đăng ký nhận Alert &rarr;
-                </a>
+                </Link>
               </div>
             </ScrollReveal>
 
@@ -529,17 +535,17 @@ export default function LandingPage() {
               Đăng ký để AI tự động tìm và gửi alert job phù hợp với bạn — hoàn toàn miễn phí.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a
-                href="#"
+              <Link
+                href="/signup"
                 className="px-10 py-4 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 text-lg"
               >
-                Đăng ký nhận Alert &rarr;
-              </a>
+                Đăng ký miễn phí &rarr;
+              </Link>
               <Link
-                href="/dashboard"
+                href="/signin"
                 className="px-6 py-3 text-white/80 hover:text-white font-medium transition-colors text-sm underline underline-offset-4"
               >
-                hoặc xem Dashboard
+                hoặc đăng nhập
               </Link>
             </div>
           </ScrollReveal>
