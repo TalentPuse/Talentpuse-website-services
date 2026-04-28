@@ -1,4 +1,3 @@
-"""Pydantic response schemas — match shape returned to frontend."""
 from __future__ import annotations
 
 from pydantic import BaseModel

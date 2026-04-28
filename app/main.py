@@ -1,48 +1,34 @@
-"""FastAPI app entry point.
-
-Routes:
-  GET /              — health check
-  GET /api/overview
-  GET /api/skills/top
-  GET /api/skills/highest-paying
-  GET /api/salary/by-level
-  GET /api/companies/top
-  GET /docs          — Swagger UI
-"""
 from __future__ import annotations
 
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.db import close_pool, init_pool
-from app.routers import companies, overview, salary, skills
+from app.api import auth, companies, overview, salary, skills
+from app.core.config import CORS_ORIGINS
+from app.core.database import close_db, init_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_pool()
+    await init_db()
     yield
-    await close_pool()
+    await close_db()
 
 
 app = FastAPI(
     title="TalentPulse Dashboard API",
-    description="Read-only API serving DE/AI job market insights from gold marts.",
-    version="0.1.0",
+    description="Job market insights + AI alert auth for Vietnam IT/AI.",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
-_default_origins = "http://localhost:8002,http://frontend:8002"
-_cors_origins = os.getenv("CORS_ORIGINS", _default_origins).split(",")
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in _cors_origins],
-    allow_credentials=False,
-    allow_methods=["GET"],
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT"],
     allow_headers=["*"],
 )
 
@@ -50,6 +36,7 @@ app.include_router(overview.router)
 app.include_router(skills.router)
 app.include_router(salary.router)
 app.include_router(companies.router)
+app.include_router(auth.router)
 
 
 @app.get("/", tags=["health"])

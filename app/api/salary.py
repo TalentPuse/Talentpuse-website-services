@@ -1,17 +1,19 @@
-"""GET /api/salary/by-level — salary percentiles grouped by level x city."""
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_conn
-from app.models import SalaryByLevelRow
+from app.core.database import get_db
+from app.schemas.dashboard import SalaryByLevelRow
 
 router = APIRouter(prefix="/api/salary", tags=["salary"])
 
 
 @router.get("/by-level", response_model=list[SalaryByLevelRow])
-async def salary_by_level() -> list[SalaryByLevelRow]:
-    async with get_conn() as conn:
-        rows = await conn.fetch(
-            """
+async def salary_by_level(
+    db: AsyncSession = Depends(get_db),
+) -> list[SalaryByLevelRow]:
+    result = await db.execute(
+        text("""
             select
                 job_level || ' - ' || city_canonical as level_city,
                 job_level,
@@ -22,6 +24,6 @@ async def salary_by_level() -> list[SalaryByLevelRow]:
                 n_visible_jobs::int
             from dbt_dev_gold.mart_salary_by_level
             order by p50_vnd desc
-            """
-        )
-        return [SalaryByLevelRow(**dict(r)) for r in rows]
+        """)
+    )
+    return [SalaryByLevelRow(**r) for r in result.mappings().all()]

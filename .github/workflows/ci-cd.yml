@@ -99,6 +99,7 @@ jobs:
           cat > .env <<'EOF'
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
           EOF
           sed -i 's/^[[:space:]]*//' .env
 

@@ -1,17 +1,17 @@
-"""GET /api/overview — 3 KPIs for top of dashboard."""
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_conn
-from app.models import Overview
+from app.core.database import get_db
+from app.schemas.dashboard import Overview
 
 router = APIRouter(prefix="/api", tags=["overview"])
 
 
 @router.get("/overview", response_model=Overview)
-async def get_overview() -> Overview:
-    async with get_conn() as conn:
-        row = await conn.fetchrow(
-            """
+async def get_overview(db: AsyncSession = Depends(get_db)) -> Overview:
+    result = await db.execute(
+        text("""
             select
                 count(*)::int as total_jobs,
                 round(
@@ -26,6 +26,7 @@ async def get_overview() -> Overview:
                 )::float as avg_salary_million
             from dbt_dev_gold.fct_jobs_daily
             where is_active
-            """
-        )
-        return Overview(**dict(row))
+        """)
+    )
+    row = result.mappings().first()
+    return Overview(**row)
