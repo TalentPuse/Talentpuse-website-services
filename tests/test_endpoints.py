@@ -113,7 +113,10 @@ def _make_fake_user(**overrides):
         desired_salary_min=20_000_000,
         desired_salary_max=40_000_000,
         preferred_cities=["Hồ Chí Minh"],
+        desired_titles=["AI Engineer"],
         is_active=True,
+        is_admin=False,
+        subscription_tier="free",
         created_at=datetime(2026, 1, 15, 10, 0, 0),
         updated_at=datetime(2026, 1, 15, 10, 0, 0),
     )

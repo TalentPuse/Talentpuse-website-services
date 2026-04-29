@@ -49,6 +49,9 @@ async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse
         desired_salary_min=current_user.desired_salary_min,
         desired_salary_max=current_user.desired_salary_max,
         preferred_cities=current_user.preferred_cities or [],
+        desired_titles=current_user.desired_titles or [],
+        is_admin=current_user.is_admin,
+        subscription_tier=current_user.subscription_tier,
         created_at=current_user.created_at,
     )
 
@@ -69,6 +72,8 @@ async def update_me(
         current_user.desired_salary_max = data.desired_salary_max
     if data.preferred_cities is not None:
         current_user.preferred_cities = data.preferred_cities
+    if data.desired_titles is not None:
+        current_user.desired_titles = data.desired_titles
     await db.commit()
     await db.refresh(current_user)
     return UserResponse(
@@ -79,5 +84,8 @@ async def update_me(
         desired_salary_min=current_user.desired_salary_min,
         desired_salary_max=current_user.desired_salary_max,
         preferred_cities=current_user.preferred_cities or [],
+        desired_titles=current_user.desired_titles or [],
+        is_admin=current_user.is_admin,
+        subscription_tier=current_user.subscription_tier,
         created_at=current_user.created_at,
     )

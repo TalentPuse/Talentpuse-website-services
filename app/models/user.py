@@ -24,7 +24,10 @@ class User(Base):
     desired_salary_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
     desired_salary_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
     preferred_cities: Mapped[list[str]] = mapped_column(ARRAY(String), server_default="{}")
+    desired_titles: Mapped[list[str]] = mapped_column(ARRAY(String), server_default="{}")
     is_active: Mapped[bool] = mapped_column(default=True)
+    is_admin: Mapped[bool] = mapped_column(default=False)
+    subscription_tier: Mapped[str] = mapped_column(String(20), server_default="free")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
