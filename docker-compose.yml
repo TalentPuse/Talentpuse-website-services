@@ -9,6 +9,7 @@ services:
       PORT: "8002"
       API_BASE_INTERNAL: ${API_BASE_INTERNAL:-http://tp-backend:8001}
       NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8001}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
     networks:
       - talentpulse
     restart: unless-stopped

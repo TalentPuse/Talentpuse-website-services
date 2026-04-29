@@ -23,6 +23,15 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const TOKEN_KEY = "tp_token";
+const TOKEN_COOKIE = "tp_token";
+
+function syncTokenCookie(token: string | null) {
+  if (token) {
+    document.cookie = `${TOKEN_COOKIE}=${token}; path=/; SameSite=Strict; max-age=86400`;
+  } else {
+    document.cookie = `${TOKEN_COOKIE}=; path=/; SameSite=Strict; max-age=0`;
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserResponse | null>(null);
@@ -33,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const saved = localStorage.getItem(TOKEN_KEY);
     if (!saved) {
+      syncTokenCookie(null);
       setIsLoading(false);
       return;
     }
@@ -41,9 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then((u) => {
         setToken(saved);
         setUser(u);
+        syncTokenCookie(saved);
       })
       .catch(() => {
         localStorage.removeItem(TOKEN_KEY);
+        syncTokenCookie(null);
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -52,10 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(TOKEN_KEY, t);
     setToken(t);
     setUser(u);
+    syncTokenCookie(t);
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
+    syncTokenCookie(null);
     setToken(null);
     setUser(null);
     router.push("/signin");
