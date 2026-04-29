@@ -66,6 +66,7 @@ def _auth_override(fake_user):
 ADMIN_ENDPOINTS = [
     ("GET", "/api/admin/stats"),
     ("GET", "/api/admin/users"),
+    ("GET", "/api/admin/jobs"),
     ("GET", "/api/admin/alert-logs"),
     ("GET", "/api/admin/config"),
     ("PUT", "/api/admin/config"),
@@ -313,3 +314,66 @@ async def test_dispatch_manual():
 
     assert r.status_code == 200
     assert r.json()["dispatched"] == 3
+
+
+# ─────────────────────────────────────────────
+# GET /api/admin/jobs
+# ─────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_jobs_list_requires_admin():
+    _auth_override(_make_fake_user(is_admin=False))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.get("/api/admin/jobs")
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_jobs_list_success():
+    _auth_override(_make_fake_user(is_admin=True))
+
+    from app.schemas.admin import AdminJobList, AdminJobRow
+    mock_list = AdminJobList(
+        jobs=[
+            AdminJobRow(
+                source="vietnamworks", source_job_id="123",
+                title="AI Engineer", company_name="FPT",
+                city_canonical="HCMC", job_level="Senior",
+                salary_million=30.5, is_active=True,
+                posted_at=datetime(2026, 4, 20),
+                expired_at=None, num_of_views=150,
+                num_of_applications=10, skills=["Python", "TensorFlow"],
+            )
+        ],
+        total=1, page=1, per_page=20,
+    )
+
+    with patch("app.api.admin.list_alertable_jobs", new_callable=AsyncMock, return_value=mock_list):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.get("/api/admin/jobs")
+
+    assert r.status_code == 200
+    data = r.json()
+    assert data["total"] == 1
+    assert data["jobs"][0]["title"] == "AI Engineer"
+    assert data["jobs"][0]["skills"] == ["Python", "TensorFlow"]
+
+
+@pytest.mark.asyncio
+async def test_jobs_list_with_filters():
+    _auth_override(_make_fake_user(is_admin=True))
+
+    from app.schemas.admin import AdminJobList
+    mock_list = AdminJobList(jobs=[], total=0, page=1, per_page=20)
+
+    with patch("app.api.admin.list_alertable_jobs", new_callable=AsyncMock, return_value=mock_list) as mock_fn:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.get("/api/admin/jobs?search=AI&city=HCMC&level=Senior&has_salary=true")
+
+    assert r.status_code == 200
+    mock_fn.assert_awaited_once()
+    call_kwargs = mock_fn.call_args
+    assert call_kwargs.kwargs["search"] == "AI"
+    assert call_kwargs.kwargs["city"] == "HCMC"
+    assert call_kwargs.kwargs["level"] == "Senior"
+    assert call_kwargs.kwargs["has_salary"] is True

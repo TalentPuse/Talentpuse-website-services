@@ -21,7 +21,7 @@ async def create_user(db: AsyncSession, data: UserCreate) -> tuple[User, str]:
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    token = create_access_token({"sub": str(user.id)})
+    token = create_access_token({"sub": str(user.id), "is_admin": user.is_admin})
     return user, token
 
 
@@ -32,7 +32,7 @@ async def authenticate_user(
     user = result.scalar_one_or_none()
     if user is None or not verify_password(password, user.hashed_password):
         return None
-    token = create_access_token({"sub": str(user.id)})
+    token = create_access_token({"sub": str(user.id), "is_admin": user.is_admin})
     return user, token
 
 

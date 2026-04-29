@@ -9,6 +9,7 @@ from app.core.database import get_db
 from app.core.security import require_admin
 from app.models.user import User
 from app.schemas.admin import (
+    AdminJobList,
     AdminStats,
     AdminUserList,
     AlertLogList,
@@ -19,6 +20,7 @@ from app.schemas.admin import (
 from app.services.admin import (
     get_admin_stats,
     get_system_config,
+    list_alertable_jobs,
     list_alert_logs,
     list_users,
     toggle_user_active,
@@ -78,6 +80,23 @@ async def change_tier(
             detail="Tier không hợp lệ hoặc user không tồn tại",
         )
     return {"ok": True, "tier": data.tier}
+
+
+@router.get("/jobs", response_model=AdminJobList)
+async def jobs(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    search: str | None = Query(None),
+    city: str | None = Query(None),
+    level: str | None = Query(None),
+    has_salary: bool | None = Query(None),
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> AdminJobList:
+    return await list_alertable_jobs(
+        db, page=page, per_page=per_page, search=search,
+        city=city, level=level, has_salary=has_salary,
+    )
 
 
 @router.get("/alert-logs", response_model=AlertLogList)

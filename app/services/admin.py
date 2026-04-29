@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import config as cfg
 from app.schemas.admin import (
+    AdminJobList,
+    AdminJobRow,
     AdminStats,
     AdminUserList,
     AdminUserRow,
@@ -205,6 +207,100 @@ async def list_alert_logs(
         ))
 
     return AlertLogList(logs=logs, total=total, page=page, per_page=per_page)
+
+
+async def list_alertable_jobs(
+    db: AsyncSession,
+    *,
+    page: int = 1,
+    per_page: int = 20,
+    search: str | None = None,
+    city: str | None = None,
+    level: str | None = None,
+    has_salary: bool | None = None,
+) -> AdminJobList:
+    conditions = []
+    params: dict = {}
+
+    if search:
+        conditions.append("(f.title ILIKE :search OR f.company_name ILIKE :search)")
+        params["search"] = f"%{search}%"
+    if city:
+        conditions.append("f.city_canonical = :city")
+        params["city"] = city
+    if level:
+        conditions.append("f.job_level = :level")
+        params["level"] = level
+    if has_salary is True:
+        conditions.append("f.salary_vnd_monthly_avg IS NOT NULL")
+    elif has_salary is False:
+        conditions.append("f.salary_vnd_monthly_avg IS NULL")
+
+    where_extra = (" AND " + " AND ".join(conditions)) if conditions else ""
+
+    count_result = await db.execute(
+        text(f"""
+            SELECT count(DISTINCT f.source_job_id)
+            FROM dbt_dev_gold.fct_jobs_daily f
+            WHERE f.is_active {where_extra}
+        """),
+        params,
+    )
+    total = count_result.scalar()
+
+    offset = (page - 1) * per_page
+    params["limit"] = per_page
+    params["offset"] = offset
+
+    result = await db.execute(text(f"""
+        SELECT
+            f.source,
+            f.source_job_id,
+            f.title,
+            f.company_name,
+            f.city_canonical,
+            f.job_level,
+            round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
+            f.is_active,
+            f.posted_at,
+            f.expired_at,
+            f.num_of_views,
+            f.num_of_applications,
+            COALESCE(
+                array_agg(DISTINCT sk.skill_name_norm) FILTER (WHERE sk.skill_name_norm IS NOT NULL),
+                ARRAY[]::text[]
+            ) AS skills
+        FROM dbt_dev_gold.fct_jobs_daily f
+        LEFT JOIN dbt_dev_silver.silver_skill_long sk
+            ON sk.source = f.source AND sk.source_job_id = f.source_job_id
+        WHERE f.is_active {where_extra}
+        GROUP BY f.source, f.source_job_id, f.title, f.company_name,
+                 f.city_canonical, f.job_level, f.salary_vnd_monthly_avg,
+                 f.is_active, f.posted_at, f.expired_at,
+                 f.num_of_views, f.num_of_applications
+        ORDER BY f.posted_at DESC NULLS LAST
+        LIMIT :limit OFFSET :offset
+    """), params)
+
+    jobs = []
+    for row in result.mappings():
+        jobs.append(AdminJobRow(
+            source=row["source"],
+            source_job_id=row["source_job_id"],
+            title=row["title"],
+            company_name=row["company_name"],
+            city_canonical=row["city_canonical"],
+            job_level=row["job_level"],
+            salary_million=row["salary_million"],
+            is_active=row["is_active"],
+            posted_at=row["posted_at"],
+            expired_at=row["expired_at"],
+            num_of_views=row["num_of_views"],
+            num_of_applications=row["num_of_applications"],
+            skills=row["skills"] or [],
+        ))
+
+    return AdminJobList(jobs=jobs, total=total, page=page, per_page=per_page)
 
 
 def get_system_config() -> SystemConfig:

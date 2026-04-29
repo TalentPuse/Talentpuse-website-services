@@ -71,3 +71,26 @@ class ConfigUpdate(BaseModel):
 
 class TierUpdate(BaseModel):
     tier: str
+
+
+class AdminJobRow(BaseModel):
+    source: str
+    source_job_id: str
+    title: str | None
+    company_name: str | None
+    city_canonical: str | None
+    job_level: str | None
+    salary_million: float | None
+    is_active: bool
+    posted_at: datetime | None
+    expired_at: datetime | None
+    num_of_views: int | None
+    num_of_applications: int | None
+    skills: list[str]
+
+
+class AdminJobList(BaseModel):
+    jobs: list[AdminJobRow]
+    total: int
+    page: int
+    per_page: int
