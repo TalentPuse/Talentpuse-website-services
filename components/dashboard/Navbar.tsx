@@ -40,6 +40,11 @@ export default function Navbar() {
           <a href="/profile" className="hover:text-brand-600 transition px-3 py-1.5 rounded-md hover:bg-brand-50">
             Hồ sơ
           </a>
+          {user?.is_admin && (
+            <a href="/admin" className="hover:text-brand-600 transition px-3 py-1.5 rounded-md hover:bg-brand-50">
+              Admin
+            </a>
+          )}
         </div>
 
         <div className="relative" ref={ref}>
@@ -92,6 +97,14 @@ export default function Navbar() {
                   >
                     Dashboard
                   </a>
+                  {user?.is_admin && (
+                    <a
+                      href="/admin"
+                      className="block px-4 py-2 text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition"
+                    >
+                      Admin
+                    </a>
+                  )}
                   <button
                     onClick={logout}
                     className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"

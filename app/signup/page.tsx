@@ -11,6 +11,7 @@ import AuthInput from "@/components/auth/AuthInput";
 import AuthBrandPanel from "@/components/auth/AuthBrandPanel";
 import SkillTagInput from "@/components/auth/SkillTagInput";
 import CityPillSelect from "@/components/auth/CityPillSelect";
+import TitlePillSelect from "@/components/auth/TitlePillSelect";
 
 export default function SignUpPage() {
   const { login } = useAuth();
@@ -28,6 +29,7 @@ export default function SignUpPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Step 2
+  const [desiredTitles, setDesiredTitles] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
@@ -64,6 +66,7 @@ export default function SignUpPage() {
         desired_salary_min: salaryMin ? Number(salaryMin) * 1_000_000 : undefined,
         desired_salary_max: salaryMax ? Number(salaryMax) * 1_000_000 : undefined,
         preferred_cities: cities,
+        desired_titles: desiredTitles,
       };
       const { access_token } = await authApi.signup(payload);
       const user = await authApi.getMe(access_token);
@@ -79,6 +82,7 @@ export default function SignUpPage() {
   }
 
   async function skipAndSubmit() {
+    setDesiredTitles([]);
     setSkills([]);
     setSalaryMin("");
     setSalaryMax("");
@@ -93,6 +97,7 @@ export default function SignUpPage() {
         full_name: fullName,
         skills: [],
         preferred_cities: [],
+        desired_titles: [],
       };
       const { access_token } = await authApi.signup(payload);
       const user = await authApi.getMe(access_token);
@@ -247,6 +252,8 @@ export default function SignUpPage() {
                   Thiết lập profile để AI match job chính xác hơn.
                   Bạn có thể bỏ qua và cập nhật sau.
                 </p>
+
+                <TitlePillSelect value={desiredTitles} onChange={setDesiredTitles} />
 
                 <SkillTagInput value={skills} onChange={setSkills} />
 

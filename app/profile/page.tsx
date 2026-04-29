@@ -10,6 +10,8 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Navbar from "@/components/dashboard/Navbar";
 import SkillTagInput from "@/components/auth/SkillTagInput";
 import CityPillSelect from "@/components/auth/CityPillSelect";
+import TitlePillSelect from "@/components/auth/TitlePillSelect";
+import TelegramLinkCard from "@/components/TelegramLinkCard";
 
 export default function ProfilePage() {
   return (
@@ -23,6 +25,7 @@ function ProfileContent() {
   const { user, token, refreshUser } = useAuth();
 
   const [fullName, setFullName] = useState("");
+  const [desiredTitles, setDesiredTitles] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
@@ -33,6 +36,7 @@ function ProfileContent() {
   useEffect(() => {
     if (!user) return;
     setFullName(user.full_name);
+    setDesiredTitles(user.desired_titles || []);
     setSkills(user.skills);
     setSalaryMin(user.desired_salary_min ? String(user.desired_salary_min / 1_000_000) : "");
     setSalaryMax(user.desired_salary_max ? String(user.desired_salary_max / 1_000_000) : "");
@@ -47,6 +51,7 @@ function ProfileContent() {
     try {
       await authApi.updateMe(token, {
         full_name: fullName,
+        desired_titles: desiredTitles,
         skills,
         desired_salary_min: salaryMin ? Number(salaryMin) * 1_000_000 : null,
         desired_salary_max: salaryMax ? Number(salaryMax) * 1_000_000 : null,
@@ -106,8 +111,11 @@ function ProfileContent() {
             </div>
           </div>
 
+          {/* Telegram alert */}
+          {token && <TelegramLinkCard token={token} />}
+
           {/* Profile form */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-slate-900">Hồ sơ</h2>
               {!editing && (
@@ -132,6 +140,8 @@ function ProfileContent() {
                     className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
                   />
                 </div>
+
+                <TitlePillSelect value={desiredTitles} onChange={setDesiredTitles} />
 
                 <SkillTagInput value={skills} onChange={setSkills} />
 
@@ -166,6 +176,7 @@ function ProfileContent() {
                       setEditing(false);
                       if (user) {
                         setFullName(user.full_name);
+                        setDesiredTitles(user.desired_titles || []);
                         setSkills(user.skills);
                         setSalaryMin(user.desired_salary_min ? String(user.desired_salary_min / 1_000_000) : "");
                         setSalaryMax(user.desired_salary_max ? String(user.desired_salary_max / 1_000_000) : "");
@@ -190,6 +201,25 @@ function ProfileContent() {
             ) : (
               <div className="space-y-5">
                 <ProfileField label="Họ và tên" value={user?.full_name || "—"} />
+                <ProfileField
+                  label="Vị trí mong muốn"
+                  value={
+                    user?.desired_titles && user.desired_titles.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {user.desired_titles.map((t) => (
+                          <span
+                            key={t}
+                            className="inline-block rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      "Chưa cập nhật"
+                    )
+                  }
+                />
                 <ProfileField
                   label="Kỹ năng"
                   value={

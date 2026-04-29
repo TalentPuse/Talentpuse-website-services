@@ -75,6 +75,9 @@ export type UserResponse = {
   desired_salary_min: number | null;
   desired_salary_max: number | null;
   preferred_cities: string[];
+  desired_titles: string[];
+  is_admin: boolean;
+  subscription_tier: string;
   created_at: string;
 };
 
@@ -86,6 +89,7 @@ export type SignupPayload = {
   desired_salary_min?: number;
   desired_salary_max?: number;
   preferred_cities: string[];
+  desired_titles: string[];
 };
 
 export type ApiError = { message: string; status: number };
@@ -119,6 +123,44 @@ async function clientFetch<T>(
   return res.json() as Promise<T>;
 }
 
+/* ───── Telegram types ───── */
+
+export type TelegramStatus = {
+  linked: boolean;
+  chat_id: number | null;
+  telegram_username: string | null;
+  status: "none" | "pending" | "active" | "stopped";
+  linked_at: string | null;
+  job_alert_enabled: boolean;
+};
+
+export type DeepLinkResponse = {
+  deep_link: string;
+  expires_in_seconds: number;
+};
+
+export const telegramApi = {
+  getStatus: (token: string) =>
+    clientFetch<TelegramStatus>("/api/telegram/status", {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  createLink: (token: string) =>
+    clientFetch<DeepLinkResponse>("/api/telegram/link", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  unlink: (token: string) =>
+    fetch(`${CLIENT_BASE}/api/telegram/link`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }),
+};
+
 export const authApi = {
   signup: (payload: SignupPayload) =>
     clientFetch<{ access_token: string; token_type: string }>(
@@ -145,5 +187,140 @@ export const authApi = {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
+    }),
+};
+
+/* ───── Admin types ───── */
+
+export type AdminStats = {
+  total_users: number;
+  active_users: number;
+  telegram_linked: number;
+  alerts_today: number;
+  alerts_this_week: number;
+  total_alerts: number;
+};
+
+export type AdminUserRow = {
+  id: string;
+  email: string;
+  full_name: string;
+  is_active: boolean;
+  is_admin: boolean;
+  subscription_tier: string;
+  skills: string[];
+  desired_titles: string[];
+  preferred_cities: string[];
+  telegram_status: string | null;
+  telegram_username: string | null;
+  alert_enabled: boolean;
+  alerts_sent: number;
+  created_at: string;
+};
+
+export type AdminUserList = {
+  users: AdminUserRow[];
+  total: number;
+  page: number;
+  per_page: number;
+};
+
+export type AlertLogRow = {
+  id: string;
+  user_email: string;
+  user_full_name: string;
+  source_job_id: string;
+  job_title: string | null;
+  company_name: string | null;
+  channel: string;
+  sent_at: string;
+};
+
+export type AlertLogList = {
+  logs: AlertLogRow[];
+  total: number;
+  page: number;
+  per_page: number;
+};
+
+export type SystemConfig = {
+  alert_interval_seconds: number;
+  alert_loop_active: boolean;
+  cors_origins: string[];
+  telegram_bot_username: string;
+  telegram_bot_configured: boolean;
+};
+
+/* ───── Admin API (browser only, requires admin JWT) ───── */
+
+function adminHeaders(token: string) {
+  return { Authorization: `Bearer ${token}` };
+}
+
+export const adminApi = {
+  stats: (token: string) =>
+    clientFetch<AdminStats>("/api/admin/stats", {
+      headers: adminHeaders(token),
+    }),
+
+  users: (
+    token: string,
+    params: { page?: number; per_page?: number; search?: string; is_active?: boolean | null; tier?: string | null },
+  ) => {
+    const q = new URLSearchParams();
+    if (params.page) q.set("page", String(params.page));
+    if (params.per_page) q.set("per_page", String(params.per_page));
+    if (params.search) q.set("search", params.search);
+    if (params.is_active !== undefined && params.is_active !== null)
+      q.set("is_active", String(params.is_active));
+    if (params.tier) q.set("tier", params.tier);
+    return clientFetch<AdminUserList>(`/api/admin/users?${q.toString()}`, {
+      headers: adminHeaders(token),
+    });
+  },
+
+  toggleUserActive: (token: string, userId: string, isActive: boolean) =>
+    clientFetch<{ ok: boolean; is_active: boolean }>(
+      `/api/admin/users/${userId}/toggle-active?is_active=${isActive}`,
+      { method: "PUT", headers: adminHeaders(token) },
+    ),
+
+  updateUserTier: (token: string, userId: string, tier: string) =>
+    clientFetch<{ ok: boolean; tier: string }>(
+      `/api/admin/users/${userId}/tier`,
+      { method: "PUT", headers: adminHeaders(token), body: JSON.stringify({ tier }) },
+    ),
+
+  alertLogs: (
+    token: string,
+    params: { page?: number; per_page?: number; user_id?: string; date_from?: string; date_to?: string },
+  ) => {
+    const q = new URLSearchParams();
+    if (params.page) q.set("page", String(params.page));
+    if (params.per_page) q.set("per_page", String(params.per_page));
+    if (params.user_id) q.set("user_id", params.user_id);
+    if (params.date_from) q.set("date_from", params.date_from);
+    if (params.date_to) q.set("date_to", params.date_to);
+    return clientFetch<AlertLogList>(`/api/admin/alert-logs?${q.toString()}`, {
+      headers: adminHeaders(token),
+    });
+  },
+
+  getConfig: (token: string) =>
+    clientFetch<SystemConfig>("/api/admin/config", {
+      headers: adminHeaders(token),
+    }),
+
+  updateConfig: (token: string, data: { alert_interval_seconds?: number; alert_loop_active?: boolean }) =>
+    clientFetch<SystemConfig>("/api/admin/config", {
+      method: "PUT",
+      headers: adminHeaders(token),
+      body: JSON.stringify(data),
+    }),
+
+  dispatchAlerts: (token: string) =>
+    clientFetch<{ dispatched: number }>("/api/admin/alerts/dispatch", {
+      method: "POST",
+      headers: adminHeaders(token),
     }),
 };
