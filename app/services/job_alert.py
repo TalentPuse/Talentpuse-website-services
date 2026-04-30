@@ -26,74 +26,97 @@ def build_job_url(source: str, source_job_id: str) -> str:
     return f"https://www.vietnamworks.com/--{source_job_id}-jd"
 
 
+ALERT_LIMIT = 3
+
+
 async def find_matching_jobs(db: AsyncSession, user: User) -> list[dict]:
     titles = [t.strip() for t in (user.desired_titles or []) if t.strip()]
     cities = [c.strip() for c in (user.preferred_cities or []) if c.strip()]
+    skills = [s.strip().lower() for s in (user.skills or []) if s.strip()]
     min_salary = getattr(user, "desired_salary_min", None)
     experience_level = getattr(user, "experience_level", None)
 
-    # Step 1 — level filter
     allowed_levels = LEVEL_MAP.get(experience_level) if experience_level else None
+
+    # --- build dynamic scoring clauses ---
+    params: dict = {"uid": str(user.id)}
+
+    # Title score (40 pts): match on title or job_category
+    if titles:
+        title_patterns = [f"%{t}%" for t in titles]
+        params["title_patterns"] = title_patterns
+        title_score = (
+            "CASE WHEN f.title ILIKE ANY(:title_patterns) "
+            "OR f.job_category ILIKE ANY(:title_patterns) THEN 40 ELSE 0 END"
+        )
+    else:
+        title_score = "0"
+
+    # City score (25 pts)
+    if cities:
+        params["cities"] = cities
+        city_score = "CASE WHEN f.city_canonical = ANY(:cities) THEN 25 ELSE 0 END"
+    else:
+        city_score = "0"
+
+    # Salary score (20 pts): job has salary >= user min
+    if min_salary and min_salary > 0:
+        params["min_salary"] = min_salary
+        salary_score = (
+            "CASE WHEN f.salary_vnd_monthly_avg IS NOT NULL "
+            "AND f.salary_vnd_monthly_avg >= :min_salary THEN 20 ELSE 0 END"
+        )
+    else:
+        salary_score = "0"
+
+    # Level filter (hard filter, not score)
     if allowed_levels:
+        params["levels"] = allowed_levels
         level_clause = "(f.job_level = ANY(:levels) OR f.job_level IS NULL)"
     else:
         level_clause = "true"
 
-    # Step 2 — content filter (titles → match job title + job_category)
-    params: dict = {"uid": str(user.id)}
-    title_patterns = [f"%{t}%" for t in titles]
-
-    if title_patterns:
-        content_clause = "(f.title ILIKE ANY(:title_patterns) OR f.job_category ILIKE ANY(:title_patterns))"
-        params["title_patterns"] = title_patterns
+    # Skill score (15 pts): ratio of overlapping skills
+    if skills:
+        params["user_skills"] = skills
+        skill_score = "COALESCE(sk.skill_ratio * 15, 0)"
+        skill_join = """
+            LEFT JOIN (
+                SELECT s.source, s.source_job_id,
+                       count(*) FILTER (WHERE s.skill_name_norm = ANY(:user_skills))::float
+                       / GREATEST(count(*), 1) AS skill_ratio
+                FROM dbt_dev_silver.silver_skill_long s
+                GROUP BY s.source, s.source_job_id
+            ) sk ON sk.source = f.source AND sk.source_job_id = f.source_job_id
+        """
     else:
-        content_clause = "true"
+        skill_score = "0"
+        skill_join = ""
 
-    if allowed_levels:
-        params["levels"] = allowed_levels
-
-    # Step 3 — soft sort
-    has_cities = bool(cities)
-    has_salary = min_salary is not None and min_salary > 0
-
-    if has_cities:
-        params["cities"] = cities
-    if has_salary:
-        params["min_salary"] = min_salary
-
-    city_sort = (
-        "CASE WHEN m.city_canonical = ANY(:cities) THEN 0 ELSE 1 END"
-        if has_cities
-        else "0::int"
-    )
-    salary_sort = (
-        "CASE WHEN m.salary_vnd_monthly_avg IS NOT NULL AND m.salary_vnd_monthly_avg >= :min_salary THEN 0 ELSE 1 END"
-        if has_salary
-        else "0::int"
-    )
+    total_score = f"({title_score} + {city_score} + {salary_score} + {skill_score})"
 
     sql = text(f"""
-        WITH matched AS (
-            SELECT DISTINCT f.source, f.source_job_id, f.title, f.company_name,
+        WITH scored AS (
+            SELECT DISTINCT ON (f.source, f.source_job_id)
+                   f.source, f.source_job_id, f.title, f.company_name,
                    f.city_canonical, f.job_level, f.job_category,
                    round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_m,
-                   f.posted_at, f.salary_vnd_monthly_avg
+                   f.posted_at,
+                   {total_score} AS score
             FROM dbt_dev_gold.fct_jobs_daily f
+            {skill_join}
             WHERE f.is_active
               AND f.source_job_id NOT IN (
                   SELECT source_job_id FROM app.alert_logs WHERE user_id = :uid
               )
               AND {level_clause}
-              AND {content_clause}
         )
         SELECT source, source_job_id, title, company_name, city_canonical,
-               job_level, job_category, salary_m
-        FROM matched m
-        ORDER BY
-            {city_sort},
-            {salary_sort},
-            m.posted_at DESC NULLS LAST
-        LIMIT 20
+               job_level, job_category, salary_m, score
+        FROM scored
+        WHERE score > 0
+        ORDER BY score DESC, posted_at DESC NULLS LAST
+        LIMIT {ALERT_LIMIT}
     """)
 
     result = await db.execute(sql, params)
@@ -123,6 +146,9 @@ def format_job_message(jobs: list[dict]) -> str:
         source_label = SOURCE_LABEL.get(source, source)
         url = build_job_url(source, j["source_job_id"])
 
+        score = j.get("score")
+        score_text = f"  ·  ⭐ {score:.0f}%" if score else ""
+
         entry = f"<b>{i}. {title}</b>"
         entry += f"\n   🏢 {company}"
         if city:
@@ -131,8 +157,7 @@ def format_job_message(jobs: list[dict]) -> str:
             entry += f"\n   📊 {level}"
         if salary:
             entry += f"  ·  💰 ~{salary:.0f} triệu/tháng"
-        elif salary is None and level:
-            pass
+        entry += score_text
         entry += f'\n   🔗 <a href="{url}">Xem trên {source_label}</a>'
         lines.append(entry)
 
