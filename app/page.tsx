@@ -8,18 +8,6 @@ import AnimatedCounter from "@/components/landing/AnimatedCounter";
 import ScrollReveal from "@/components/landing/ScrollReveal";
 import LiveDataPreview from "@/components/landing/LiveDataPreview";
 
-const platforms = [
-  "VietnamWorks",
-  "TopCV",
-  "ITviec",
-  "LinkedIn",
-  "CareerBuilder",
-  "Jobstreet",
-  "Glints",
-  "TopDev",
-  "CareerLink",
-  "Việc Làm 24h",
-];
 
 export default function LandingPage() {
   return (
@@ -73,7 +61,7 @@ export default function LandingPage() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500" />
           </span>
-          AI Job Alert — Không bỏ lỡ cơ hội việc làm
+          AI Job Alert. Không bỏ lỡ cơ hội việc làm
         </motion.div>
 
         <motion.h1
@@ -84,7 +72,7 @@ export default function LandingPage() {
         >
           <span className="text-slate-900">Nắm bắt thị trường tuyển dụng </span>
           <span className="bg-gradient-to-r from-brand-600 via-brand-500 to-brand-400 bg-clip-text text-transparent">
-            IT/AI Việt Nam
+            Việt Nam
           </span>
         </motion.h1>
 
@@ -94,7 +82,7 @@ export default function LandingPage() {
           transition={{ delay: 0.5, duration: 0.6 }}
           className="mt-6 text-lg text-slate-600 max-w-2xl mx-auto text-center leading-relaxed px-6"
         >
-          AI Agent phân tích dữ liệu từ 10+ trang tuyển dụng, tự động match job phù hợp với bạn
+          Phân tích dữ liệu từ hơn 10 nguồn tuyển dụng, tự động match job phù hợp với bạn
           và gửi alert tức thì qua Telegram, Zalo, Discord.
         </motion.p>
 
@@ -190,10 +178,10 @@ export default function LandingPage() {
               <div>
                 <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 bg-emerald-500/20 border border-emerald-400/30 rounded-full">
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-400" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
                   </span>
-                  <span className="text-xs font-semibold text-emerald-100">Tính năng Premium</span>
+                  <span className="text-xs font-semibold text-emerald-100">Tính năng nổi bật</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
                   AI tự động tìm job<br />phù hợp với bạn
@@ -208,7 +196,7 @@ export default function LandingPage() {
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                     </span>
                     <span className="text-emerald-50">
-                      <strong className="text-white">AI phân tích profile</strong> — match job chính xác theo skills, kinh nghiệm, mức lương mong muốn
+                      <strong className="text-white">AI phân tích profile</strong>, match job chính xác theo skills, kinh nghiệm và mức lương mong muốn
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
@@ -216,7 +204,7 @@ export default function LandingPage() {
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                     </span>
                     <span className="text-emerald-50">
-                      <strong className="text-white">Alert tức thì</strong> — nhận thông báo qua Telegram, Zalo, Discord hoặc trực tiếp trên website
+                      <strong className="text-white">Alert tức thì</strong>, nhận thông báo qua Telegram, Zalo, Discord hoặc trực tiếp trên website
                     </span>
                   </li>
                   <li className="flex items-start gap-3">
@@ -224,7 +212,7 @@ export default function LandingPage() {
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                     </span>
                     <span className="text-emerald-50">
-                      <strong className="text-white">Không bỏ lỡ</strong> — job hot đến tay bạn đầu tiên, trước cả khi đăng trên các kênh lớn
+                      <strong className="text-white">Không bỏ lỡ</strong>, job hot đến tay bạn đầu tiên, trước cả khi đăng rộng rãi
                     </span>
                   </li>
                 </ul>
@@ -355,19 +343,13 @@ export default function LandingPage() {
             <div className="text-center mb-14">
               <h2 className="text-3xl font-bold text-slate-900">Hai tính năng cốt lõi</h2>
               <p className="mt-3 text-slate-600 max-w-xl mx-auto">
-                Tất cả những gì bạn cần để nắm bắt thị trường tuyển dụng IT/AI tại Việt Nam
+                Tất cả những gì bạn cần để nắm bắt thị trường tuyển dụng tại Việt Nam
               </p>
             </div>
           </ScrollReveal>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* AI Job Alert — first, with Premium badge */}
             <ScrollReveal direction="left" delay={0.1}>
               <div className="group relative bg-white rounded-2xl border-2 border-emerald-200 p-8 hover:shadow-xl hover:border-emerald-400 transition-all duration-500 hover:-translate-y-1 ring-1 ring-emerald-100">
-                <div className="absolute -top-3 left-6">
-                  <span className="px-3 py-1 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-md">
-                    Premium
-                  </span>
-                </div>
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="relative">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform duration-300">
@@ -447,75 +429,67 @@ export default function LandingPage() {
       </section>
 
       {/* ── How it works ── */}
-      <section className="max-w-6xl mx-auto px-6 py-20">
+      <section className="max-w-6xl mx-auto px-6 py-24">
         <ScrollReveal>
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-slate-900">Cách hoạt động</h2>
-            <p className="mt-3 text-slate-600">Đơn giản 3 bước</p>
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 bg-brand-50 border border-brand-200 rounded-full">
+              <span className="text-xs font-medium text-brand-700">Quy trình</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">Cách hoạt động</h2>
+            <p className="mt-4 text-slate-600 max-w-2xl mx-auto text-lg">
+              Hệ thống tự động thu thập, phân tích và gửi thông báo việc làm phù hợp đến bạn chỉ trong 3 bước
+            </p>
           </div>
         </ScrollReveal>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-          {/* Connecting line (desktop) */}
-          <div className="hidden md:block absolute top-10 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-brand-200 via-brand-400 to-brand-200" />
-
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10">
           <ScrollReveal delay={0}>
-            <div className="text-center relative">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-xl font-bold mx-auto shadow-lg shadow-brand-500/30 relative z-10">
-                1
+            <div className="relative bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-xl hover:border-brand-300 transition-all duration-500 hover:-translate-y-1 h-full">
+              <div className="absolute -top-4 left-8">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-brand-600 text-white text-sm font-bold shadow-lg shadow-brand-500/30">1</span>
               </div>
-              <h3 className="mt-6 text-lg font-semibold text-slate-900">Thu thập</h3>
-              <p className="mt-2 text-sm text-slate-600 max-w-xs mx-auto">
-                Hệ thống crawl dữ liệu từ 10+ trang tuyển dụng lớn ở Việt Nam, cập nhật liên tục mỗi ngày.
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center mb-5 mt-2 shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-3">Thu thập dữ liệu</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Hệ thống tự động thu thập hàng nghìn tin tuyển dụng từ hơn 10 nguồn uy tín tại Việt Nam. Dữ liệu được cập nhật liên tục mỗi ngày để đảm bảo độ chính xác và kịp thời.
               </p>
             </div>
           </ScrollReveal>
           <ScrollReveal delay={0.15}>
-            <div className="text-center relative">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-xl font-bold mx-auto shadow-lg shadow-brand-500/30 relative z-10">
-                2
+            <div className="relative bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-xl hover:border-brand-300 transition-all duration-500 hover:-translate-y-1 h-full">
+              <div className="absolute -top-4 left-8">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-brand-600 text-white text-sm font-bold shadow-lg shadow-brand-500/30">2</span>
               </div>
-              <h3 className="mt-6 text-lg font-semibold text-slate-900">Phân tích</h3>
-              <p className="mt-2 text-sm text-slate-600 max-w-xs mx-auto">
-                Pipeline dbt xử lý và tổng hợp dữ liệu thành các gold marts &mdash; skills, salary, companies, trends.
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 text-white flex items-center justify-center mb-5 mt-2 shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-3">Phân tích chuyên sâu</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Hệ thống xử lý và tổng hợp dữ liệu thành các báo cáo chi tiết về kỹ năng thị trường cần, mức lương theo vị trí, doanh nghiệp đang tuyển và xu hướng ngành nghề.
               </p>
             </div>
           </ScrollReveal>
           <ScrollReveal delay={0.3}>
-            <div className="text-center relative">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center text-xl font-bold mx-auto shadow-lg shadow-brand-500/30 relative z-10">
-                3
+            <div className="relative bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-xl hover:border-brand-300 transition-all duration-500 hover:-translate-y-1 h-full">
+              <div className="absolute -top-4 left-8">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-brand-600 text-white text-sm font-bold shadow-lg shadow-brand-500/30">3</span>
               </div>
-              <h3 className="mt-6 text-lg font-semibold text-slate-900">Alert &amp; Insight</h3>
-              <p className="mt-2 text-sm text-slate-600 max-w-xs mx-auto">
-                Xem dashboard trực quan hoặc nhận AI alert job match với bạn qua Telegram, Zalo, Discord.
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center mb-5 mt-2 shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-3">Thông báo và báo cáo</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Theo dõi thị trường qua dashboard trực quan hoặc nhận thông báo việc làm phù hợp với hồ sơ của bạn qua Telegram, Zalo và Discord.
               </p>
             </div>
           </ScrollReveal>
-        </div>
-      </section>
-
-      {/* ── Integrations marquee ── */}
-      <section className="border-y border-slate-200 bg-slate-50 py-12 overflow-hidden">
-        <ScrollReveal>
-          <div className="text-center mb-8">
-            <h2 className="text-lg font-semibold text-slate-900">
-              Thu thập dữ liệu từ các nền tảng hàng đầu
-            </h2>
-          </div>
-        </ScrollReveal>
-        <div className="relative">
-          <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-slate-50 to-transparent z-10" />
-          <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-slate-50 to-transparent z-10" />
-          <div className="flex animate-marquee whitespace-nowrap">
-            {[...platforms, ...platforms].map((name, i) => (
-              <div
-                key={`${name}-${i}`}
-                className="mx-8 flex-shrink-0 px-6 py-3 bg-white rounded-xl border border-slate-200 shadow-sm"
-              >
-                <span className="text-sm font-medium text-slate-600">{name}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -532,7 +506,7 @@ export default function LandingPage() {
               Đừng để job hot vuột mất
             </h2>
             <p className="mt-4 text-brand-100 max-w-lg mx-auto text-lg">
-              Đăng ký để AI tự động tìm và gửi alert job phù hợp với bạn — hoàn toàn miễn phí.
+              Đăng ký để AI tự động tìm và gửi alert job phù hợp với bạn. Hoàn toàn miễn phí.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
