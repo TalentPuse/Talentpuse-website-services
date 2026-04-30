@@ -35,12 +35,12 @@ function JobBoardContent() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [salaryFilter, setSalaryFilter] = useState<string>("all");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const abortRef = useRef<AbortController>();
 
   useEffect(() => {
     if (!token) return;
@@ -49,38 +49,41 @@ function JobBoardContent() {
 
   const load = useCallback(async () => {
     if (!token) return;
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     try {
       const res = await jobsApi.list(token, {
         page,
         per_page: PER_PAGE,
-        search: debouncedSearch || undefined,
+        search: search || undefined,
         city: cityFilter === "all" ? null : cityFilter,
         level: levelFilter === "all" ? null : levelFilter,
         source: sourceFilter === "all" ? null : sourceFilter,
         has_salary: salaryFilter === "all" ? null : salaryFilter === "yes",
-      });
-      setData(res);
-    } catch {
+      }, controller.signal);
+      if (!controller.signal.aborted) setData(res);
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  }, [token, page, debouncedSearch, cityFilter, levelFilter, sourceFilter, salaryFilter]);
+  }, [token, page, search, cityFilter, levelFilter, sourceFilter, salaryFilter]);
 
   useEffect(() => {
-    load();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(load, 350);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [load]);
 
   function onSearchChange(val: string) {
     setSearch(val);
     setPage(1);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDebouncedSearch(val), 300);
   }
 
   function resetFilters() {
     setSearch("");
-    setDebouncedSearch("");
     setCityFilter("all");
     setLevelFilter("all");
     setSourceFilter("all");
@@ -90,7 +93,7 @@ function JobBoardContent() {
 
   const totalPages = data ? Math.ceil(data.total / PER_PAGE) : 0;
   const hasFilters =
-    debouncedSearch || cityFilter !== "all" || levelFilter !== "all" || sourceFilter !== "all" || salaryFilter !== "all";
+    search || cityFilter !== "all" || levelFilter !== "all" || sourceFilter !== "all" || salaryFilter !== "all";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-50/30">

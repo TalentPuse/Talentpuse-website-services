@@ -346,6 +346,7 @@ export const jobsApi = {
       source?: string | null;
       has_salary?: boolean | null;
     },
+    signal?: AbortSignal,
   ) => {
     const q = new URLSearchParams();
     if (params.page) q.set("page", String(params.page));
@@ -358,6 +359,7 @@ export const jobsApi = {
       q.set("has_salary", String(params.has_salary));
     return clientFetch<PublicJobList>(`/api/jobs?${q.toString()}`, {
       headers: authHeaders(token),
+      signal,
     });
   },
 
