@@ -6,7 +6,6 @@ import GradientBackground from "@/components/landing/GradientBackground";
 import FloatingDashboard from "@/components/landing/FloatingDashboard";
 import AnimatedCounter from "@/components/landing/AnimatedCounter";
 import ScrollReveal from "@/components/landing/ScrollReveal";
-import LiveDataPreview from "@/components/landing/LiveDataPreview";
 
 
 export default function LandingPage() {
@@ -24,12 +23,6 @@ export default function LandingPage() {
               className="hidden sm:block text-sm text-slate-600 hover:text-slate-900 transition-colors"
             >
               Tính năng
-            </a>
-            <a
-              href="#live-data"
-              className="hidden sm:block text-sm text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              Dữ liệu
             </a>
             <Link
               href="/signin"
@@ -138,30 +131,6 @@ export default function LandingPage() {
             <div className="mt-2 text-sm text-slate-600">Kênh alert</div>
           </ScrollReveal>
         </div>
-      </section>
-
-      {/* ── Live Data Preview ── */}
-      <section id="live-data" className="max-w-6xl mx-auto px-6 py-20">
-        <ScrollReveal>
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <span className="text-xs font-medium text-emerald-700">Dữ liệu thật</span>
-            </div>
-            <h2 className="text-3xl font-bold text-slate-900">
-              Dữ liệu thật, cập nhật liên tục
-            </h2>
-            <p className="mt-3 text-slate-600 max-w-xl mx-auto">
-              Không phải demo giả — đây là dữ liệu thật đang được thu thập và phân tích mỗi ngày
-            </p>
-          </div>
-        </ScrollReveal>
-        <ScrollReveal delay={0.2}>
-          <LiveDataPreview />
-        </ScrollReveal>
       </section>
 
       {/* ── AI Job Alert Showcase ── */}
