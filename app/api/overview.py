@@ -20,7 +20,9 @@ async def get_overview(db: AsyncSession = Depends(get_db)) -> Overview:
                     1
                 )::float as pct_with_salary,
                 round(
-                    (avg(salary_vnd_monthly_avg) filter (where salary_vnd_monthly_avg is not null)
+                    (percentile_cont(0.5) within group (order by salary_vnd_monthly_avg)
+                        filter (where salary_vnd_monthly_avg is not null
+                                  and salary_vnd_monthly_avg <= 200000000)
                     / 1000000.0)::numeric,
                     1
                 )::float as avg_salary_million

@@ -23,6 +23,7 @@ async def salary_by_level(
                 round((p75_vnd / 1000000.0)::numeric, 1)::float as p75_million,
                 n_visible_jobs::int
             from dbt_dev_gold.mart_salary_by_level
+            where city_canonical in ('HCMC', 'Hanoi', 'Da Nang')
             order by p50_vnd desc
         """)
     )
