@@ -193,6 +193,23 @@ async def _handle_start(
         )
         return
 
+    old_conn_result = await db.execute(
+        select(TelegramConnection).where(
+            TelegramConnection.chat_id == msg.chat.id,
+            TelegramConnection.id != conn.id,
+        )
+    )
+    old_conn = old_conn_result.scalar_one_or_none()
+    if old_conn is not None:
+        old_conn.chat_id = None
+        old_conn.status = "stopped"
+        await db.execute(
+            update(AlertSubscription)
+            .where(AlertSubscription.user_id == old_conn.user_id)
+            .values(enabled=False)
+        )
+        await db.flush()
+
     conn.chat_id = msg.chat.id
     conn.telegram_username = msg.from_.username if msg.from_ else None
     conn.status = "active"
