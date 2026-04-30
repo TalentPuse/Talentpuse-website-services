@@ -100,29 +100,45 @@ async def find_matching_jobs(db: AsyncSession, user: User) -> list[dict]:
     return [dict(r._mapping) for r in result.all()]
 
 
+SOURCE_LABEL: dict[str, str] = {
+    "vietnamworks": "VietnamWorks",
+    "itviec": "ITviec",
+}
+
+
 def format_job_message(jobs: list[dict]) -> str:
     count = len(jobs)
-    lines = [f"🔔 <b>{count} việc làm phù hợp với bạn!</b>\n"]
+    lines = [
+        f"📋 <b>TalentPulse Alert</b>",
+        f"Tìm thấy <b>{count}</b> việc làm mới phù hợp với bạn.\n",
+    ]
 
     for i, j in enumerate(jobs, 1):
-        title = j["title"] or "Untitled"
-        company = j["company_name"] or "N/A"
+        title = j["title"] or "Không rõ"
+        company = j["company_name"] or "Không rõ"
         city = j["city_canonical"] or ""
-        category = j.get("job_category") or ""
+        level = j.get("job_level") or ""
         salary = j["salary_m"]
-        url = build_job_url(j.get("source", "vietnamworks"), j["source_job_id"])
+        source = j.get("source", "vietnamworks")
+        source_label = SOURCE_LABEL.get(source, source)
+        url = build_job_url(source, j["source_job_id"])
 
-        entry = f"{i}. <b>{title}</b>\n   🏢 {company}"
+        entry = f"<b>{i}. {title}</b>"
+        entry += f"\n   🏢 {company}"
         if city:
-            entry += f" • 📍 {city}"
-        if category:
-            entry += f"\n   🏷️ {category}"
+            entry += f"  ·  📍 {city}"
+        if level:
+            entry += f"\n   📊 {level}"
         if salary:
-            entry += f"\n   💰 ~{salary:.0f}M VND/tháng"
-        entry += f'\n   🔗 <a href="{url}">Xem chi tiết</a>'
+            entry += f"  ·  💰 ~{salary:.0f} triệu/tháng"
+        elif salary is None and level:
+            pass
+        entry += f'\n   🔗 <a href="{url}">Xem trên {source_label}</a>'
         lines.append(entry)
 
-    lines.append("\n💡 Cập nhật profile để nhận alert chính xác hơn!")
+    lines.append(
+        "\n✏️ Cập nhật hồ sơ tại <b>talentpuse.io.vn/profile</b> để nhận alert chính xác hơn."
+    )
     return "\n\n".join(lines)
 
 
