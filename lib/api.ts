@@ -101,7 +101,7 @@ export type ApiError = { message: string; status: number };
 const CLIENT_BASE =
   (typeof window !== "undefined"
     ? process.env.NEXT_PUBLIC_API_BASE
-    : undefined) || "http://localhost:8001";
+    : undefined) || "";
 
 async function clientFetch<T>(
   path: string,
