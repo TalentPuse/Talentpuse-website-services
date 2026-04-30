@@ -20,10 +20,16 @@ LEVEL_MAP: dict[str, list[str]] = {
 }
 
 
-def build_job_url(source: str, source_job_id: str) -> str:
-    if source == "itviec":
-        return f"https://itviec.com/it-jobs/{source_job_id}"
-    return f"https://www.vietnamworks.com/--{source_job_id}-jd"
+FALLBACK_URL: dict[str, str] = {
+    "vietnamworks": "https://www.vietnamworks.com",
+    "itviec": "https://itviec.com",
+}
+
+
+def build_job_url(source: str, source_job_id: str, source_url: str | None = None) -> str:
+    if source_url:
+        return source_url
+    return FALLBACK_URL.get(source, "https://www.vietnamworks.com")
 
 
 ALERT_LIMIT = 3
@@ -102,8 +108,11 @@ async def find_matching_jobs(db: AsyncSession, user: User) -> list[dict]:
                    f.city_canonical, f.job_level, f.job_category,
                    round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_m,
                    f.posted_at,
+                   sd.source_url,
                    {total_score} AS score
             FROM dbt_dev_gold.fct_jobs_daily f
+            LEFT JOIN dbt_dev_silver.silver_job_detail sd
+                   ON sd.source = f.source AND sd.source_job_id = f.source_job_id
             {skill_join}
             WHERE f.is_active
               AND f.source_job_id NOT IN (
@@ -112,7 +121,7 @@ async def find_matching_jobs(db: AsyncSession, user: User) -> list[dict]:
               AND {level_clause}
         )
         SELECT source, source_job_id, title, company_name, city_canonical,
-               job_level, job_category, salary_m, score
+               job_level, job_category, salary_m, source_url, score
         FROM scored
         WHERE score > 0
         ORDER BY score DESC, posted_at DESC NULLS LAST
@@ -144,7 +153,7 @@ def format_job_message(jobs: list[dict]) -> str:
         salary = j["salary_m"]
         source = j.get("source", "vietnamworks")
         source_label = SOURCE_LABEL.get(source, source)
-        url = build_job_url(source, j["source_job_id"])
+        url = build_job_url(source, j["source_job_id"], j.get("source_url"))
 
         score = j.get("score")
         score_text = f"  ·  ⭐ {score:.0f}%" if score else ""

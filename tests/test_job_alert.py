@@ -227,3 +227,40 @@ def test_format_no_level():
     assert "📊" not in msg
     assert "DevOps Engineer" in msg
     assert "ITviec" in msg
+
+
+def test_format_uses_source_url():
+    jobs = [
+        {
+            "source": "itviec",
+            "source_job_id": "3715",
+            "source_url": "https://itviec.com/job/data-engineer-aws-gcp-up-to-2700-3715",
+            "title": "Data Engineer",
+            "company_name": "TechCo",
+            "city_canonical": "HCMC",
+            "job_level": None,
+            "job_category": None,
+            "salary_m": None,
+            "score": 50.0,
+        }
+    ]
+    msg = format_job_message(jobs)
+    assert "itviec.com/job/data-engineer-aws-gcp-up-to-2700-3715" in msg
+
+
+def test_format_fallback_without_source_url():
+    jobs = [
+        {
+            "source": "itviec",
+            "source_job_id": "999",
+            "title": "DevOps",
+            "company_name": "X",
+            "city_canonical": None,
+            "job_level": None,
+            "job_category": None,
+            "salary_m": None,
+            "score": 30.0,
+        }
+    ]
+    msg = format_job_message(jobs)
+    assert "itviec.com" in msg
