@@ -1,0 +1,175 @@
+export type Lang = "vi" | "en";
+
+const vi = {
+  nav: {
+    features: "Tính năng",
+    signIn: "Đăng nhập",
+    signUp: "Đăng ký miễn phí",
+  },
+  hero: {
+    badge: "AI Thông báo việc làm. Không bỏ lỡ cơ hội",
+    heading1: "Nắm bắt thị trường tuyển dụng ",
+    heading2: "Việt Nam",
+    sub: "Phân tích dữ liệu từ hơn 10 nguồn tuyển dụng, tự động match job phù hợp với bạn và gửi alert tức thì qua Telegram, Zalo, Discord.",
+    ctaPrimary: "Đăng ký Alert miễn phí",
+    ctaSecondary: "Đăng nhập",
+  },
+  stats: {
+    sources: "Nguồn dữ liệu",
+    jobs: "Jobs được theo dõi",
+    realtime: "Cập nhật realtime",
+    channels: "Kênh thông báo",
+  },
+  aiAlert: {
+    badge: "Tính năng nổi bật",
+    heading: "AI tự động tìm job\nphù hợp với bạn",
+    description: "Thay vì lướt hàng trăm tin tuyển dụng mỗi ngày, để AI Agent làm việc đó. Chỉ nhận thông báo khi có job thật sự match với profile và kỹ năng của bạn.",
+    bullet1Title: "AI phân tích profile",
+    bullet1: ", match job chính xác theo skills, kinh nghiệm và mức lương mong muốn",
+    bullet2Title: "Thông báo tức thì",
+    bullet2: ", nhận alert qua Telegram, Zalo, Discord hoặc trực tiếp trên website",
+    bullet3Title: "Không bỏ lỡ",
+    bullet3: ", job hot đến tay bạn đầu tiên, trước cả khi đăng rộng rãi",
+    cta: "Đăng ký nhận Alert",
+    sentVia: "Gửi qua:",
+  },
+  notifications: {
+    match: "Phù hợp",
+    minAgo: "phút trước",
+    hourAgo: "giờ trước",
+  },
+  features: {
+    heading: "Hai tính năng cốt lõi",
+    sub: "Tất cả những gì bạn cần để nắm bắt thị trường tuyển dụng tại Việt Nam",
+    alert: {
+      title: "Thông báo việc làm AI",
+      description: "AI Agent tự động phân tích và match job phù hợp với profile của bạn. Nhận thông báo nhanh nhất qua Telegram, Zalo, Discord hoặc trực tiếp trên website.",
+      bullet1: "AI phân tích mức độ phù hợp với profile",
+      bullet2: "Thông báo qua Telegram / Zalo / Discord",
+      bullet3: "Không bỏ lỡ job hot trên thị trường",
+    },
+    intel: {
+      title: "Phân tích thị trường",
+      description: "Thu thập và phân tích dữ liệu real-time từ hơn 10 trang tuyển dụng lớn tại Việt Nam. Dashboard trực quan giúp bạn theo dõi skills hot, mức lương trung bình, và xu hướng tuyển dụng.",
+      bullet1: "Phân tích skills đang được săn đón nhất",
+      bullet2: "So sánh lương theo cấp bậc và thành phố",
+      bullet3: "Top công ty đang tuyển nhiều nhất",
+    },
+  },
+  howItWorks: {
+    badge: "Quy trình",
+    heading: "Cách hoạt động",
+    sub: "Hệ thống tự động thu thập, phân tích và gửi thông báo việc làm phù hợp đến bạn chỉ trong 3 bước",
+    step1: {
+      title: "Thu thập dữ liệu",
+      description: "Hệ thống tự động thu thập hàng nghìn tin tuyển dụng từ hơn 10 nguồn uy tín tại Việt Nam. Dữ liệu được cập nhật liên tục mỗi ngày để đảm bảo độ chính xác và kịp thời.",
+    },
+    step2: {
+      title: "Phân tích chuyên sâu",
+      description: "Hệ thống xử lý và tổng hợp dữ liệu thành các báo cáo chi tiết về kỹ năng thị trường cần, mức lương theo vị trí, doanh nghiệp đang tuyển và xu hướng ngành nghề.",
+    },
+    step3: {
+      title: "Thông báo và báo cáo",
+      description: "Theo dõi thị trường qua dashboard trực quan hoặc nhận thông báo việc làm phù hợp với hồ sơ của bạn qua Telegram, Zalo và Discord.",
+    },
+  },
+  cta: {
+    heading: "Đừng để job hot vuột mất",
+    sub: "Đăng ký để AI tự động tìm và gửi alert job phù hợp với bạn. Hoàn toàn miễn phí.",
+    button: "Đăng ký miễn phí",
+    orSignIn: "hoặc đăng nhập",
+  },
+  footer: {
+    copyright: "© 2026. Xây dựng cho cộng đồng công nghệ Việt Nam.",
+    dashboard: "Dashboard",
+    features: "Tính năng",
+  },
+};
+
+const en: typeof vi = {
+  nav: {
+    features: "Features",
+    signIn: "Sign in",
+    signUp: "Sign up free",
+  },
+  hero: {
+    badge: "AI Job Alert. Never miss an opportunity",
+    heading1: "Master the job market in ",
+    heading2: "Vietnam",
+    sub: "Analyze data from 10+ recruitment sources, automatically match jobs to your profile, and receive instant alerts via Telegram, Zalo, Discord.",
+    ctaPrimary: "Sign up for free Alerts",
+    ctaSecondary: "Sign in",
+  },
+  stats: {
+    sources: "Data sources",
+    jobs: "Jobs tracked",
+    realtime: "Realtime updates",
+    channels: "Alert channels",
+  },
+  aiAlert: {
+    badge: "Key Feature",
+    heading: "AI finds the right jobs\nfor you automatically",
+    description: "Instead of scrolling through hundreds of listings every day, let our AI Agent do the work. Get notified only when a job truly matches your profile and skills.",
+    bullet1Title: "AI analyzes your profile",
+    bullet1: ", matching jobs precisely by skills, experience, and desired salary",
+    bullet2Title: "Instant alerts",
+    bullet2: ", receive notifications via Telegram, Zalo, Discord or directly on the website",
+    bullet3Title: "Never miss out",
+    bullet3: ", hot jobs reach you first, before they're widely posted",
+    cta: "Sign up for Alerts",
+    sentVia: "Sent via:",
+  },
+  notifications: {
+    match: "Match",
+    minAgo: "min ago",
+    hourAgo: "hour ago",
+  },
+  features: {
+    heading: "Two core features",
+    sub: "Everything you need to stay on top of Vietnam's job market",
+    alert: {
+      title: "AI Job Alert",
+      description: "Our AI Agent automatically analyzes and matches jobs to your profile. Get the fastest notifications via Telegram, Zalo, Discord or directly on the website.",
+      bullet1: "AI analyzes how well jobs match your profile",
+      bullet2: "Alerts via Telegram / Zalo / Discord",
+      bullet3: "Never miss hot jobs on the market",
+    },
+    intel: {
+      title: "Market Intelligence",
+      description: "Collect and analyze real-time data from 10+ major recruitment sites in Vietnam. Visual dashboard helps you track trending skills, average salaries, and hiring trends.",
+      bullet1: "Analyze the most in-demand skills",
+      bullet2: "Compare salary by level and city",
+      bullet3: "Top companies hiring the most",
+    },
+  },
+  howItWorks: {
+    badge: "Process",
+    heading: "How it works",
+    sub: "Our system automatically collects, analyzes, and sends matching job alerts to you in just 3 steps",
+    step1: {
+      title: "Data collection",
+      description: "The system automatically collects thousands of job listings from 10+ trusted sources in Vietnam. Data is continuously updated daily to ensure accuracy and timeliness.",
+    },
+    step2: {
+      title: "Deep analysis",
+      description: "The system processes and synthesizes data into detailed reports on market-demanded skills, salary by position, hiring companies, and industry trends.",
+    },
+    step3: {
+      title: "Alerts & reports",
+      description: "Track the market via a visual dashboard or receive job alerts matching your profile via Telegram, Zalo, and Discord.",
+    },
+  },
+  cta: {
+    heading: "Don't let hot jobs slip away",
+    sub: "Sign up for AI to automatically find and alert you about matching jobs. Completely free.",
+    button: "Sign up for free",
+    orSignIn: "or sign in",
+  },
+  footer: {
+    copyright: "© 2026. Built for Vietnam's tech community.",
+    dashboard: "Dashboard",
+    features: "Features",
+  },
+};
+
+export const translations = { vi, en } as const;
