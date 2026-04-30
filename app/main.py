@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, auth, companies, overview, salary, skills, telegram
+from app.api import admin, auth, companies, jobs, overview, salary, skills, telegram
 from app.core.config import ALERT_INTERVAL_SECONDS, CORS_ORIGINS
 from app.core.database import async_session_factory, close_db, init_db
 from app.services.job_alert import dispatch_alerts
@@ -60,6 +60,7 @@ app.include_router(skills.router)
 app.include_router(salary.router)
 app.include_router(companies.router)
 app.include_router(auth.router)
+app.include_router(jobs.router)
 app.include_router(telegram.router)
 app.include_router(admin.router)
 
