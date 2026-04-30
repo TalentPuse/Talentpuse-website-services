@@ -9,7 +9,7 @@ import { authApi, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthBrandPanel from "@/components/auth/AuthBrandPanel";
-import SkillTagInput from "@/components/auth/SkillTagInput";
+import SkillPillSelect from "@/components/auth/SkillPillSelect";
 import CityPillSelect from "@/components/auth/CityPillSelect";
 import TitlePillSelect from "@/components/auth/TitlePillSelect";
 
@@ -29,11 +29,19 @@ export default function SignUpPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Step 2
+  const [experienceLevel, setExperienceLevel] = useState("");
   const [desiredTitles, setDesiredTitles] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
   const [cities, setCities] = useState<string[]>([]);
+
+  const EXPERIENCE_OPTIONS = [
+    { value: "student", label: "Sinh viên" },
+    { value: "fresher", label: "Fresher (< 1 năm)" },
+    { value: "experienced", label: "Experienced (1-5 năm)" },
+    { value: "manager", label: "Manager (> 5 năm)" },
+  ];
 
   function validateStep1(): boolean {
     const errs: Record<string, string> = {};
@@ -67,6 +75,7 @@ export default function SignUpPage() {
         desired_salary_max: salaryMax ? Number(salaryMax) * 1_000_000 : undefined,
         preferred_cities: cities,
         desired_titles: desiredTitles,
+        experience_level: experienceLevel || undefined,
       };
       const { access_token } = await authApi.signup(payload);
       const user = await authApi.getMe(access_token);
@@ -253,9 +262,37 @@ export default function SignUpPage() {
                   Bạn có thể bỏ qua và cập nhật sau.
                 </p>
 
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Cấp độ kinh nghiệm
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {EXPERIENCE_OPTIONS.map((opt) => {
+                      const active = experienceLevel === opt.value;
+                      return (
+                        <motion.button
+                          key={opt.value}
+                          type="button"
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() =>
+                            setExperienceLevel(active ? "" : opt.value)
+                          }
+                          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 border ${
+                            active
+                              ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+                              : "bg-white text-slate-600 border-slate-200 hover:border-brand-300"
+                          }`}
+                        >
+                          {opt.label}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <TitlePillSelect value={desiredTitles} onChange={setDesiredTitles} />
 
-                <SkillTagInput value={skills} onChange={setSkills} />
+                <SkillPillSelect value={skills} onChange={setSkills} />
 
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-slate-700">

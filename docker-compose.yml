@@ -4,7 +4,7 @@ services:
     build: .
     container_name: tp-frontend-standalone
     ports:
-      - "8002:8002"
+      - "127.0.0.1:8002:8002"
     environment:
       PORT: "8002"
       API_BASE_INTERNAL: ${API_BASE_INTERNAL:-http://tp-backend:8001}

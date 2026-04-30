@@ -78,6 +78,7 @@ export type UserResponse = {
   desired_titles: string[];
   is_admin: boolean;
   subscription_tier: string;
+  experience_level: string | null;
   created_at: string;
 };
 
@@ -90,6 +91,7 @@ export type SignupPayload = {
   desired_salary_max?: number;
   preferred_cities: string[];
   desired_titles: string[];
+  experience_level?: string;
 };
 
 export type ApiError = { message: string; status: number };

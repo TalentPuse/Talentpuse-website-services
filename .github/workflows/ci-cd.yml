@@ -99,6 +99,7 @@ jobs:
           PORT=8002
           API_BASE_INTERNAL=${{ secrets.API_BASE_INTERNAL }}
           NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }}
+          NEXT_PUBLIC_DOMAIN=${{ secrets.NEXT_PUBLIC_DOMAIN }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           EOF
           sed -i 's/^[[:space:]]*//' .env

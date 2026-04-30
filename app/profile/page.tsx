@@ -8,7 +8,7 @@ import { authApi, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Navbar from "@/components/dashboard/Navbar";
-import SkillTagInput from "@/components/auth/SkillTagInput";
+import SkillPillSelect from "@/components/auth/SkillPillSelect";
 import CityPillSelect from "@/components/auth/CityPillSelect";
 import TitlePillSelect from "@/components/auth/TitlePillSelect";
 import TelegramLinkCard from "@/components/TelegramLinkCard";
@@ -30,8 +30,17 @@ function ProfileContent() {
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
   const [cities, setCities] = useState<string[]>([]);
+  const [experienceLevel, setExperienceLevel] = useState("");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const EXPERIENCE_OPTIONS = [
+    { value: "", label: "Chưa chọn" },
+    { value: "student", label: "Sinh viên" },
+    { value: "fresher", label: "Fresher (< 1 năm)" },
+    { value: "experienced", label: "Experienced (1-5 năm)" },
+    { value: "manager", label: "Manager (> 5 năm)" },
+  ];
 
   useEffect(() => {
     if (!user) return;
@@ -41,6 +50,7 @@ function ProfileContent() {
     setSalaryMin(user.desired_salary_min ? String(user.desired_salary_min / 1_000_000) : "");
     setSalaryMax(user.desired_salary_max ? String(user.desired_salary_max / 1_000_000) : "");
     setCities(user.preferred_cities);
+    setExperienceLevel(user.experience_level || "");
   }, [user]);
 
   async function onSave(e: FormEvent) {
@@ -56,6 +66,7 @@ function ProfileContent() {
         desired_salary_min: salaryMin ? Number(salaryMin) * 1_000_000 : null,
         desired_salary_max: salaryMax ? Number(salaryMax) * 1_000_000 : null,
         preferred_cities: cities,
+        experience_level: experienceLevel || null,
       });
       await refreshUser();
       setEditing(false);
@@ -143,7 +154,7 @@ function ProfileContent() {
 
                 <TitlePillSelect value={desiredTitles} onChange={setDesiredTitles} />
 
-                <SkillTagInput value={skills} onChange={setSkills} />
+                <SkillPillSelect value={skills} onChange={setSkills} />
 
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-slate-700">
@@ -169,6 +180,23 @@ function ProfileContent() {
 
                 <CityPillSelect value={cities} onChange={setCities} />
 
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Cấp độ kinh nghiệm
+                  </label>
+                  <select
+                    value={experienceLevel}
+                    onChange={(e) => setExperienceLevel(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200 bg-white"
+                  >
+                    {EXPERIENCE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
@@ -181,6 +209,7 @@ function ProfileContent() {
                         setSalaryMin(user.desired_salary_min ? String(user.desired_salary_min / 1_000_000) : "");
                         setSalaryMax(user.desired_salary_max ? String(user.desired_salary_max / 1_000_000) : "");
                         setCities(user.preferred_cities);
+                        setExperienceLevel(user.experience_level || "");
                       }
                     }}
                     className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
@@ -264,6 +293,14 @@ function ProfileContent() {
                     ) : (
                       "Chưa cập nhật"
                     )
+                  }
+                />
+                <ProfileField
+                  label="Cấp độ kinh nghiệm"
+                  value={
+                    user?.experience_level
+                      ? { student: "Sinh viên", fresher: "Fresher (< 1 năm)", experienced: "Experienced (1-5 năm)", manager: "Manager (> 5 năm)" }[user.experience_level] || user.experience_level
+                      : "Chưa cập nhật"
                   }
                 />
               </div>
