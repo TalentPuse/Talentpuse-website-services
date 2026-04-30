@@ -282,6 +282,105 @@ function adminHeaders(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
 
+/* ───── Jobs (public, requires auth) ───── */
+
+export type PublicJobRow = {
+  source: string;
+  source_job_id: string;
+  title: string | null;
+  company_name: string | null;
+  city_canonical: string | null;
+  job_level: string | null;
+  job_category: string | null;
+  salary_million: number | null;
+  source_url: string | null;
+  posted_at: string | null;
+  skills: string[];
+};
+
+export type PublicJobList = {
+  jobs: PublicJobRow[];
+  total: number;
+  page: number;
+  per_page: number;
+};
+
+export type FilterOptions = {
+  cities: string[];
+  levels: string[];
+  sources: string[];
+};
+
+export type MyAlertRow = {
+  source_job_id: string;
+  source: string | null;
+  title: string | null;
+  company_name: string | null;
+  city_canonical: string | null;
+  salary_million: number | null;
+  source_url: string | null;
+  sent_at: string;
+  channel: string;
+};
+
+export type MyAlertList = {
+  alerts: MyAlertRow[];
+  total: number;
+  page: number;
+  per_page: number;
+};
+
+function authHeaders(token: string) {
+  return { Authorization: `Bearer ${token}` };
+}
+
+export const jobsApi = {
+  list: (
+    token: string,
+    params: {
+      page?: number;
+      per_page?: number;
+      search?: string;
+      city?: string | null;
+      level?: string | null;
+      source?: string | null;
+      has_salary?: boolean | null;
+    },
+  ) => {
+    const q = new URLSearchParams();
+    if (params.page) q.set("page", String(params.page));
+    if (params.per_page) q.set("per_page", String(params.per_page));
+    if (params.search) q.set("search", params.search);
+    if (params.city) q.set("city", params.city);
+    if (params.level) q.set("level", params.level);
+    if (params.source) q.set("source", params.source);
+    if (params.has_salary !== undefined && params.has_salary !== null)
+      q.set("has_salary", String(params.has_salary));
+    return clientFetch<PublicJobList>(`/api/jobs?${q.toString()}`, {
+      headers: authHeaders(token),
+    });
+  },
+
+  filters: (token: string) =>
+    clientFetch<FilterOptions>("/api/jobs/filters", {
+      headers: authHeaders(token),
+    }),
+
+  myAlerts: (
+    token: string,
+    params: { page?: number; per_page?: number },
+  ) => {
+    const q = new URLSearchParams();
+    if (params.page) q.set("page", String(params.page));
+    if (params.per_page) q.set("per_page", String(params.per_page));
+    return clientFetch<MyAlertList>(`/api/jobs/my-alerts?${q.toString()}`, {
+      headers: authHeaders(token),
+    });
+  },
+};
+
+/* ───── Admin types ───── */
+
 export const adminApi = {
   stats: (token: string) =>
     clientFetch<AdminStats>("/api/admin/stats", {

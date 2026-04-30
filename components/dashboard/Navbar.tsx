@@ -37,6 +37,9 @@ export default function Navbar() {
           <a href="/dashboard" className="hover:text-brand-600 transition px-3 py-1.5 rounded-md hover:bg-brand-50">
             Dashboard
           </a>
+          <a href="/jobs" className="hover:text-brand-600 transition px-3 py-1.5 rounded-md hover:bg-brand-50">
+            Tìm việc
+          </a>
           <a href="/profile" className="hover:text-brand-600 transition px-3 py-1.5 rounded-md hover:bg-brand-50">
             Hồ sơ
           </a>
@@ -96,6 +99,12 @@ export default function Navbar() {
                     className="block px-4 py-2 text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition md:hidden"
                   >
                     Dashboard
+                  </a>
+                  <a
+                    href="/jobs/alerts"
+                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition"
+                  >
+                    Lịch sử Alert
                   </a>
                   {user?.is_admin && (
                     <a
