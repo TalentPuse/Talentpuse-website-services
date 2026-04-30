@@ -20,7 +20,9 @@ LEVEL_MAP: dict[str, list[str]] = {
 }
 
 
-def build_job_url(source_job_id: str) -> str:
+def build_job_url(source: str, source_job_id: str) -> str:
+    if source == "itviec":
+        return f"https://itviec.com/it-jobs/{source_job_id}"
     return f"https://www.vietnamworks.com/--{source_job_id}-jd"
 
 
@@ -72,7 +74,7 @@ async def find_matching_jobs(db: AsyncSession, user: User) -> list[dict]:
 
     sql = text(f"""
         WITH matched AS (
-            SELECT DISTINCT f.source_job_id, f.title, f.company_name,
+            SELECT DISTINCT f.source, f.source_job_id, f.title, f.company_name,
                    f.city_canonical, f.job_level, f.job_category,
                    round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_m,
                    f.posted_at, f.salary_vnd_monthly_avg
@@ -84,7 +86,7 @@ async def find_matching_jobs(db: AsyncSession, user: User) -> list[dict]:
               AND {level_clause}
               AND {content_clause}
         )
-        SELECT source_job_id, title, company_name, city_canonical,
+        SELECT source, source_job_id, title, company_name, city_canonical,
                job_level, job_category, salary_m
         FROM matched m
         ORDER BY
@@ -108,7 +110,7 @@ def format_job_message(jobs: list[dict]) -> str:
         city = j["city_canonical"] or ""
         category = j.get("job_category") or ""
         salary = j["salary_m"]
-        url = build_job_url(j["source_job_id"])
+        url = build_job_url(j.get("source", "vietnamworks"), j["source_job_id"])
 
         entry = f"{i}. <b>{title}</b>\n   🏢 {company}"
         if city:
