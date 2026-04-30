@@ -52,6 +52,7 @@ async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse
         desired_titles=current_user.desired_titles or [],
         is_admin=current_user.is_admin,
         subscription_tier=current_user.subscription_tier,
+        experience_level=current_user.experience_level,
         created_at=current_user.created_at,
     )
 
@@ -74,6 +75,8 @@ async def update_me(
         current_user.preferred_cities = data.preferred_cities
     if data.desired_titles is not None:
         current_user.desired_titles = data.desired_titles
+    if data.experience_level is not None:
+        current_user.experience_level = data.experience_level
     await db.commit()
     await db.refresh(current_user)
     return UserResponse(
@@ -87,5 +90,6 @@ async def update_me(
         desired_titles=current_user.desired_titles or [],
         is_admin=current_user.is_admin,
         subscription_tier=current_user.subscription_tier,
+        experience_level=current_user.experience_level,
         created_at=current_user.created_at,
     )

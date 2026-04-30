@@ -117,6 +117,7 @@ def _make_fake_user(**overrides):
         is_active=True,
         is_admin=False,
         subscription_tier="free",
+        experience_level=None,
         created_at=datetime(2026, 1, 15, 10, 0, 0),
         updated_at=datetime(2026, 1, 15, 10, 0, 0),
     )

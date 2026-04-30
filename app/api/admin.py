@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import config as cfg
 from app.core.database import get_db
 from app.core.security import require_admin
 from app.models.user import User
@@ -135,5 +136,17 @@ async def manual_dispatch(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    count = await dispatch_alerts(db)
+    return {"dispatched": count}
+
+
+@router.post("/alerts/dispatch-internal")
+async def internal_dispatch(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    secret = request.headers.get("X-Webhook-Secret", "")
+    if not secret or secret != cfg.TELEGRAM_WEBHOOK_SECRET:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret")
     count = await dispatch_alerts(db)
     return {"dispatched": count}

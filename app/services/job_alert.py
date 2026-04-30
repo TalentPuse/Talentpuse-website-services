@@ -12,6 +12,13 @@ from app.services.telegram import _send_message
 
 logger = logging.getLogger(__name__)
 
+LEVEL_MAP: dict[str, list[str]] = {
+    "student": ["Intern/Student", "Fresher/Entry level"],
+    "fresher": ["Fresher/Entry level", "Experienced (non-manager)"],
+    "experienced": ["Fresher/Entry level", "Experienced (non-manager)", "Manager"],
+    "manager": ["Experienced (non-manager)", "Manager"],
+}
+
 
 def build_job_url(source_job_id: str) -> str:
     return f"https://www.vietnamworks.com/--{source_job_id}-jd"
@@ -19,46 +26,72 @@ def build_job_url(source_job_id: str) -> str:
 
 async def find_matching_jobs(db: AsyncSession, user: User) -> list[dict]:
     titles = [t.strip() for t in (user.desired_titles or []) if t.strip()]
-    skills = [s.strip().lower() for s in (user.skills or []) if s.strip()]
+    cities = [c.strip() for c in (user.preferred_cities or []) if c.strip()]
+    min_salary = getattr(user, "desired_salary_min", None)
+    experience_level = getattr(user, "experience_level", None)
 
-    if not titles and not skills:
-        return []
+    # Step 1 — level filter
+    allowed_levels = LEVEL_MAP.get(experience_level) if experience_level else None
+    if allowed_levels:
+        level_clause = "(f.job_level = ANY(:levels) OR f.job_level IS NULL)"
+    else:
+        level_clause = "true"
 
-    conditions = []
+    # Step 2 — content filter (titles → match job title + job_category)
     params: dict = {"uid": str(user.id)}
+    title_patterns = [f"%{t}%" for t in titles]
 
-    if titles:
-        title_clauses = []
-        for i, t in enumerate(titles):
-            key = f"t{i}"
-            title_clauses.append(f"f.title ILIKE :{key}")
-            params[key] = f"%{t}%"
-        conditions.append(f"({' OR '.join(title_clauses)})")
+    if title_patterns:
+        content_clause = "(f.title ILIKE ANY(:title_patterns) OR f.job_category ILIKE ANY(:title_patterns))"
+        params["title_patterns"] = title_patterns
+    else:
+        content_clause = "true"
 
-    if skills:
-        conditions.append("lower(sk.skill_name_norm) = ANY(:user_skills)")
-        params["user_skills"] = skills
+    if allowed_levels:
+        params["levels"] = allowed_levels
 
-    where_match = " OR ".join(conditions)
+    # Step 3 — soft sort
+    has_cities = bool(cities)
+    has_salary = min_salary is not None and min_salary > 0
+
+    if has_cities:
+        params["cities"] = cities
+    if has_salary:
+        params["min_salary"] = min_salary
+
+    city_sort = (
+        "CASE WHEN m.city_canonical = ANY(:cities) THEN 0 ELSE 1 END"
+        if has_cities
+        else "0::int"
+    )
+    salary_sort = (
+        "CASE WHEN m.salary_vnd_monthly_avg IS NOT NULL AND m.salary_vnd_monthly_avg >= :min_salary THEN 0 ELSE 1 END"
+        if has_salary
+        else "0::int"
+    )
 
     sql = text(f"""
-        SELECT DISTINCT ON (f.source_job_id)
-            f.source_job_id,
-            f.title,
-            f.company_name,
-            f.city_canonical,
-            f.job_level,
-            round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float as salary_m
-        FROM dbt_dev_gold.fct_jobs_daily f
-        LEFT JOIN dbt_dev_silver.silver_skill_long sk
-            ON sk.source = f.source AND sk.source_job_id = f.source_job_id
-        WHERE f.is_active
-          AND f.source_job_id NOT IN (
-              SELECT source_job_id FROM app.alert_logs WHERE user_id = :uid
-          )
-          AND ({where_match})
-        ORDER BY f.source_job_id, f.posted_at DESC NULLS LAST
-        LIMIT 10
+        WITH matched AS (
+            SELECT DISTINCT f.source_job_id, f.title, f.company_name,
+                   f.city_canonical, f.job_level, f.job_category,
+                   round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_m,
+                   f.posted_at, f.salary_vnd_monthly_avg
+            FROM dbt_dev_gold.fct_jobs_daily f
+            WHERE f.is_active
+              AND f.source_job_id NOT IN (
+                  SELECT source_job_id FROM app.alert_logs WHERE user_id = :uid
+              )
+              AND {level_clause}
+              AND {content_clause}
+        )
+        SELECT source_job_id, title, company_name, city_canonical,
+               job_level, job_category, salary_m
+        FROM matched m
+        ORDER BY
+            {city_sort},
+            {salary_sort},
+            m.posted_at DESC NULLS LAST
+        LIMIT 20
     """)
 
     result = await db.execute(sql, params)
@@ -73,15 +106,18 @@ def format_job_message(jobs: list[dict]) -> str:
         title = j["title"] or "Untitled"
         company = j["company_name"] or "N/A"
         city = j["city_canonical"] or ""
+        category = j.get("job_category") or ""
         salary = j["salary_m"]
         url = build_job_url(j["source_job_id"])
 
         entry = f"{i}. <b>{title}</b>\n   🏢 {company}"
         if city:
             entry += f" • 📍 {city}"
+        if category:
+            entry += f"\n   🏷️ {category}"
         if salary:
             entry += f"\n   💰 ~{salary:.0f}M VND/tháng"
-        entry += f"\n   🔗 <a href=\"{url}\">Xem chi tiết</a>"
+        entry += f'\n   🔗 <a href="{url}">Xem chi tiết</a>'
         lines.append(entry)
 
     lines.append("\n💡 Cập nhật profile để nhận alert chính xác hơn!")
@@ -91,7 +127,7 @@ def format_job_message(jobs: list[dict]) -> str:
 async def dispatch_alerts(db: AsyncSession) -> int:
     result = await db.execute(text("""
         SELECT u.id, u.skills, u.desired_titles, u.desired_salary_min,
-               u.desired_salary_max, u.preferred_cities,
+               u.preferred_cities, u.experience_level,
                tc.chat_id
         FROM app.users u
         JOIN app.telegram_connections tc ON tc.user_id = u.id
@@ -140,10 +176,13 @@ async def dispatch_alerts(db: AsyncSession) -> int:
 class _UserProxy:
     """Lightweight proxy to pass query row data to find_matching_jobs."""
 
-    def __init__(self, id, skills, desired_titles):
+    def __init__(self, id, skills, desired_titles, preferred_cities, desired_salary_min, experience_level):
         self.id = id
         self.skills = skills or []
         self.desired_titles = desired_titles or []
+        self.preferred_cities = preferred_cities or []
+        self.desired_salary_min = desired_salary_min
+        self.experience_level = experience_level
 
 
 def _row_to_user(row) -> _UserProxy:
@@ -151,4 +190,7 @@ def _row_to_user(row) -> _UserProxy:
         id=row["id"],
         skills=row["skills"],
         desired_titles=row["desired_titles"],
+        preferred_cities=row["preferred_cities"],
+        desired_salary_min=row["desired_salary_min"],
+        experience_level=row["experience_level"],
     )

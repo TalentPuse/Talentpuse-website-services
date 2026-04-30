@@ -1,7 +1,7 @@
 """Tests for job alert matching + dispatch."""
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -77,6 +77,40 @@ async def test_dispatch_zero():
 
 
 # ─────────────────────────────────────────────
+# POST /api/admin/alerts/dispatch-internal
+# ─────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_internal_dispatch_no_secret():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.post("/api/admin/alerts/dispatch-internal")
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_internal_dispatch_wrong_secret():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.post(
+            "/api/admin/alerts/dispatch-internal",
+            headers={"X-Webhook-Secret": "bad-secret"},
+        )
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_internal_dispatch_success():
+    with patch("app.api.admin.dispatch_alerts", new_callable=AsyncMock, return_value=12):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.post(
+                "/api/admin/alerts/dispatch-internal",
+                headers={"X-Webhook-Secret": "dev-webhook-secret"},
+            )
+
+    assert r.status_code == 200
+    assert r.json() == {"dispatched": 12}
+
+
+# ─────────────────────────────────────────────
 # format_job_message
 # ─────────────────────────────────────────────
 
@@ -88,6 +122,7 @@ def test_format_single_job():
             "company_name": "FPT",
             "city_canonical": "HCMC",
             "job_level": "Experienced",
+            "job_category": "AI Engineer",
             "salary_m": 30.0,
         }
     ]
@@ -108,6 +143,7 @@ def test_format_multiple_jobs():
             "company_name": "VNG",
             "city_canonical": "HCMC",
             "job_level": "Senior",
+            "job_category": "Data Engineer",
             "salary_m": 25.0,
         },
         {
@@ -116,6 +152,7 @@ def test_format_multiple_jobs():
             "company_name": "Grab",
             "city_canonical": "Hanoi",
             "job_level": "Mid",
+            "job_category": None,
             "salary_m": None,
         },
     ]
@@ -133,9 +170,44 @@ def test_format_no_salary():
             "company_name": "Startup",
             "city_canonical": None,
             "job_level": None,
+            "job_category": None,
             "salary_m": None,
         }
     ]
     msg = format_job_message(jobs)
     assert "Backend Dev" in msg
     assert "VND" not in msg
+
+
+def test_format_with_category():
+    jobs = [
+        {
+            "source_job_id": "42",
+            "title": "Senior Data Analyst",
+            "company_name": "Bosch",
+            "city_canonical": "HCMC",
+            "job_level": "Experienced (non-manager)",
+            "job_category": "Data Analyst",
+            "salary_m": 25.0,
+        }
+    ]
+    msg = format_job_message(jobs)
+    assert "🏷️ Data Analyst" in msg
+    assert "Bosch" in msg
+
+
+def test_format_no_category():
+    jobs = [
+        {
+            "source_job_id": "55",
+            "title": "DevOps Engineer",
+            "company_name": "TechCorp",
+            "city_canonical": "Hanoi",
+            "job_level": None,
+            "job_category": None,
+            "salary_m": 20.0,
+        }
+    ]
+    msg = format_job_message(jobs)
+    assert "🏷️" not in msg
+    assert "DevOps Engineer" in msg

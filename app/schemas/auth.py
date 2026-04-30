@@ -14,6 +14,7 @@ class UserCreate(BaseModel):
     desired_salary_max: int | None = None
     preferred_cities: list[str] = []
     desired_titles: list[str] = []
+    experience_level: str | None = None
 
 
 class UserLogin(BaseModel):
@@ -37,6 +38,7 @@ class UserResponse(BaseModel):
     desired_titles: list[str]
     is_admin: bool
     subscription_tier: str
+    experience_level: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -49,3 +51,4 @@ class UserUpdate(BaseModel):
     desired_salary_max: int | None = None
     preferred_cities: list[str] | None = None
     desired_titles: list[str] | None = None
+    experience_level: str | None = None
