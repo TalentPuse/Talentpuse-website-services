@@ -117,6 +117,7 @@ async def test_internal_dispatch_success():
 def test_format_single_job():
     jobs = [
         {
+            "source": "vietnamworks",
             "source_job_id": "123",
             "title": "AI Engineer",
             "company_name": "FPT",
@@ -124,20 +125,22 @@ def test_format_single_job():
             "job_level": "Experienced",
             "job_category": "AI Engineer",
             "salary_m": 30.0,
+            "score": 72.5,
         }
     ]
     msg = format_job_message(jobs)
-    assert "1 việc làm" in msg
+    assert "việc làm" in msg
     assert "AI Engineer" in msg
     assert "FPT" in msg
     assert "HCMC" in msg
-    assert "30M" in msg
-    assert "vietnamworks.com" in msg
+    assert "30 triệu" in msg
+    assert "VietnamWorks" in msg
 
 
 def test_format_multiple_jobs():
     jobs = [
         {
+            "source": "vietnamworks",
             "source_job_id": "1",
             "title": "Data Engineer",
             "company_name": "VNG",
@@ -145,26 +148,32 @@ def test_format_multiple_jobs():
             "job_level": "Senior",
             "job_category": "Data Engineer",
             "salary_m": 25.0,
+            "score": 65.0,
         },
         {
-            "source_job_id": "2",
+            "source": "itviec",
+            "source_job_id": "abc-slug",
             "title": "AI Engineer",
             "company_name": "Grab",
             "city_canonical": "Hanoi",
             "job_level": "Mid",
             "job_category": None,
             "salary_m": None,
+            "score": 40.0,
         },
     ]
     msg = format_job_message(jobs)
-    assert "2 việc làm" in msg
+    assert "việc làm" in msg
     assert "Data Engineer" in msg
     assert "AI Engineer" in msg
+    assert "VietnamWorks" in msg
+    assert "ITviec" in msg
 
 
 def test_format_no_salary():
     jobs = [
         {
+            "source": "vietnamworks",
             "source_job_id": "99",
             "title": "Backend Dev",
             "company_name": "Startup",
@@ -172,16 +181,18 @@ def test_format_no_salary():
             "job_level": None,
             "job_category": None,
             "salary_m": None,
+            "score": 25.0,
         }
     ]
     msg = format_job_message(jobs)
     assert "Backend Dev" in msg
-    assert "VND" not in msg
+    assert "triệu" not in msg
 
 
-def test_format_with_category():
+def test_format_with_level():
     jobs = [
         {
+            "source": "vietnamworks",
             "source_job_id": "42",
             "title": "Senior Data Analyst",
             "company_name": "Bosch",
@@ -189,25 +200,30 @@ def test_format_with_category():
             "job_level": "Experienced (non-manager)",
             "job_category": "Data Analyst",
             "salary_m": 25.0,
+            "score": 80.0,
         }
     ]
     msg = format_job_message(jobs)
-    assert "🏷️ Data Analyst" in msg
+    assert "📊 Experienced (non-manager)" in msg
     assert "Bosch" in msg
+    assert "⭐ 80%" in msg
 
 
-def test_format_no_category():
+def test_format_no_level():
     jobs = [
         {
-            "source_job_id": "55",
+            "source": "itviec",
+            "source_job_id": "devops-engineer",
             "title": "DevOps Engineer",
             "company_name": "TechCorp",
             "city_canonical": "Hanoi",
             "job_level": None,
             "job_category": None,
             "salary_m": 20.0,
+            "score": 45.0,
         }
     ]
     msg = format_job_message(jobs)
-    assert "🏷️" not in msg
+    assert "📊" not in msg
     assert "DevOps Engineer" in msg
+    assert "ITviec" in msg
