@@ -182,13 +182,10 @@ async def dispatch_alerts(db: AsyncSession) -> int:
                u.preferred_cities, u.experience_level,
                tc.chat_id
         FROM app.users u
-        JOIN app.telegram_connections tc ON tc.user_id = u.id
-        JOIN app.alert_subscriptions asub ON asub.user_id = u.id
-        WHERE tc.status = 'active'
-          AND tc.chat_id IS NOT NULL
-          AND asub.alert_type = 'job_match'
-          AND asub.enabled = true
-          AND u.is_active = true
+        LEFT JOIN app.telegram_connections tc
+            ON tc.user_id = u.id AND tc.status = 'active' AND tc.chat_id IS NOT NULL
+        WHERE u.is_active = true
+          AND array_length(u.skills, 1) > 0
     """))
 
     rows = result.all()
@@ -204,19 +201,26 @@ async def dispatch_alerts(db: AsyncSession) -> int:
             if not jobs:
                 continue
 
-            msg = format_job_message(jobs)
-            await _send_message(chat_id, msg)
-
             for j in jobs:
                 db.add(AlertLog(
                     user_id=user.id,
                     source_job_id=j["source_job_id"],
-                    channel="telegram",
+                    channel="website",
                 ))
+
+            if chat_id:
+                msg = format_job_message(jobs)
+                await _send_message(chat_id, msg)
+                for j in jobs:
+                    db.add(AlertLog(
+                        user_id=user.id,
+                        source_job_id=j["source_job_id"],
+                        channel="telegram",
+                    ))
 
             await db.commit()
             total_sent += len(jobs)
-            logger.info("Sent %d alerts to user %s", len(jobs), user.id)
+            logger.info("Sent %d alerts to user %s (telegram=%s)", len(jobs), user.id, bool(chat_id))
 
         except Exception:
             logger.exception("Failed to dispatch alerts for user %s", user_data["id"])
