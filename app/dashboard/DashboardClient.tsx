@@ -1,7 +1,6 @@
 "use client";
 
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import Navbar from "@/components/dashboard/Navbar";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import KpiCard from "@/components/KpiCard";
 import SkillsBar from "@/components/SkillsBar";
 import HighestPayingSkills from "@/components/HighestPayingSkills";
@@ -33,10 +32,8 @@ export default function DashboardClient({
   companies,
 }: Props) {
   return (
-    <ProtectedRoute>
+    <DashboardLayout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-50/30">
-        <Navbar />
-
         <main className="max-w-7xl mx-auto px-6 py-8">
           <header className="mb-8">
             <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
@@ -119,6 +116,6 @@ export default function DashboardClient({
           </footer>
         </main>
       </div>
-    </ProtectedRoute>
+    </DashboardLayout>
   );
 }

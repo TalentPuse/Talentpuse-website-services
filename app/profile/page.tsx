@@ -6,8 +6,7 @@ import toast from "react-hot-toast";
 
 import { authApi, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import Navbar from "@/components/dashboard/Navbar";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import SkillPillSelect from "@/components/auth/SkillPillSelect";
 import CityPillSelect from "@/components/auth/CityPillSelect";
 import TitlePillSelect from "@/components/auth/TitlePillSelect";
@@ -15,9 +14,9 @@ import TelegramLinkCard from "@/components/TelegramLinkCard";
 
 export default function ProfilePage() {
   return (
-    <ProtectedRoute>
+    <DashboardLayout>
       <ProfileContent />
-    </ProtectedRoute>
+    </DashboardLayout>
   );
 }
 
@@ -96,7 +95,6 @@ function ProfileContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-50/30">
-      <Navbar />
 
       <main className="max-w-2xl mx-auto px-6 py-8">
         <motion.div

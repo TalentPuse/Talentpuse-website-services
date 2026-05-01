@@ -5,8 +5,7 @@ import { motion } from "framer-motion";
 
 import { jobsApi, MyAlertList } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import Navbar from "@/components/dashboard/Navbar";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const PER_PAGE = 20;
 
@@ -17,9 +16,9 @@ const SOURCE_LABEL: Record<string, string> = {
 
 export default function AlertHistoryPage() {
   return (
-    <ProtectedRoute>
+    <DashboardLayout>
       <AlertHistoryContent />
-    </ProtectedRoute>
+    </DashboardLayout>
   );
 }
 
@@ -49,7 +48,6 @@ function AlertHistoryContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-50/30">
-      <Navbar />
 
       <main className="max-w-4xl mx-auto px-6 py-8">
         <motion.div

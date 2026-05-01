@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { jobsApi, PublicJobList, FilterOptions } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import Navbar from "@/components/dashboard/Navbar";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 const PER_PAGE = 20;
 
@@ -22,9 +21,9 @@ const SOURCE_COLOR: Record<string, string> = {
 
 export default function JobBoardPage() {
   return (
-    <ProtectedRoute>
+    <DashboardLayout>
       <JobBoardContent />
-    </ProtectedRoute>
+    </DashboardLayout>
   );
 }
 
@@ -97,7 +96,6 @@ function JobBoardContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-50/30">
-      <Navbar />
 
       {/* Hero search */}
       <div className="bg-gradient-to-r from-brand-600 to-brand-700 text-white">
