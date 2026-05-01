@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import time, timedelta, timezone
 
 DATABASE_URL_RAW = os.getenv(
     "DATABASE_URL",
@@ -26,3 +27,8 @@ TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "TalentPulseBot")
 TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "dev-webhook-secret")
 
 ALERT_INTERVAL_SECONDS = int(os.getenv("ALERT_INTERVAL_SECONDS", "7200"))
+
+VN_TZ = timezone(timedelta(hours=7))
+ALERT_START_TIME = time(7, 30)
+ALERT_END_TIME = time(21, 30)
+ALERT_INTERVAL_HOURS = 2
