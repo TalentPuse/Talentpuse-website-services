@@ -36,6 +36,12 @@ export default function SignUpPage() {
   const [salaryMax, setSalaryMax] = useState("");
   const [cities, setCities] = useState<string[]>([]);
 
+  // Step 2 — student fields
+  const [university, setUniversity] = useState("");
+  const [graduationYear, setGraduationYear] = useState("");
+  const [openToInternship, setOpenToInternship] = useState(false);
+  const [partTimeOk, setPartTimeOk] = useState(false);
+
   const EXPERIENCE_OPTIONS = [
     { value: "student", label: "Sinh viên" },
     { value: "fresher", label: "Fresher (< 1 năm)" },
@@ -76,6 +82,10 @@ export default function SignUpPage() {
         preferred_cities: cities,
         desired_titles: desiredTitles,
         experience_level: experienceLevel || undefined,
+        university: university || undefined,
+        graduation_year: graduationYear ? Number(graduationYear) : undefined,
+        open_to_internship: openToInternship || undefined,
+        part_time_ok: partTimeOk || undefined,
       };
       const { access_token } = await authApi.signup(payload);
       const user = await authApi.getMe(access_token);
@@ -289,6 +299,54 @@ export default function SignUpPage() {
                     })}
                   </div>
                 </div>
+
+                {experienceLevel === "student" && (
+                  <div className="space-y-3 p-4 rounded-lg bg-indigo-50/50 border border-indigo-100">
+                    <p className="text-sm font-semibold text-indigo-700">Thông tin sinh viên</p>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">Trường đại học</label>
+                      <input
+                        value={university}
+                        onChange={(e) => setUniversity(e.target.value)}
+                        placeholder="VD: Đại học Bách Khoa TP.HCM"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">Năm tốt nghiệp</label>
+                      <select
+                        value={graduationYear}
+                        onChange={(e) => setGraduationYear(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200 bg-white"
+                      >
+                        <option value="">Chưa chọn</option>
+                        {Array.from({ length: 9 }, (_, i) => 2024 + i).map((y) => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={openToInternship}
+                          onChange={(e) => setOpenToInternship(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                        />
+                        <span className="text-sm text-slate-700">Sẵn sàng thực tập</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={partTimeOk}
+                          onChange={(e) => setPartTimeOk(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                        />
+                        <span className="text-sm text-slate-700">Có thể part-time</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
 
                 <TitlePillSelect value={desiredTitles} onChange={setDesiredTitles} />
 

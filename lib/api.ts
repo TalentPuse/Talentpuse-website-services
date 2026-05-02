@@ -79,6 +79,10 @@ export type UserResponse = {
   is_admin: boolean;
   subscription_tier: string;
   experience_level: string | null;
+  university: string | null;
+  graduation_year: number | null;
+  open_to_internship: boolean;
+  part_time_ok: boolean;
   created_at: string;
 };
 
@@ -92,6 +96,10 @@ export type SignupPayload = {
   preferred_cities: string[];
   desired_titles: string[];
   experience_level?: string;
+  university?: string;
+  graduation_year?: number;
+  open_to_internship?: boolean;
+  part_time_ok?: boolean;
 };
 
 export type ApiError = { message: string; status: number };

@@ -3,6 +3,7 @@ export type Lang = "vi" | "en";
 const vi = {
   nav: {
     features: "Tính năng",
+    students: "Sinh viên",
     signIn: "Đăng nhập",
     signUp: "Đăng ký miễn phí",
   },
@@ -73,6 +74,28 @@ const vi = {
       description: "Theo dõi thị trường qua dashboard trực quan hoặc nhận thông báo việc làm phù hợp với hồ sơ của bạn qua Telegram, Zalo và Discord.",
     },
   },
+  studentFeatures: {
+    badge: "Dành cho Sinh viên",
+    heading: "Khởi đầu sự nghiệp đúng cách",
+    sub: "TalentPulse hỗ trợ sinh viên từ A đến Z — từ tìm việc đến phỏng vấn thành công",
+    jobSearch: {
+      title: "Tìm việc thông minh",
+      description: "AI tự động match internship và fresher job phù hợp với ngành học, kỹ năng và mức lương mong muốn của bạn",
+    },
+    cvReview: {
+      title: "Chỉnh sửa CV chuyên nghiệp",
+      description: "Gợi ý cải thiện CV dựa trên tiêu chuẩn tuyển dụng thực tế tại Việt Nam",
+    },
+    mockInterview: {
+      title: "Luyện phỏng vấn",
+      description: "Bộ câu hỏi phỏng vấn phổ biến theo ngành, kèm mẹo trả lời từ HR chuyên nghiệp",
+    },
+    tips: {
+      title: "Tips đi phỏng vấn",
+      description: "Hướng dẫn chuẩn bị phỏng vấn, dress code, cách trả lời câu hỏi lương và negotiate offer",
+    },
+    cta: "Đăng ký dành cho Sinh viên",
+  },
   cta: {
     heading: "Đừng để job hot vuột mất",
     sub: "Đăng ký để AI tự động tìm và gửi alert job phù hợp với bạn. Hoàn toàn miễn phí.",
@@ -89,6 +112,7 @@ const vi = {
 const en: typeof vi = {
   nav: {
     features: "Features",
+    students: "Students",
     signIn: "Sign in",
     signUp: "Sign up free",
   },
@@ -158,6 +182,28 @@ const en: typeof vi = {
       title: "Alerts & reports",
       description: "Track the market via a visual dashboard or receive job alerts matching your profile via Telegram, Zalo, and Discord.",
     },
+  },
+  studentFeatures: {
+    badge: "For Students",
+    heading: "Kick-start your career the right way",
+    sub: "TalentPulse supports students from A to Z — from job hunting to interview success",
+    jobSearch: {
+      title: "Smart job search",
+      description: "AI automatically matches internships and fresher jobs that fit your major, skills, and desired salary",
+    },
+    cvReview: {
+      title: "Professional CV review",
+      description: "Suggestions to improve your CV based on real hiring standards in Vietnam",
+    },
+    mockInterview: {
+      title: "Mock interviews",
+      description: "Common interview questions by industry, with answer tips from professional HR",
+    },
+    tips: {
+      title: "Interview tips",
+      description: "Guides on interview prep, dress code, how to answer salary questions and negotiate offers",
+    },
+    cta: "Sign up for Students",
   },
   cta: {
     heading: "Don't let hot jobs slip away",

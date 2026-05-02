@@ -30,6 +30,10 @@ function ProfileContent() {
   const [salaryMax, setSalaryMax] = useState("");
   const [cities, setCities] = useState<string[]>([]);
   const [experienceLevel, setExperienceLevel] = useState("");
+  const [university, setUniversity] = useState("");
+  const [graduationYear, setGraduationYear] = useState("");
+  const [openToInternship, setOpenToInternship] = useState(false);
+  const [partTimeOk, setPartTimeOk] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -50,6 +54,10 @@ function ProfileContent() {
     setSalaryMax(user.desired_salary_max ? String(user.desired_salary_max / 1_000_000) : "");
     setCities(user.preferred_cities);
     setExperienceLevel(user.experience_level || "");
+    setUniversity(user.university || "");
+    setGraduationYear(user.graduation_year ? String(user.graduation_year) : "");
+    setOpenToInternship(user.open_to_internship);
+    setPartTimeOk(user.part_time_ok);
   }, [user]);
 
   async function onSave(e: FormEvent) {
@@ -66,6 +74,10 @@ function ProfileContent() {
         desired_salary_max: salaryMax ? Number(salaryMax) * 1_000_000 : null,
         preferred_cities: cities,
         experience_level: experienceLevel || null,
+        university: university || null,
+        graduation_year: graduationYear ? Number(graduationYear) : null,
+        open_to_internship: openToInternship,
+        part_time_ok: partTimeOk,
       });
       await refreshUser();
       setEditing(false);
@@ -195,6 +207,58 @@ function ProfileContent() {
                   </select>
                 </div>
 
+                {experienceLevel === "student" && (
+                  <div className="space-y-4 p-4 rounded-lg bg-indigo-50/50 border border-indigo-100">
+                    <p className="text-sm font-semibold text-indigo-700">Thông tin sinh viên</p>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">
+                        Trường đại học
+                      </label>
+                      <input
+                        value={university}
+                        onChange={(e) => setUniversity(e.target.value)}
+                        placeholder="VD: Đại học Bách Khoa TP.HCM"
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">
+                        Năm tốt nghiệp
+                      </label>
+                      <select
+                        value={graduationYear}
+                        onChange={(e) => setGraduationYear(e.target.value)}
+                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200 bg-white"
+                      >
+                        <option value="">Chưa chọn</option>
+                        {Array.from({ length: 9 }, (_, i) => 2024 + i).map((y) => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={openToInternship}
+                          onChange={(e) => setOpenToInternship(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                        />
+                        <span className="text-sm text-slate-700">Sẵn sàng thực tập</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={partTimeOk}
+                          onChange={(e) => setPartTimeOk(e.target.checked)}
+                          className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                        />
+                        <span className="text-sm text-slate-700">Có thể làm part-time</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
@@ -208,6 +272,10 @@ function ProfileContent() {
                         setSalaryMax(user.desired_salary_max ? String(user.desired_salary_max / 1_000_000) : "");
                         setCities(user.preferred_cities);
                         setExperienceLevel(user.experience_level || "");
+                        setUniversity(user.university || "");
+                        setGraduationYear(user.graduation_year ? String(user.graduation_year) : "");
+                        setOpenToInternship(user.open_to_internship);
+                        setPartTimeOk(user.part_time_ok);
                       }
                     }}
                     className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
@@ -301,6 +369,19 @@ function ProfileContent() {
                       : "Chưa cập nhật"
                   }
                 />
+                {user?.experience_level === "student" && (
+                  <>
+                    <ProfileField label="Trường đại học" value={user.university || "Chưa cập nhật"} />
+                    <ProfileField label="Năm tốt nghiệp" value={user.graduation_year ? String(user.graduation_year) : "Chưa cập nhật"} />
+                    <ProfileField
+                      label="Loại hình làm việc"
+                      value={[
+                        user.open_to_internship && "Sẵn sàng thực tập",
+                        user.part_time_ok && "Có thể part-time",
+                      ].filter(Boolean).join(", ") || "Chưa cập nhật"}
+                    />
+                  </>
+                )}
               </div>
             )}
           </div>

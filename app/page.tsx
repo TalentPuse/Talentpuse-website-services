@@ -53,6 +53,12 @@ export default function LandingPage() {
             >
               {t.nav.features}
             </a>
+            <a
+              href="#student-features"
+              className="hidden sm:block text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+            >
+              {t.nav.students}
+            </a>
             <Link
               href="/signin"
               className="hidden sm:block text-sm text-slate-600 hover:text-slate-900 transition-colors"
@@ -482,6 +488,89 @@ export default function LandingPage() {
               <p className="text-sm text-slate-600 leading-relaxed">
                 {t.howItWorks.step3.description}
               </p>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ── For Students ── */}
+      <section id="student-features" className="relative overflow-hidden bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/60">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <ScrollReveal>
+            <div className="text-center mb-12">
+              <span className="inline-block rounded-full bg-indigo-100 px-4 py-1.5 text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-4">
+                {t.studentFeatures.badge}
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
+                {t.studentFeatures.heading}
+              </h2>
+              <p className="mt-3 text-slate-600 max-w-xl mx-auto text-lg">
+                {t.studentFeatures.sub}
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <ScrollReveal>
+              <div className="bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full">
+                <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-semibold text-slate-900 mb-2">{t.studentFeatures.jobSearch.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{t.studentFeatures.jobSearch.description}</p>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal>
+              <div className="bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full">
+                <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-semibold text-slate-900 mb-2">{t.studentFeatures.cvReview.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{t.studentFeatures.cvReview.description}</p>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal>
+              <div className="bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full">
+                <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-semibold text-slate-900 mb-2">{t.studentFeatures.mockInterview.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{t.studentFeatures.mockInterview.description}</p>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal>
+              <div className="bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full">
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-semibold text-slate-900 mb-2">{t.studentFeatures.tips.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{t.studentFeatures.tips.description}</p>
+              </div>
+            </ScrollReveal>
+          </div>
+
+          <ScrollReveal>
+            <div className="text-center mt-10">
+              <Link
+                href="/signup"
+                className="inline-flex items-center gap-2 px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+              >
+                {t.studentFeatures.cta}
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              </Link>
             </div>
           </ScrollReveal>
         </div>
