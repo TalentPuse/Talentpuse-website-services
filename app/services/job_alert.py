@@ -78,7 +78,7 @@ async def find_matching_jobs(db: AsyncSession, user: User) -> list[dict]:
     # Level filter (hard filter, not score)
     if allowed_levels:
         params["levels"] = allowed_levels
-        level_clause = "(f.job_level = ANY(:levels) OR f.job_level IS NULL)"
+        level_clause = "f.job_level = ANY(:levels)"
     else:
         level_clause = "true"
 

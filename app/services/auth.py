@@ -19,6 +19,10 @@ async def create_user(db: AsyncSession, data: UserCreate) -> tuple[User, str]:
         preferred_cities=data.preferred_cities,
         desired_titles=data.desired_titles,
         experience_level=data.experience_level,
+        university=data.university,
+        graduation_year=data.graduation_year,
+        open_to_internship=data.open_to_internship,
+        part_time_ok=data.part_time_ok,
     )
     db.add(user)
     await db.commit()

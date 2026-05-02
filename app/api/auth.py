@@ -53,6 +53,10 @@ async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse
         is_admin=current_user.is_admin,
         subscription_tier=current_user.subscription_tier,
         experience_level=current_user.experience_level,
+        university=current_user.university,
+        graduation_year=current_user.graduation_year,
+        open_to_internship=current_user.open_to_internship,
+        part_time_ok=current_user.part_time_ok,
         created_at=current_user.created_at,
     )
 
@@ -77,6 +81,14 @@ async def update_me(
         current_user.desired_titles = data.desired_titles
     if data.experience_level is not None:
         current_user.experience_level = data.experience_level
+    if data.university is not None:
+        current_user.university = data.university
+    if data.graduation_year is not None:
+        current_user.graduation_year = data.graduation_year
+    if data.open_to_internship is not None:
+        current_user.open_to_internship = data.open_to_internship
+    if data.part_time_ok is not None:
+        current_user.part_time_ok = data.part_time_ok
     await db.commit()
     await db.refresh(current_user)
     return UserResponse(
@@ -91,5 +103,9 @@ async def update_me(
         is_admin=current_user.is_admin,
         subscription_tier=current_user.subscription_tier,
         experience_level=current_user.experience_level,
+        university=current_user.university,
+        graduation_year=current_user.graduation_year,
+        open_to_internship=current_user.open_to_internship,
+        part_time_ok=current_user.part_time_ok,
         created_at=current_user.created_at,
     )
