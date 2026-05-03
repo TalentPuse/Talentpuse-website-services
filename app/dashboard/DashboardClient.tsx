@@ -107,13 +107,6 @@ export default function DashboardClient({
               </Card>
             </section>
           </ScrollReveal>
-
-          <footer className="mt-12 pt-6 border-t border-slate-200 text-xs text-slate-400">
-            Data cập nhật hàng ngày qua dbt build. Schema:{" "}
-            <code className="bg-slate-100 px-1.5 py-0.5 rounded">
-              dbt_dev_gold
-            </code>
-          </footer>
         </main>
       </div>
     </DashboardLayout>
