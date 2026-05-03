@@ -73,8 +73,8 @@ def _row_to_job(row, score: float | None = None) -> MatchedJob:
         job_level=mapping["job_level"],
         job_category=mapping["job_category"],
         salary_m=mapping["salary_m"],
-        source_url=mapping["source_url"],
-        posted_at=mapping["posted_at"],
+        source_url=mapping.get("source_url"),
+        posted_at=mapping.get("posted_at"),
         score=score,
     )
 
@@ -232,6 +232,7 @@ class JobMatcher:
                 scored.c.job_category,
                 scored.c.salary_m,
                 scored.c.source_url,
+                scored.c.posted_at,
                 scored.c.score,
             )
             .where(scored.c.score > 0)

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.alert_log import AlertLog
@@ -33,7 +33,7 @@ async def dispatch_alerts(db: AsyncSession) -> int:
             & (TelegramConnection.chat_id.isnot(None)),
         )
         .where(User.is_active == True)  # noqa: E712
-        .where(User.skills.any())  # non-empty skills array
+        .where(func.array_length(User.skills, 1) > 0)
     )
 
     rows = result.all()
