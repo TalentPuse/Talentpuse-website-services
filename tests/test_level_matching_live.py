@@ -1,16 +1,22 @@
 """Live DB test: verify alert matching returns correct job_level for each profile type.
 
-Run on prod server:
-    docker exec -i talentpulse-postgres psql -U admin -d warehouse < tests/test_level_matching_live.sql
-
-Or via Python:
+Run locally (requires running Postgres with data):
     cd dashboard/backend && python -m pytest tests/test_level_matching_live.py -v -s
+
+These tests are automatically skipped in CI (no database available).
 """
 from __future__ import annotations
 
 import os
 
 import pytest
+
+try:
+    import psycopg
+except ImportError:
+    psycopg = None
+
+pytestmark = pytest.mark.skipif(psycopg is None, reason="psycopg not installed (no DB)")
 
 # ─── Canonical taxonomy (single source of truth) ──────────────────
 CANONICAL = {"Intern/Student", "Fresher/Entry level", "Mid-level", "Senior", "Manager", "Director+"}
@@ -27,7 +33,6 @@ DB_URL = os.getenv("DATABASE_URL", "postgresql://admin:admin@localhost:5432/ware
 
 
 def _get_conn():
-    import psycopg
     return psycopg.connect(DB_URL)
 
 
