@@ -346,8 +346,8 @@ async def test_student_sql_has_level_filter():
 
     await find_matching_jobs(FakeDB(), user)
 
-    clause = _extract_level_clause(captured["sql"])
-    assert clause == "f.job_level = ANY(:levels)", f"Expected level filter, got: {clause}"
+    sql = captured["sql"]
+    assert "f.job_level = ANY(:levels)" in sql
     assert captured["params"]["levels"] == ["Intern/Student", "Fresher/Entry level"]
 
 
@@ -414,13 +414,14 @@ async def test_no_experience_level_no_filter():
 
 
 @pytest.mark.asyncio
-async def test_student_sql_rejects_senior_jobs():
-    """Verify student SQL would NOT match Senior jobs by checking ANY array."""
+async def test_student_sql_has_hard_title_filter():
+    """Student SQL must have ILIKE title filter (hard filter, not scoring)."""
     captured = {}
 
     class FakeDB:
         async def execute(self, sql, params):
-            captured.update(params)
+            captured["sql"] = str(sql)
+            captured["params"] = params
 
             class R:
                 def all(self):
@@ -430,8 +431,40 @@ async def test_student_sql_rejects_senior_jobs():
 
     user = _UserProxy(
         id="00000000-0000-0000-0000-000000000004",
-        skills=[],
-        desired_titles=[],
+        skills=["python"],
+        desired_titles=["AI Engineer"],
+        preferred_cities=["HCMC"],
+        desired_salary_min=None,
+        experience_level="student",
+    )
+
+    await find_matching_jobs(FakeDB(), user)
+
+    sql = captured["sql"]
+    assert "ILIKE ANY(:title_patterns)" in sql, "Student SQL must have hard title filter"
+    assert "score" not in sql.lower() or "score" not in sql, "Student SQL should not use scoring"
+    assert captured["params"]["title_patterns"] == ["%AI Engineer%"]
+
+
+@pytest.mark.asyncio
+async def test_student_sql_no_limit_3():
+    """Student SQL should not be limited to 3 results."""
+    captured = {}
+
+    class FakeDB:
+        async def execute(self, sql, params):
+            captured["sql"] = str(sql)
+
+            class R:
+                def all(self):
+                    return []
+
+            return R()
+
+    user = _UserProxy(
+        id="00000000-0000-0000-0000-000000000006",
+        skills=["python"],
+        desired_titles=["Data Engineer"],
         preferred_cities=[],
         desired_salary_min=None,
         experience_level="student",
@@ -439,13 +472,95 @@ async def test_student_sql_rejects_senior_jobs():
 
     await find_matching_jobs(FakeDB(), user)
 
-    allowed = captured["levels"]
-    assert "Senior" not in allowed
-    assert "Manager" not in allowed
-    assert "Director+" not in allowed
-    assert "Mid-level" not in allowed
-    assert "Intern/Student" in allowed
-    assert "Fresher/Entry level" in allowed
+    sql = captured["sql"]
+    assert "LIMIT 3" not in sql, "Student SQL should not have LIMIT 3"
+    assert "LIMIT 50" in sql, "Student SQL should have LIMIT 50"
+
+
+@pytest.mark.asyncio
+async def test_student_no_titles_returns_empty():
+    """Student with no desired_titles should return empty (no title filter = no match)."""
+    class FakeDB:
+        async def execute(self, sql, params):
+            assert False, "Should not execute SQL when student has no titles"
+
+    user = _UserProxy(
+        id="00000000-0000-0000-0000-000000000007",
+        skills=[],
+        desired_titles=[],
+        preferred_cities=[],
+        desired_salary_min=None,
+        experience_level="student",
+    )
+
+    result = await find_matching_jobs(FakeDB(), user)
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_student_sql_rejects_senior_levels():
+    """Student SQL levels param should only have Intern/Student + Fresher."""
+    captured = {}
+
+    class FakeDB:
+        async def execute(self, sql, params):
+            captured["params"] = params
+
+            class R:
+                def all(self):
+                    return []
+
+            return R()
+
+    user = _UserProxy(
+        id="00000000-0000-0000-0000-000000000008",
+        skills=[],
+        desired_titles=["Data Analyst"],
+        preferred_cities=[],
+        desired_salary_min=None,
+        experience_level="student",
+    )
+
+    await find_matching_jobs(FakeDB(), user)
+
+    levels = captured["params"]["levels"]
+    assert "Senior" not in levels
+    assert "Manager" not in levels
+    assert "Director+" not in levels
+    assert "Mid-level" not in levels
+    assert "Intern/Student" in levels
+    assert "Fresher/Entry level" in levels
+
+
+@pytest.mark.asyncio
+async def test_non_student_still_uses_scoring():
+    """Non-student profiles should still use scoring logic with LIMIT 3."""
+    captured = {}
+
+    class FakeDB:
+        async def execute(self, sql, params):
+            captured["sql"] = str(sql)
+
+            class R:
+                def all(self):
+                    return []
+
+            return R()
+
+    user = _UserProxy(
+        id="00000000-0000-0000-0000-000000000009",
+        skills=["sql"],
+        desired_titles=["Data Analyst"],
+        preferred_cities=["HCMC"],
+        desired_salary_min=None,
+        experience_level="experienced",
+    )
+
+    await find_matching_jobs(FakeDB(), user)
+
+    sql = captured["sql"]
+    assert "score" in sql.lower(), "Non-student SQL should use scoring"
+    assert "LIMIT 3" in sql, "Non-student SQL should have LIMIT 3"
 
 
 @pytest.mark.asyncio

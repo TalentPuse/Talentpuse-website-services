@@ -33,14 +33,58 @@ def build_job_url(source: str, source_job_id: str, source_url: str | None = None
 
 
 ALERT_LIMIT = 3
+STUDENT_ALERT_LIMIT = 50
+
+
+async def _find_student_jobs(db: AsyncSession, user: User) -> list[dict]:
+    """Student-specific matching: hard title filter, Intern/Fresher only, no score."""
+    titles = [t.strip() for t in (user.desired_titles or []) if t.strip()]
+    if not titles:
+        return []
+
+    title_patterns = [f"%{t}%" for t in titles]
+    params: dict = {
+        "uid": str(user.id),
+        "title_patterns": title_patterns,
+        "levels": LEVEL_MAP["student"],
+    }
+
+    sql = text(f"""
+        SELECT f.source, f.source_job_id, f.title, f.company_name,
+               f.city_canonical, f.job_level, f.job_category,
+               round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_m,
+               f.posted_at,
+               sd.source_url
+        FROM dbt_dev_gold.fct_jobs_daily f
+        LEFT JOIN dbt_dev_silver.silver_job_detail sd
+               ON sd.source = f.source AND sd.source_job_id = f.source_job_id
+        WHERE f.is_active
+          AND f.source_job_id NOT IN (
+              SELECT source_job_id FROM app.alert_logs WHERE user_id = :uid
+          )
+          AND f.job_level = ANY(:levels)
+          AND (f.title ILIKE ANY(:title_patterns)
+               OR f.job_category ILIKE ANY(:title_patterns))
+        ORDER BY f.posted_at DESC NULLS LAST
+        LIMIT {STUDENT_ALERT_LIMIT}
+    """)
+
+    result = await db.execute(sql, params)
+    return [dict(r._mapping) for r in result.all()]
 
 
 async def find_matching_jobs(db: AsyncSession, user: User) -> list[dict]:
+    experience_level = getattr(user, "experience_level", None)
+
+    # Student: hard title filter + Intern/Fresher only + no limit
+    if experience_level == "student":
+        return await _find_student_jobs(db, user)
+
+    # Non-student: existing scoring logic
     titles = [t.strip() for t in (user.desired_titles or []) if t.strip()]
     cities = [c.strip() for c in (user.preferred_cities or []) if c.strip()]
     skills = [s.strip().lower() for s in (user.skills or []) if s.strip()]
     min_salary = getattr(user, "desired_salary_min", None)
-    experience_level = getattr(user, "experience_level", None)
 
     allowed_levels = LEVEL_MAP.get(experience_level) if experience_level else None
 
