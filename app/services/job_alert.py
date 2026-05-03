@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 LEVEL_MAP: dict[str, list[str]] = {
     "student": ["Intern/Student", "Fresher/Entry level"],
-    "fresher": ["Fresher/Entry level", "Experienced (non-manager)"],
-    "experienced": ["Fresher/Entry level", "Experienced (non-manager)", "Manager"],
-    "manager": ["Experienced (non-manager)", "Manager"],
+    "fresher": ["Fresher/Entry level", "Mid-level"],
+    "experienced": ["Mid-level", "Senior"],
+    "manager": ["Senior", "Manager", "Director+"],
 }
 
 

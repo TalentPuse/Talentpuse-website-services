@@ -1,6 +1,7 @@
 """Tests for job alert matching + dispatch."""
 from __future__ import annotations
 
+import re
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -8,7 +9,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.core.database import get_db
 from app.main import app
-from app.services.job_alert import format_job_message
+from app.services.job_alert import LEVEL_MAP, _UserProxy, find_matching_jobs, format_job_message
 
 
 # ─────────────────────────────────────────────
@@ -197,14 +198,14 @@ def test_format_with_level():
             "title": "Senior Data Analyst",
             "company_name": "Bosch",
             "city_canonical": "HCMC",
-            "job_level": "Experienced (non-manager)",
+            "job_level": "Mid-level",
             "job_category": "Data Analyst",
             "salary_m": 25.0,
             "score": 80.0,
         }
     ]
     msg = format_job_message(jobs)
-    assert "📊 Experienced (non-manager)" in msg
+    assert "📊 Mid-level" in msg
     assert "Bosch" in msg
     assert "⭐ 80%" in msg
 
@@ -264,3 +265,219 @@ def test_format_fallback_without_source_url():
     ]
     msg = format_job_message(jobs)
     assert "itviec.com" in msg
+
+
+# ─────────────────────────────────────────────
+# LEVEL_MAP correctness
+# ─────────────────────────────────────────────
+
+CANONICAL_LEVELS = {"Intern/Student", "Fresher/Entry level", "Mid-level", "Senior", "Manager", "Director+"}
+
+
+class TestLevelMap:
+    """Verify LEVEL_MAP only references canonical job_level values."""
+
+    def test_all_values_are_canonical(self):
+        for level_key, levels in LEVEL_MAP.items():
+            for lv in levels:
+                assert lv in CANONICAL_LEVELS, (
+                    f"LEVEL_MAP['{level_key}'] contains non-canonical value '{lv}'"
+                )
+
+    def test_no_dead_raw_values(self):
+        dead = {"Experienced (non-manager)", "Not Applicable", "Mid-Senior level",
+                "Associate", "Entry level", "Internship", "Executive", "Director"}
+        for level_key, levels in LEVEL_MAP.items():
+            for lv in levels:
+                assert lv not in dead, (
+                    f"LEVEL_MAP['{level_key}'] contains dead raw value '{lv}'"
+                )
+
+    def test_student_gets_intern_and_fresher(self):
+        assert LEVEL_MAP["student"] == ["Intern/Student", "Fresher/Entry level"]
+
+    def test_fresher_gets_entry_and_mid(self):
+        assert LEVEL_MAP["fresher"] == ["Fresher/Entry level", "Mid-level"]
+
+    def test_experienced_gets_mid_and_senior(self):
+        assert LEVEL_MAP["experienced"] == ["Mid-level", "Senior"]
+
+    def test_manager_gets_senior_manager_director(self):
+        assert LEVEL_MAP["manager"] == ["Senior", "Manager", "Director+"]
+
+
+# ─────────────────────────────────────────────
+# find_matching_jobs SQL generation
+# ─────────────────────────────────────────────
+
+def _extract_level_clause(sql_text: str) -> str:
+    """Extract the level filter clause from generated SQL."""
+    # The level clause appears after "AND " near the end of WHERE
+    # It's either "f.job_level = ANY(:levels)" or "true"
+    m = re.search(r"AND (f\.job_level = ANY\(:levels\)|true)\s*\)", sql_text)
+    assert m, f"Could not find level clause in SQL:\n{sql_text}"
+    return m.group(1)
+
+
+@pytest.mark.asyncio
+async def test_student_sql_has_level_filter():
+    """Student profile should produce a hard level filter."""
+    captured = {}
+
+    class FakeDB:
+        async def execute(self, sql, params):
+            captured["sql"] = str(sql)
+            captured["params"] = params
+
+            class R:
+                def all(self):
+                    return []
+
+            return R()
+
+    user = _UserProxy(
+        id="00000000-0000-0000-0000-000000000001",
+        skills=["python"],
+        desired_titles=["Data Engineer"],
+        preferred_cities=["HCMC"],
+        desired_salary_min=None,
+        experience_level="student",
+    )
+
+    await find_matching_jobs(FakeDB(), user)
+
+    clause = _extract_level_clause(captured["sql"])
+    assert clause == "f.job_level = ANY(:levels)", f"Expected level filter, got: {clause}"
+    assert captured["params"]["levels"] == ["Intern/Student", "Fresher/Entry level"]
+
+
+@pytest.mark.asyncio
+async def test_experienced_sql_has_level_filter():
+    """Experienced profile should filter to Mid-level + Senior."""
+    captured = {}
+
+    class FakeDB:
+        async def execute(self, sql, params):
+            captured["sql"] = str(sql)
+            captured["params"] = params
+
+            class R:
+                def all(self):
+                    return []
+
+            return R()
+
+    user = _UserProxy(
+        id="00000000-0000-0000-0000-000000000002",
+        skills=["sql"],
+        desired_titles=["Data Analyst"],
+        preferred_cities=[],
+        desired_salary_min=None,
+        experience_level="experienced",
+    )
+
+    await find_matching_jobs(FakeDB(), user)
+
+    assert captured["params"]["levels"] == ["Mid-level", "Senior"]
+
+
+@pytest.mark.asyncio
+async def test_no_experience_level_no_filter():
+    """User with no experience_level should get no level filter (level_clause = true)."""
+    captured = {}
+
+    class FakeDB:
+        async def execute(self, sql, params):
+            captured["sql"] = str(sql)
+            captured["params"] = params
+
+            class R:
+                def all(self):
+                    return []
+
+            return R()
+
+    user = _UserProxy(
+        id="00000000-0000-0000-0000-000000000003",
+        skills=["python"],
+        desired_titles=["AI Engineer"],
+        preferred_cities=[],
+        desired_salary_min=None,
+        experience_level=None,
+    )
+
+    await find_matching_jobs(FakeDB(), user)
+
+    clause = _extract_level_clause(captured["sql"])
+    assert clause == "true"
+    assert "levels" not in captured["params"]
+
+
+@pytest.mark.asyncio
+async def test_student_sql_rejects_senior_jobs():
+    """Verify student SQL would NOT match Senior jobs by checking ANY array."""
+    captured = {}
+
+    class FakeDB:
+        async def execute(self, sql, params):
+            captured.update(params)
+
+            class R:
+                def all(self):
+                    return []
+
+            return R()
+
+    user = _UserProxy(
+        id="00000000-0000-0000-0000-000000000004",
+        skills=[],
+        desired_titles=[],
+        preferred_cities=[],
+        desired_salary_min=None,
+        experience_level="student",
+    )
+
+    await find_matching_jobs(FakeDB(), user)
+
+    allowed = captured["levels"]
+    assert "Senior" not in allowed
+    assert "Manager" not in allowed
+    assert "Director+" not in allowed
+    assert "Mid-level" not in allowed
+    assert "Intern/Student" in allowed
+    assert "Fresher/Entry level" in allowed
+
+
+@pytest.mark.asyncio
+async def test_manager_sql_rejects_intern_jobs():
+    """Verify manager SQL would NOT match Intern/Fresher jobs."""
+    captured = {}
+
+    class FakeDB:
+        async def execute(self, sql, params):
+            captured.update(params)
+
+            class R:
+                def all(self):
+                    return []
+
+            return R()
+
+    user = _UserProxy(
+        id="00000000-0000-0000-0000-000000000005",
+        skills=[],
+        desired_titles=[],
+        preferred_cities=[],
+        desired_salary_min=None,
+        experience_level="manager",
+    )
+
+    await find_matching_jobs(FakeDB(), user)
+
+    allowed = captured["levels"]
+    assert "Intern/Student" not in allowed
+    assert "Fresher/Entry level" not in allowed
+    assert "Mid-level" not in allowed
+    assert "Senior" in allowed
+    assert "Manager" in allowed
+    assert "Director+" in allowed
