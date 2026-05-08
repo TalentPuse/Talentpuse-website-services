@@ -20,14 +20,9 @@ export default function LandingPage() {
       {/* ── Navbar ── */}
       <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/60">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Image
-            src="/logo.png"
-            alt="TalentPuse"
-            width={140}
-            height={36}
-            className="h-9 w-auto"
-            priority
-          />
+          <span className="text-xl font-bold bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
+            TalentPuse
+          </span>
           <div className="flex items-center gap-4">
             {/* Language toggle */}
             <div className="flex items-center bg-slate-100 rounded-lg p-0.5 text-xs font-medium">
