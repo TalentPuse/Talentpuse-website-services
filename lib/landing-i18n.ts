@@ -7,7 +7,7 @@ const vi = {
     signUp: "Đăng ký miễn phí",
   },
   hero: {
-    badge: "AI Thông báo việc làm. Không bỏ lỡ cơ hội",
+    badge: "AI Job Alert",
     heading1: "Nắm bắt thị trường tuyển dụng ",
     heading2: "Việt Nam",
     sub: "Phân tích dữ liệu từ hơn 10 nguồn tuyển dụng, tự động match job phù hợp với bạn và gửi alert tức thì qua Telegram, Zalo, Discord.",
