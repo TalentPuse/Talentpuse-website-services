@@ -20,7 +20,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/60">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <span className="text-xl font-bold bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
-            TalentPulse
+            TalentPuse
           </span>
           <div className="flex items-center gap-4">
             {/* Language toggle */}
@@ -48,16 +48,10 @@ export default function LandingPage() {
             </div>
 
             <a
-              href="#features"
+              href="#ai-alert"
               className="hidden sm:block text-sm text-slate-600 hover:text-slate-900 transition-colors"
             >
               {t.nav.features}
-            </a>
-            <a
-              href="#student-features"
-              className="hidden sm:block text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
-            >
-              {t.nav.students}
             </a>
             <Link
               href="/signin"
@@ -338,96 +332,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features ── */}
-      <section id="features" className="bg-slate-50 border-y border-slate-200">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <ScrollReveal>
-            <div className="text-center mb-14">
-              <h2 className="text-3xl font-bold text-slate-900">{t.features.heading}</h2>
-              <p className="mt-3 text-slate-600 max-w-xl mx-auto">
-                {t.features.sub}
-              </p>
-            </div>
-          </ScrollReveal>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <ScrollReveal direction="left" delay={0.1}>
-              <div className="group relative bg-white rounded-2xl border-2 border-emerald-200 p-8 hover:shadow-xl hover:border-emerald-400 transition-all duration-500 hover:-translate-y-1 ring-1 ring-emerald-100">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform duration-300">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold text-slate-900 mb-3">{t.features.alert.title}</h3>
-                  <p className="text-slate-600 leading-relaxed">
-                    {t.features.alert.description}
-                  </p>
-                  <ul className="mt-6 space-y-3 text-sm text-slate-500">
-                    <li className="flex items-center gap-3">
-                      <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                      </span>
-                      {t.features.alert.bullet1}
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                      </span>
-                      {t.features.alert.bullet2}
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                      </span>
-                      {t.features.alert.bullet3}
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </ScrollReveal>
-
-            {/* Market Intelligence — second */}
-            <ScrollReveal direction="right" delay={0.2}>
-              <div className="group relative bg-white rounded-2xl border border-slate-200 p-8 hover:shadow-xl hover:border-brand-300 transition-all duration-500 hover:-translate-y-1">
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-brand-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 text-white flex items-center justify-center mb-6 shadow-lg shadow-brand-500/25 group-hover:scale-110 transition-transform duration-300">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold text-slate-900 mb-3">{t.features.intel.title}</h3>
-                  <p className="text-slate-600 leading-relaxed">
-                    {t.features.intel.description}
-                  </p>
-                  <ul className="mt-6 space-y-3 text-sm text-slate-500">
-                    <li className="flex items-center gap-3">
-                      <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                      </span>
-                      {t.features.intel.bullet1}
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                      </span>
-                      {t.features.intel.bullet2}
-                    </li>
-                    <li className="flex items-center gap-3">
-                      <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                      </span>
-                      {t.features.intel.bullet3}
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
-
       {/* ── How it works ── */}
       <section className="max-w-6xl mx-auto px-6 py-24">
         <ScrollReveal>
@@ -498,9 +402,14 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 py-20">
           <ScrollReveal>
             <div className="text-center mb-12">
-              <span className="inline-block rounded-full bg-indigo-100 px-4 py-1.5 text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-4">
-                {t.studentFeatures.badge}
-              </span>
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <span className="inline-block rounded-full bg-indigo-100 px-4 py-1.5 text-xs font-semibold text-indigo-700 uppercase tracking-wide">
+                  {t.studentFeatures.badge}
+                </span>
+                <span className="inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                  {t.studentFeatures.comingSoon}
+                </span>
+              </div>
               <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
                 {t.studentFeatures.heading}
               </h2>
@@ -512,7 +421,8 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <ScrollReveal>
-              <div className="bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full">
+              <div className="relative bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full opacity-80">
+                <span className="absolute top-3 right-3 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">{t.studentFeatures.comingSoon}</span>
                 <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -524,7 +434,8 @@ export default function LandingPage() {
             </ScrollReveal>
 
             <ScrollReveal>
-              <div className="bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full">
+              <div className="relative bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full opacity-80">
+                <span className="absolute top-3 right-3 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">{t.studentFeatures.comingSoon}</span>
                 <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -536,7 +447,8 @@ export default function LandingPage() {
             </ScrollReveal>
 
             <ScrollReveal>
-              <div className="bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full">
+              <div className="relative bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full opacity-80">
+                <span className="absolute top-3 right-3 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">{t.studentFeatures.comingSoon}</span>
                 <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
@@ -548,7 +460,8 @@ export default function LandingPage() {
             </ScrollReveal>
 
             <ScrollReveal>
-              <div className="bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full">
+              <div className="relative bg-white rounded-2xl border border-indigo-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all h-full opacity-80">
+                <span className="absolute top-3 right-3 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">{t.studentFeatures.comingSoon}</span>
                 <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center mb-4">
                   <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
@@ -614,7 +527,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
-              TalentPulse
+              TalentPuse
             </span>
             <span className="text-sm text-slate-400">
               {t.footer.copyright}
@@ -624,7 +537,7 @@ export default function LandingPage() {
             <Link href="/dashboard" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">
               {t.footer.dashboard}
             </Link>
-            <a href="#features" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">
+            <a href="#ai-alert" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">
               {t.footer.features}
             </a>
           </div>

@@ -55,7 +55,7 @@ export default function DashboardSidebar() {
             T
           </div>
           <span className="hidden md:block text-lg font-bold bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
-            TalentPulse
+            TalentPuse
           </span>
         </a>
       </div>

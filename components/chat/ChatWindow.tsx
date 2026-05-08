@@ -52,7 +52,7 @@ export default function ChatWindow({
           </svg>
         </div>
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">TalentPulse AI</h2>
+          <h2 className="text-sm font-semibold text-slate-900">TalentPuse AI</h2>
           <p className="text-xs text-slate-400">Trợ lý việc làm</p>
         </div>
         <span className="ml-auto inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-[10px] font-semibold text-amber-700 uppercase tracking-wide">

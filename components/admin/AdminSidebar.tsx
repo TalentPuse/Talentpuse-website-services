@@ -18,7 +18,7 @@ export default function AdminSidebar() {
       <div className="px-6 py-5 border-b border-slate-700/50">
         <a href="/admin" className="block">
           <span className="text-lg font-bold bg-gradient-to-r from-brand-400 to-brand-300 bg-clip-text text-transparent">
-            TalentPulse
+            TalentPuse
           </span>
           <span className="text-xs text-slate-400 block mt-0.5">Admin Panel</span>
         </a>

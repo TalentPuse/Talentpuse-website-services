@@ -90,7 +90,7 @@ export default function SignUpPage() {
       const { access_token } = await authApi.signup(payload);
       const user = await authApi.getMe(access_token);
       login(access_token, user);
-      toast.success("Chào mừng bạn đến TalentPulse!");
+      toast.success("Chào mừng bạn đến TalentPuse!");
       router.push("/dashboard");
     } catch (err) {
       const apiErr = err as ApiError;
@@ -121,7 +121,7 @@ export default function SignUpPage() {
       const { access_token } = await authApi.signup(payload);
       const user = await authApi.getMe(access_token);
       login(access_token, user);
-      toast.success("Chào mừng bạn đến TalentPulse!");
+      toast.success("Chào mừng bạn đến TalentPuse!");
       router.push("/dashboard");
     } catch (err) {
       const apiErr = err as ApiError;

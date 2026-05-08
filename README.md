@@ -1,4 +1,4 @@
-# TalentPulse Frontend
+# TalentPuse Frontend
 
 Dashboard UI for DE/AI job market insights.
 

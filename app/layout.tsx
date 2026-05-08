@@ -6,7 +6,7 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin", "vietnamese"] });
 
 export const metadata: Metadata = {
-  title: "TalentPulse — IT/AI Job Market Vietnam",
+  title: "TalentPuse — IT/AI Job Market Vietnam",
   description:
     "Thu thập và phân tích dữ liệu tuyển dụng IT/AI từ 10+ nguồn tại Việt Nam. Dashboard trực quan, AI job alert qua Telegram/Zalo/Discord.",
 };

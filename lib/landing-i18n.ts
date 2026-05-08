@@ -3,7 +3,6 @@ export type Lang = "vi" | "en";
 const vi = {
   nav: {
     features: "Tính năng",
-    students: "Sinh viên",
     signIn: "Đăng nhập",
     signUp: "Đăng ký miễn phí",
   },
@@ -39,24 +38,6 @@ const vi = {
     minAgo: "phút trước",
     hourAgo: "giờ trước",
   },
-  features: {
-    heading: "Hai tính năng cốt lõi",
-    sub: "Tất cả những gì bạn cần để nắm bắt thị trường tuyển dụng tại Việt Nam",
-    alert: {
-      title: "Thông báo việc làm AI",
-      description: "AI Agent tự động phân tích và match job phù hợp với profile của bạn. Nhận thông báo nhanh nhất qua Telegram, Zalo, Discord hoặc trực tiếp trên website.",
-      bullet1: "AI phân tích mức độ phù hợp với profile",
-      bullet2: "Thông báo qua Telegram / Zalo / Discord",
-      bullet3: "Không bỏ lỡ job hot trên thị trường",
-    },
-    intel: {
-      title: "Phân tích thị trường",
-      description: "Thu thập và phân tích dữ liệu real-time từ hơn 10 trang tuyển dụng lớn tại Việt Nam. Dashboard trực quan giúp bạn theo dõi skills hot, mức lương trung bình, và xu hướng tuyển dụng.",
-      bullet1: "Phân tích skills đang được săn đón nhất",
-      bullet2: "So sánh lương theo cấp bậc và thành phố",
-      bullet3: "Top công ty đang tuyển nhiều nhất",
-    },
-  },
   howItWorks: {
     badge: "Quy trình",
     heading: "Cách hoạt động",
@@ -75,9 +56,10 @@ const vi = {
     },
   },
   studentFeatures: {
+    comingSoon: "Sắp ra mắt",
     badge: "Dành cho Sinh viên",
     heading: "Khởi đầu sự nghiệp đúng cách",
-    sub: "TalentPulse hỗ trợ sinh viên từ A đến Z — từ tìm việc đến phỏng vấn thành công",
+    sub: "TalentPuse hỗ trợ sinh viên từ A đến Z — từ tìm việc đến phỏng vấn thành công",
     jobSearch: {
       title: "Tìm việc thông minh",
       description: "AI tự động match internship và fresher job phù hợp với ngành học, kỹ năng và mức lương mong muốn của bạn",
@@ -112,7 +94,6 @@ const vi = {
 const en: typeof vi = {
   nav: {
     features: "Features",
-    students: "Students",
     signIn: "Sign in",
     signUp: "Sign up free",
   },
@@ -148,24 +129,6 @@ const en: typeof vi = {
     minAgo: "min ago",
     hourAgo: "hour ago",
   },
-  features: {
-    heading: "Two core features",
-    sub: "Everything you need to stay on top of Vietnam's job market",
-    alert: {
-      title: "AI Job Alert",
-      description: "Our AI Agent automatically analyzes and matches jobs to your profile. Get the fastest notifications via Telegram, Zalo, Discord or directly on the website.",
-      bullet1: "AI analyzes how well jobs match your profile",
-      bullet2: "Alerts via Telegram / Zalo / Discord",
-      bullet3: "Never miss hot jobs on the market",
-    },
-    intel: {
-      title: "Market Intelligence",
-      description: "Collect and analyze real-time data from 10+ major recruitment sites in Vietnam. Visual dashboard helps you track trending skills, average salaries, and hiring trends.",
-      bullet1: "Analyze the most in-demand skills",
-      bullet2: "Compare salary by level and city",
-      bullet3: "Top companies hiring the most",
-    },
-  },
   howItWorks: {
     badge: "Process",
     heading: "How it works",
@@ -184,9 +147,10 @@ const en: typeof vi = {
     },
   },
   studentFeatures: {
+    comingSoon: "Coming soon",
     badge: "For Students",
     heading: "Kick-start your career the right way",
-    sub: "TalentPulse supports students from A to Z — from job hunting to interview success",
+    sub: "TalentPuse supports students from A to Z — from job hunting to interview success",
     jobSearch: {
       title: "Smart job search",
       description: "AI automatically matches internships and fresher jobs that fit your major, skills, and desired salary",

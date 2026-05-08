@@ -25,7 +25,7 @@ export default function AuthBrandPanel({ headline, subtext }: Props) {
         >
           <h1 className="text-3xl font-bold text-white mb-2">
             <span className="bg-gradient-to-r from-white to-brand-200 bg-clip-text text-transparent">
-              TalentPulse
+              TalentPuse
             </span>
           </h1>
           <div className="w-12 h-1 bg-gradient-to-r from-emerald-400 to-brand-400 rounded-full mb-8" />
