@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import GradientBackground from "@/components/landing/GradientBackground";
@@ -513,34 +512,31 @@ export default function LandingPage() {
       {/* ── Footer ── */}
       <footer className="bg-slate-900 text-slate-400">
         <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="flex flex-col sm:flex-row items-start justify-between gap-8">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-10">
             <div className="flex flex-col gap-3">
-              <Image
-                src="/logo.png"
-                alt="TalentPuse"
-                width={130}
-                height={34}
-                className="h-8 w-auto brightness-0 invert"
-              />
+              <span className="text-xl font-bold bg-gradient-to-r from-brand-400 to-brand-300 bg-clip-text text-transparent">
+                TalentPuse
+              </span>
               <p className="text-sm max-w-xs leading-relaxed">
                 {t.footer.tagline}
               </p>
             </div>
-            <div className="flex gap-12 text-sm">
-              <div className="flex flex-col gap-2">
+            <div className="flex gap-16 text-sm">
+              <div className="flex flex-col gap-2.5">
                 <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">{t.footer.product}</span>
                 <Link href="/dashboard" className="hover:text-white transition-colors">{t.footer.dashboard}</Link>
                 <a href="#ai-alert" className="hover:text-white transition-colors">{t.footer.features}</a>
                 <Link href="/signup" className="hover:text-white transition-colors">{t.footer.signUp}</Link>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2.5">
                 <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">{t.footer.connect}</span>
-                <a href="https://t.me/TalentPuseBot" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Telegram</a>
+                <a href="https://t.me/TalentPuseBot" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Telegram Bot</a>
+                <a href="mailto:baonm@talentpuse.io.vn" className="hover:text-white transition-colors">baonm@talentpuse.io.vn</a>
               </div>
             </div>
           </div>
-          <div className="mt-10 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-            <span>{t.footer.copyright}</span>
+          <div className="mt-10 pt-6 border-t border-slate-800 text-xs text-slate-500 text-center">
+            {t.footer.copyright}
           </div>
         </div>
       </footer>
