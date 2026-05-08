@@ -260,14 +260,20 @@ async def list_alertable_jobs(
             f.source_job_id,
             f.title,
             f.company_name,
+            f.company_size_bucket,
+            f.job_category,
             f.city_canonical,
+            f.region,
             f.job_level,
+            f.degree_label,
             round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
             f.is_active,
             f.posted_at,
             f.expired_at,
             f.num_of_views,
             f.num_of_applications,
+            sd.source_url,
+            sd.primary_address AS address,
             COALESCE(
                 array_agg(DISTINCT sk.skill_name_norm) FILTER (WHERE sk.skill_name_norm IS NOT NULL),
                 ARRAY[]::text[]
@@ -275,11 +281,15 @@ async def list_alertable_jobs(
         FROM dbt_dev_gold.fct_jobs_daily f
         LEFT JOIN dbt_dev_silver.silver_skill_long sk
             ON sk.source = f.source AND sk.source_job_id = f.source_job_id
+        LEFT JOIN dbt_dev_silver.silver_job_detail sd
+            ON sd.source = f.source AND sd.source_job_id = f.source_job_id
         WHERE f.is_active {where_extra}
         GROUP BY f.source, f.source_job_id, f.title, f.company_name,
-                 f.city_canonical, f.job_level, f.salary_vnd_monthly_avg,
+                 f.company_size_bucket, f.job_category, f.city_canonical, f.region,
+                 f.job_level, f.degree_label, f.salary_vnd_monthly_avg,
                  f.is_active, f.posted_at, f.expired_at,
-                 f.num_of_views, f.num_of_applications
+                 f.num_of_views, f.num_of_applications,
+                 sd.source_url, sd.primary_address
         ORDER BY f.posted_at DESC NULLS LAST
         LIMIT :limit OFFSET :offset
     """), params)
@@ -291,14 +301,20 @@ async def list_alertable_jobs(
             source_job_id=row["source_job_id"],
             title=row["title"],
             company_name=row["company_name"],
+            company_size_bucket=row["company_size_bucket"],
+            job_category=row["job_category"],
             city_canonical=row["city_canonical"],
+            region=row["region"],
             job_level=row["job_level"],
+            degree_label=row["degree_label"],
             salary_million=row["salary_million"],
             is_active=row["is_active"],
             posted_at=row["posted_at"],
             expired_at=row["expired_at"],
             num_of_views=row["num_of_views"],
             num_of_applications=row["num_of_applications"],
+            source_url=row["source_url"],
+            address=row["address"],
             skills=row["skills"] or [],
         ))
 

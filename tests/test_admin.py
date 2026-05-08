@@ -338,11 +338,16 @@ async def test_jobs_list_success():
             AdminJobRow(
                 source="vietnamworks", source_job_id="123",
                 title="AI Engineer", company_name="FPT",
-                city_canonical="HCMC", job_level="Senior",
+                company_size_bucket=None, job_category="AI/ML",
+                city_canonical="HCMC", region="Southern",
+                job_level="Senior", degree_label="Bachelor",
                 salary_million=30.5, is_active=True,
                 posted_at=datetime(2026, 4, 20),
                 expired_at=None, num_of_views=150,
-                num_of_applications=10, skills=["Python", "TensorFlow"],
+                num_of_applications=10,
+                source_url="https://example.com/job/123",
+                address="Quan 1, TP.HCM",
+                skills=["Python", "TensorFlow"],
             )
         ],
         total=1, page=1, per_page=20,
