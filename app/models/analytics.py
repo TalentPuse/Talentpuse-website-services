@@ -51,6 +51,8 @@ silver_job_detail = Table(
     Column("salary_vnd_monthly_avg", Numeric),
     Column("source_url", String),
     Column("posted_at", String),
+    Column("primary_address", String),
+    Column("city_raw_vi", String),
     schema="dbt_dev_silver",
 )
 

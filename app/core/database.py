@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import AsyncIterator
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -15,6 +16,12 @@ engine: AsyncEngine | None = None
 async_session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
+def _set_timezone(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("SET TIME ZONE 'Asia/Ho_Chi_Minh'")
+    cursor.close()
+
+
 async def init_db() -> None:
     global engine, async_session_factory
     engine = create_async_engine(
@@ -23,6 +30,7 @@ async def init_db() -> None:
         max_overflow=0,
         pool_timeout=10,
     )
+    event.listen(engine.sync_engine, "connect", _set_timezone)
     async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
 

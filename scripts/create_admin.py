@@ -3,7 +3,7 @@
 
 Usage (trong Docker container):
     docker exec -it tp-backend python scripts/create_admin.py \\
-        admin@talentpulse.vn "StrongP@ss123" "Admin TalentPulse"
+        admin@talentpulse.vn "StrongP@ss123" "Admin TalentPuse"
 
 Nếu email đã tồn tại → promote lên admin (không đổi password).
 Nếu email chưa tồn tại → tạo user mới với is_admin=True.

@@ -4,6 +4,8 @@ import logging
 import secrets
 from datetime import datetime, timedelta
 
+from app.core.config import VN_TZ
+
 import httpx
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,7 +56,7 @@ async def generate_deep_link(
     conn = result.scalar_one_or_none()
 
     code = secrets.token_urlsafe(16)
-    expires = datetime.utcnow() + LINK_CODE_TTL
+    expires = datetime.now(VN_TZ).replace(tzinfo=None) + LINK_CODE_TTL
 
     if conn is None:
         conn = TelegramConnection(
@@ -136,7 +138,7 @@ async def unlink(db: AsyncSession, user_id: str) -> None:
     if old_chat_id:
         await _send_message(
             old_chat_id,
-            "Bot đã bị huỷ kết nối với tài khoản TalentPulse của bạn.",
+            "Bot đã bị huỷ kết nối với tài khoản TalentPuse của bạn.",
         )
 
 
@@ -155,7 +157,7 @@ async def handle_webhook_update(db: AsyncSession, payload: TelegramUpdate) -> No
         else:
             await _send_message(
                 msg.chat.id,
-                "Chào bạn! Vui lòng tạo liên kết từ trang cá nhân TalentPulse để kết nối bot.",
+                "Chào bạn! Vui lòng tạo liên kết từ trang cá nhân TalentPuse để kết nối bot.",
             )
     elif text.startswith("/stop"):
         await _handle_stop(db, msg)
@@ -183,7 +185,7 @@ async def _handle_start(
         )
         return
 
-    if conn.link_code_expires_at and conn.link_code_expires_at < datetime.utcnow():
+    if conn.link_code_expires_at and conn.link_code_expires_at < datetime.now(VN_TZ).replace(tzinfo=None):
         conn.link_code = None
         conn.link_code_expires_at = None
         await db.commit()
@@ -213,7 +215,7 @@ async def _handle_start(
     conn.chat_id = msg.chat.id
     conn.telegram_username = msg.from_.username if msg.from_ else None
     conn.status = "active"
-    conn.linked_at = datetime.utcnow()
+    conn.linked_at = datetime.now(VN_TZ).replace(tzinfo=None)
     conn.link_code = None
     conn.link_code_expires_at = None
 
@@ -274,7 +276,7 @@ async def _handle_status_cmd(db: AsyncSession, msg: TelegramMessage) -> None:
     conn = result.scalar_one_or_none()
 
     if conn is None:
-        await _send_message(msg.chat.id, "Tài khoản chưa được liên kết với TalentPulse.")
+        await _send_message(msg.chat.id, "Tài khoản chưa được liên kết với TalentPuse.")
         return
 
     sub_result = await db.execute(
@@ -292,7 +294,7 @@ async def _handle_status_cmd(db: AsyncSession, msg: TelegramMessage) -> None:
 
     await _send_message(
         msg.chat.id,
-        f"<b>Trạng thái kết nối TalentPulse</b>\n\n"
+        f"<b>Trạng thái kết nối TalentPuse</b>\n\n"
         f"{status_icon} Trạng thái: {conn.status}\n"
         f"{alert_icon}\n"
         f"📅 Kết nối từ: {linked_date}",

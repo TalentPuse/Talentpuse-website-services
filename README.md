@@ -1,4 +1,4 @@
-# TalentPulse Backend
+# TalentPuse Backend
 
 Read-only REST API serving DE/AI job market insights from dbt gold marts.
 

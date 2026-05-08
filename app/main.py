@@ -70,7 +70,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="TalentPulse Dashboard API",
+    title="TalentPuse Dashboard API",
     description="Job market insights + AI alert auth for Vietnam IT/AI.",
     version="0.2.0",
     lifespan=lifespan,

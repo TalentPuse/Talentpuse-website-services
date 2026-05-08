@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, timedelta
 
+from app.core.config import VN_TZ
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,9 +26,9 @@ VALID_TIERS = {"free", "pro", "enterprise"}
 
 
 async def get_admin_stats(db: AsyncSession) -> AdminStats:
-    now = datetime.utcnow()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    week_start = today_start - timedelta(days=now.weekday())
+    now_vn = datetime.now(VN_TZ)
+    today_start = now_vn.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=now_vn.weekday())
 
     result = await db.execute(text("""
         SELECT

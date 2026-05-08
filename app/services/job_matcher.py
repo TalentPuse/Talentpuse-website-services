@@ -60,6 +60,8 @@ class MatchedJob:
     source_url: str | None = None
     posted_at: datetime | None = None
     score: float | None = None
+    address: str | None = None
+    city_raw_vi: str | None = None
 
 
 def _row_to_job(row, score: float | None = None) -> MatchedJob:
@@ -76,6 +78,8 @@ def _row_to_job(row, score: float | None = None) -> MatchedJob:
         source_url=mapping.get("source_url"),
         posted_at=mapping.get("posted_at"),
         score=score,
+        address=mapping.get("primary_address"),
+        city_raw_vi=mapping.get("city_raw_vi"),
     )
 
 
@@ -98,6 +102,8 @@ def _base_columns():
         _salary_m,
         fct_jobs_daily.c.posted_at,
         silver_job_detail.c.source_url,
+        silver_job_detail.c.primary_address,
+        silver_job_detail.c.city_raw_vi,
     ]
 
 
@@ -234,6 +240,8 @@ class JobMatcher:
                 scored.c.source_url,
                 scored.c.posted_at,
                 scored.c.score,
+                scored.c.primary_address,
+                scored.c.city_raw_vi,
             )
             .where(scored.c.score > 0)
             .order_by(scored.c.score.desc(), scored.c.posted_at.desc().nullslast())
@@ -368,14 +376,14 @@ def _build_job_url(job: MatchedJob) -> str:
 def _format_job_message(jobs: list[MatchedJob]) -> str:
     count = len(jobs)
     lines = [
-        f"\U0001f4cb <b>TalentPulse Alert</b>",
+        f"\U0001f4cb <b>TalentPuse Alert</b>",
         f"Tìm thấy <b>{count}</b> việc làm mới phù hợp với bạn.\n",
     ]
 
     for i, j in enumerate(jobs, 1):
         title = j.title or "Không rõ"
         company = j.company_name or "Không rõ"
-        city = j.city_canonical or ""
+        city = j.city_raw_vi or j.city_canonical or ""
         level = j.job_level or ""
         salary = j.salary_m
         source_label = SOURCE_LABEL.get(j.source, j.source)
@@ -387,6 +395,8 @@ def _format_job_message(jobs: list[MatchedJob]) -> str:
         entry += f"\n   \U0001f3e2 {company}"
         if city:
             entry += f"  ·  \U0001f4cd {city}"
+        if j.address:
+            entry += f"\n   \U0001f4cd {j.address}"
         if level:
             entry += f"\n   \U0001f4ca {level}"
         if salary:
