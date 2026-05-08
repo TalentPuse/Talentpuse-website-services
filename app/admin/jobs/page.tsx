@@ -1,13 +1,72 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { adminApi, AdminJobList } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import AdminLayout from "@/components/admin/AdminLayout";
 
 const PER_PAGE = 20;
+
+type ColKey =
+  | "source"
+  | "title"
+  | "company_name"
+  | "company_size_bucket"
+  | "job_category"
+  | "city_canonical"
+  | "region"
+  | "job_level"
+  | "degree_label"
+  | "salary_million"
+  | "num_of_views"
+  | "num_of_applications"
+  | "posted_at"
+  | "expired_at"
+  | "address"
+  | "skills";
+
+interface ColDef {
+  key: ColKey;
+  label: string;
+  visible: boolean;
+  width?: string;
+}
+
+const DEFAULT_COLS: ColDef[] = [
+  { key: "source", label: "Nguồn", visible: false, width: "w-24" },
+  { key: "title", label: "Tiêu đề", visible: true },
+  { key: "company_name", label: "Công ty", visible: true, width: "w-44" },
+  { key: "company_size_bucket", label: "Quy mô", visible: false, width: "w-24" },
+  { key: "job_category", label: "Ngành", visible: false, width: "w-36" },
+  { key: "city_canonical", label: "Thành phố", visible: true, width: "w-28" },
+  { key: "region", label: "Vùng", visible: false, width: "w-24" },
+  { key: "job_level", label: "Level", visible: true, width: "w-32" },
+  { key: "degree_label", label: "Bằng cấp", visible: false, width: "w-28" },
+  { key: "salary_million", label: "Lương (tr)", visible: true, width: "w-24" },
+  { key: "num_of_views", label: "Views", visible: true, width: "w-20" },
+  { key: "num_of_applications", label: "Ứng tuyển", visible: true, width: "w-24" },
+  { key: "posted_at", label: "Ngày đăng", visible: true, width: "w-28" },
+  { key: "expired_at", label: "Ngày hết hạn", visible: false, width: "w-28" },
+  { key: "address", label: "Địa chỉ", visible: false, width: "w-48" },
+  { key: "skills", label: "Skills", visible: true },
+];
+
+const SOURCE_LABEL: Record<string, string> = {
+  vietnamworks: "VietnamWorks",
+  itviec: "ITviec",
+};
+
+const FALLBACK_URL: Record<string, string> = {
+  vietnamworks: "https://www.vietnamworks.com",
+  itviec: "https://itviec.com",
+};
+
+function buildJobUrl(job: { source: string; source_url: string | null }): string {
+  if (job.source_url) return job.source_url;
+  return FALLBACK_URL[job.source] || "#";
+}
 
 export default function AdminJobsPage() {
   const { token } = useAuth();
@@ -17,10 +76,14 @@ export default function AdminJobsPage() {
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [salaryFilter, setSalaryFilter] = useState<string>("all");
+  const [cols, setCols] = useState<ColDef[]>(DEFAULT_COLS);
+  const [showColPicker, setShowColPicker] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const [cities, setCities] = useState<string[]>([]);
   const [levels, setLevels] = useState<string[]>([]);
+
+  const visibleCols = cols.filter((c) => c.visible);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -91,14 +154,136 @@ export default function AdminJobsPage() {
     debounceRef.current = setTimeout(() => {}, 300);
   }
 
+  function toggleCol(key: ColKey) {
+    setCols((prev) =>
+      prev.map((c) => (c.key === key ? { ...c, visible: !c.visible } : c))
+    );
+  }
+
   const totalPages = data ? Math.ceil(data.total / PER_PAGE) : 0;
+
+  function renderCell(job: AdminJobList["jobs"][0], col: ColKey) {
+    switch (col) {
+      case "source":
+        return (
+          <span className="inline-block rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+            {SOURCE_LABEL[job.source] || job.source}
+          </span>
+        );
+      case "title": {
+        const url = buildJobUrl(job);
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-brand-600 hover:text-brand-700 hover:underline line-clamp-2"
+          >
+            {job.title || "—"}
+          </a>
+        );
+      }
+      case "company_name":
+        return (
+          <span className="text-slate-700 truncate block max-w-[200px]">
+            {job.company_name || "—"}
+          </span>
+        );
+      case "company_size_bucket":
+        return job.company_size_bucket || "—";
+      case "job_category":
+        return (
+          <span className="text-slate-600 truncate block max-w-[160px]">
+            {job.job_category || "—"}
+          </span>
+        );
+      case "city_canonical":
+        return <span className="text-slate-600">{job.city_canonical || "—"}</span>;
+      case "region":
+        return <span className="text-slate-600">{job.region || "—"}</span>;
+      case "job_level":
+        return job.job_level ? (
+          <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+            {job.job_level}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">—</span>
+        );
+      case "degree_label":
+        return <span className="text-slate-600">{job.degree_label || "—"}</span>;
+      case "salary_million":
+        return (
+          <span className="tabular-nums text-slate-700">
+            {job.salary_million ? `${job.salary_million.toFixed(1)}M` : "—"}
+          </span>
+        );
+      case "num_of_views":
+        return (
+          <span className="tabular-nums text-slate-500">
+            {job.num_of_views?.toLocaleString() ?? "—"}
+          </span>
+        );
+      case "num_of_applications":
+        return (
+          <span className="tabular-nums text-slate-500">
+            {job.num_of_applications?.toLocaleString() ?? "—"}
+          </span>
+        );
+      case "posted_at":
+        return (
+          <span className="text-slate-500 text-xs whitespace-nowrap">
+            {job.posted_at
+              ? new Date(job.posted_at).toLocaleDateString("vi-VN")
+              : "—"}
+          </span>
+        );
+      case "expired_at":
+        return (
+          <span className="text-slate-500 text-xs whitespace-nowrap">
+            {job.expired_at
+              ? new Date(job.expired_at).toLocaleDateString("vi-VN")
+              : "—"}
+          </span>
+        );
+      case "address":
+        return (
+          <span className="text-slate-600 text-xs truncate block max-w-[200px]" title={job.address || undefined}>
+            {job.address || "—"}
+          </span>
+        );
+      case "skills":
+        return (
+          <div className="flex flex-wrap gap-1 max-w-[200px]">
+            {job.skills.slice(0, 3).map((sk) => (
+              <span
+                key={sk}
+                className="inline-block rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
+              >
+                {sk}
+              </span>
+            ))}
+            {job.skills.length > 3 && (
+              <span
+                className="inline-block rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 cursor-default"
+                title={job.skills.join(", ")}
+              >
+                +{job.skills.length - 3}
+              </span>
+            )}
+            {job.skills.length === 0 && (
+              <span className="text-xs text-slate-400">—</span>
+            )}
+          </div>
+        );
+    }
+  }
 
   return (
     <AdminLayout>
       <header className="mb-6">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-slate-900">
-            Quản lý Jobs có thể Alert
+            Quản lý Jobs
           </h1>
           {data && (
             <span className="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-sm font-semibold text-brand-700">
@@ -107,13 +292,12 @@ export default function AdminJobsPage() {
           )}
         </div>
         <p className="mt-1 text-sm text-slate-500">
-          Tất cả jobs đang active trong hệ thống — có thể được gửi alert cho
-          user
+          Tất cả jobs đang active trong hệ thống
         </p>
       </header>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
+      <div className="flex flex-wrap gap-3 mb-4">
         <input
           type="text"
           value={search}
@@ -163,6 +347,44 @@ export default function AdminJobsPage() {
           <option value="yes">Có lương</option>
           <option value="no">Không có lương</option>
         </select>
+        {/* Column picker toggle */}
+        <div className="relative">
+          <button
+            onClick={() => setShowColPicker((v) => !v)}
+            className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm hover:bg-slate-50 transition flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+            </svg>
+            Cột hiển thị
+          </button>
+          <AnimatePresence>
+            {showColPicker && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 p-3 z-50 min-w-[200px]"
+              >
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Hiển thị cột</div>
+                {cols.map((c) => (
+                  <label
+                    key={c.key}
+                    className="flex items-center gap-2 py-1 px-1 rounded hover:bg-slate-50 cursor-pointer text-sm text-slate-700"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={c.visible}
+                      onChange={() => toggleCol(c.key)}
+                      className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    />
+                    {c.label}
+                  </label>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Table */}
@@ -176,19 +398,11 @@ export default function AdminJobsPage() {
             <thead>
               <tr className="text-left border-b border-slate-200 text-slate-600 uppercase text-xs bg-slate-50">
                 <th className="px-4 py-3 font-medium">#</th>
-                <th className="px-4 py-3 font-medium">Tiêu đề</th>
-                <th className="px-4 py-3 font-medium">Công ty</th>
-                <th className="px-4 py-3 font-medium">Thành phố</th>
-                <th className="px-4 py-3 font-medium">Level</th>
-                <th className="px-4 py-3 font-medium text-right">
-                  Lương (tr)
-                </th>
-                <th className="px-4 py-3 font-medium text-right">Views</th>
-                <th className="px-4 py-3 font-medium text-right">
-                  Ứng tuyển
-                </th>
-                <th className="px-4 py-3 font-medium">Ngày đăng</th>
-                <th className="px-4 py-3 font-medium">Skills</th>
+                {visibleCols.map((col) => (
+                  <th key={col.key} className={`px-4 py-3 font-medium ${col.key === "salary_million" || col.key === "num_of_views" || col.key === "num_of_applications" ? "text-right" : ""}`}>
+                    {col.label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -200,76 +414,20 @@ export default function AdminJobsPage() {
                   <td className="px-4 py-3 text-slate-400">
                     {(page - 1) * PER_PAGE + idx + 1}
                   </td>
-                  <td className="px-4 py-3 max-w-[280px]">
-                    <a
-                      href={`https://www.vietnamworks.com/--${job.source_job_id}-jd`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-brand-600 hover:text-brand-700 hover:underline line-clamp-2"
+                  {visibleCols.map((col) => (
+                    <td
+                      key={col.key}
+                      className={`px-4 py-3 ${col.width ?? ""} ${col.key === "salary_million" || col.key === "num_of_views" || col.key === "num_of_applications" ? "text-right" : ""}`}
                     >
-                      {job.title || "—"}
-                    </a>
-                  </td>
-                  <td className="px-4 py-3 text-slate-700 max-w-[200px] truncate">
-                    {job.company_name || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {job.city_canonical || "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {job.job_level ? (
-                      <span className="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-                        {job.job_level}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-700">
-                    {job.salary_million
-                      ? `${job.salary_million.toFixed(1)}M`
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-500">
-                    {job.num_of_views?.toLocaleString() ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-500">
-                    {job.num_of_applications?.toLocaleString() ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">
-                    {job.posted_at
-                      ? new Date(job.posted_at).toLocaleDateString("vi-VN")
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1 max-w-[200px]">
-                      {job.skills.slice(0, 3).map((sk) => (
-                        <span
-                          key={sk}
-                          className="inline-block rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
-                        >
-                          {sk}
-                        </span>
-                      ))}
-                      {job.skills.length > 3 && (
-                        <span
-                          className="inline-block rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 cursor-default"
-                          title={job.skills.join(", ")}
-                        >
-                          +{job.skills.length - 3}
-                        </span>
-                      )}
-                      {job.skills.length === 0 && (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
-                    </div>
-                  </td>
+                      {renderCell(job, col.key)}
+                    </td>
+                  ))}
                 </tr>
               ))}
               {data && data.jobs.length === 0 && (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={visibleCols.length + 1}
                     className="px-4 py-12 text-center text-slate-400"
                   >
                     Không tìm thấy job nào

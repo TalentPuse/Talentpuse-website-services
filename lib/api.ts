@@ -266,14 +266,20 @@ export type AdminJobRow = {
   source_job_id: string;
   title: string | null;
   company_name: string | null;
+  company_size_bucket: string | null;
+  job_category: string | null;
   city_canonical: string | null;
+  region: string | null;
   job_level: string | null;
+  degree_label: string | null;
   salary_million: number | null;
   is_active: boolean;
   posted_at: string | null;
   expired_at: string | null;
   num_of_views: number | null;
   num_of_applications: number | null;
+  source_url: string | null;
+  address: string | null;
   skills: string[];
 };
 
