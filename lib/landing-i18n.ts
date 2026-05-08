@@ -85,9 +85,13 @@ const vi = {
     orSignIn: "hoặc đăng nhập",
   },
   footer: {
-    copyright: "© 2026. Xây dựng cho cộng đồng công nghệ Việt Nam.",
+    tagline: "Phân tích thị trường tuyển dụng IT/AI Việt Nam. AI tự động match job và gửi alert tức thì.",
+    product: "Sản phẩm",
+    connect: "Kết nối",
     dashboard: "Dashboard",
     features: "Tính năng",
+    signUp: "Đăng ký",
+    copyright: "© 2026 TalentPuse. Xây dựng cho cộng đồng công nghệ Việt Nam.",
   },
 };
 
@@ -176,9 +180,13 @@ const en: typeof vi = {
     orSignIn: "or sign in",
   },
   footer: {
-    copyright: "© 2026. Built for Vietnam's tech community.",
+    tagline: "Vietnam IT/AI job market intelligence. AI matches jobs to your profile and sends instant alerts.",
+    product: "Product",
+    connect: "Connect",
     dashboard: "Dashboard",
     features: "Features",
+    signUp: "Sign up",
+    copyright: "© 2026 TalentPuse. Built for Vietnam's tech community.",
   },
 };
 

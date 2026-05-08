@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import GradientBackground from "@/components/landing/GradientBackground";
@@ -19,9 +20,14 @@ export default function LandingPage() {
       {/* ── Navbar ── */}
       <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-200/60">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="text-xl font-bold bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
-            TalentPuse
-          </span>
+          <Image
+            src="/logo.png"
+            alt="TalentPuse"
+            width={140}
+            height={36}
+            className="h-9 w-auto"
+            priority
+          />
           <div className="flex items-center gap-4">
             {/* Language toggle */}
             <div className="flex items-center bg-slate-100 rounded-lg p-0.5 text-xs font-medium">
@@ -523,23 +529,36 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
-              TalentPuse
-            </span>
-            <span className="text-sm text-slate-400">
-              {t.footer.copyright}
-            </span>
+      <footer className="bg-slate-900 text-slate-400">
+        <div className="max-w-6xl mx-auto px-6 py-12">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-8">
+            <div className="flex flex-col gap-3">
+              <Image
+                src="/logo.png"
+                alt="TalentPuse"
+                width={130}
+                height={34}
+                className="h-8 w-auto brightness-0 invert"
+              />
+              <p className="text-sm max-w-xs leading-relaxed">
+                {t.footer.tagline}
+              </p>
+            </div>
+            <div className="flex gap-12 text-sm">
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">{t.footer.product}</span>
+                <Link href="/dashboard" className="hover:text-white transition-colors">{t.footer.dashboard}</Link>
+                <a href="#ai-alert" className="hover:text-white transition-colors">{t.footer.features}</a>
+                <Link href="/signup" className="hover:text-white transition-colors">{t.footer.signUp}</Link>
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wide">{t.footer.connect}</span>
+                <a href="https://t.me/TalentPuseBot" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Telegram</a>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">
-              {t.footer.dashboard}
-            </Link>
-            <a href="#ai-alert" className="text-sm text-slate-500 hover:text-slate-700 transition-colors">
-              {t.footer.features}
-            </a>
+          <div className="mt-10 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+            <span>{t.footer.copyright}</span>
           </div>
         </div>
       </footer>
