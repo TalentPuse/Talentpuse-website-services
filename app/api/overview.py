@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,9 +9,18 @@ router = APIRouter(prefix="/api", tags=["overview"])
 
 
 @router.get("/overview", response_model=Overview)
-async def get_overview(db: AsyncSession = Depends(get_db)) -> Overview:
+async def get_overview(
+    category: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+) -> Overview:
+    where = "is_active"
+    params: dict = {}
+    if category:
+        where += " and job_category = :category"
+        params["category"] = category
+
     result = await db.execute(
-        text("""
+        text(f"""
             select
                 count(*)::int as total_jobs,
                 round(
@@ -27,8 +36,20 @@ async def get_overview(db: AsyncSession = Depends(get_db)) -> Overview:
                     1
                 )::float as avg_salary_million
             from dbt_dev_gold.fct_jobs_daily
-            where is_active
-        """)
+            where {where}
+        """),
+        params,
     )
     row = result.mappings().first()
     return Overview(**row)
+
+
+@router.get("/dashboard/categories", response_model=list[str])
+async def get_categories(db: AsyncSession = Depends(get_db)) -> list[str]:
+    result = await db.execute(text("""
+        select distinct job_category
+        from dbt_dev_gold.fct_jobs_daily
+        where is_active and job_category is not null
+        order by job_category
+    """))
+    return [row["job_category"] for row in result.mappings().all()]
