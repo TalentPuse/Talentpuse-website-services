@@ -14,7 +14,7 @@ from app.services.cv_parser import (
     MAX_FILE_SIZE,
     extract_text,
     parse_cv,
-    upload_to_minio,
+    upload_to_s3,
 )
 
 logger = logging.getLogger(__name__)
@@ -51,9 +51,9 @@ async def upload_cv(
     # Upload to MinIO
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     object_name = f"cvs/{user.id}_{timestamp}.pdf"
-    minio_url = upload_to_minio(pdf_bytes, object_name)
-    if minio_url:
-        user.cv_file_url = minio_url
+    s3_url = upload_to_s3(pdf_bytes, object_name)
+    if s3_url:
+        user.cv_file_url = s3_url
         await db.flush()
 
     # Extract text from PDF

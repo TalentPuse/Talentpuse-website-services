@@ -127,38 +127,41 @@ def parse_cv(text: str) -> CvExtractResult:
         return CvExtractResult(error="Không thể phân tích CV, thử lại sau", raw_text_length=len(text))
 
 
-def upload_to_minio(pdf_bytes: bytes, object_name: str) -> str | None:
-    """Upload PDF bytes to MinIO, return the object URL or None on failure."""
-    from app.core.config import MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET, MINIO_SECURE
+def upload_to_s3(pdf_bytes: bytes, object_name: str) -> str | None:
+    """Upload PDF bytes to S3/MinIO, return the object URL or None on failure."""
+    from app.core.config import S3_ENDPOINT_URL, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET_NAME
 
-    if not MINIO_ENDPOINT:
-        logger.warning("MINIO_ENDPOINT not configured, skipping upload")
+    if not S3_SECRET_KEY:
+        logger.warning("S3_SECRET_KEY not configured, skipping upload")
         return None
 
     try:
         from minio import Minio
+        from io import BytesIO
+        from urllib.parse import urlparse
+
+        parsed = urlparse(S3_ENDPOINT_URL)
+        secure = parsed.scheme == "https"
+        endpoint = parsed.netloc or parsed.path
 
         client = Minio(
-            MINIO_ENDPOINT,
-            access_key=MINIO_ACCESS_KEY,
-            secret_key=MINIO_SECRET_KEY,
-            secure=MINIO_SECURE,
+            endpoint,
+            access_key=S3_ACCESS_KEY,
+            secret_key=S3_SECRET_KEY,
+            secure=secure,
         )
-        if not client.bucket_exists(MINIO_BUCKET):
-            client.make_bucket(MINIO_BUCKET)
-
-        from io import BytesIO
+        if not client.bucket_exists(S3_BUCKET_NAME):
+            client.make_bucket(S3_BUCKET_NAME)
 
         client.put_object(
-            MINIO_BUCKET,
+            S3_BUCKET_NAME,
             object_name,
             BytesIO(pdf_bytes),
             length=len(pdf_bytes),
             content_type="application/pdf",
         )
 
-        protocol = "https" if MINIO_SECURE else "http"
-        return f"{protocol}://{MINIO_ENDPOINT}/{MINIO_BUCKET}/{object_name}"
+        return f"{S3_ENDPOINT_URL}/{S3_BUCKET_NAME}/{object_name}"
     except Exception:
-        logger.exception("MinIO upload failed")
+        logger.exception("S3 upload failed")
         return None
