@@ -55,14 +55,55 @@ export type CompanyRow = {
 
 const EMPTY_OVERVIEW: Overview = { total_jobs: 0, pct_with_salary: 0, avg_salary_million: null };
 
+function catParam(category?: string) {
+  return category ? `&category=${encodeURIComponent(category)}` : "";
+}
+
 export const api = {
-  overview: () => fetchJson<Overview>("/api/overview", EMPTY_OVERVIEW),
-  topSkills: (limit = 15) => fetchJson<SkillRow[]>(`/api/skills/top?limit=${limit}`, []),
-  highestPayingSkills: (limit = 10) =>
-    fetchJson<HighestPayingSkillRow[]>(`/api/skills/highest-paying?limit=${limit}`, []),
-  salaryByLevel: () => fetchJson<SalaryByLevelRow[]>("/api/salary/by-level", []),
-  topCompanies: (limit = 20) =>
-    fetchJson<CompanyRow[]>(`/api/companies/top?limit=${limit}`, []),
+  overview: (category?: string) =>
+    fetchJson<Overview>(`/api/overview${category ? `?category=${encodeURIComponent(category)}` : ""}`, EMPTY_OVERVIEW),
+  topSkills: (limit = 15, category?: string) =>
+    fetchJson<SkillRow[]>(`/api/skills/top?limit=${limit}${catParam(category)}`, []),
+  highestPayingSkills: (limit = 10, category?: string) =>
+    fetchJson<HighestPayingSkillRow[]>(`/api/skills/highest-paying?limit=${limit}${catParam(category)}`, []),
+  salaryByLevel: (category?: string) =>
+    fetchJson<SalaryByLevelRow[]>(`/api/salary/by-level${category ? `?category=${encodeURIComponent(category)}` : ""}`, []),
+  topCompanies: (limit = 20, category?: string) =>
+    fetchJson<CompanyRow[]>(`/api/companies/top?limit=${limit}${catParam(category)}`, []),
+  categories: () =>
+    fetchJson<string[]>("/api/dashboard/categories", []),
+};
+
+/* ───── Client-side dashboard API (browser, no auth) ───── */
+
+const DASHBOARD_BASE =
+  (typeof window !== "undefined"
+    ? process.env.NEXT_PUBLIC_API_BASE
+    : undefined) || "";
+
+async function dashboardFetch<T>(path: string, fallback: T): Promise<T> {
+  try {
+    const res = await fetch(`${DASHBOARD_BASE}${path}`, { cache: "no-store" });
+    if (!res.ok) return fallback;
+    return res.json() as Promise<T>;
+  } catch {
+    return fallback;
+  }
+}
+
+export const dashboardApi = {
+  categories: () =>
+    dashboardFetch<string[]>("/api/dashboard/categories", []),
+  overview: (category?: string) =>
+    dashboardFetch<Overview>(`/api/overview${category ? `?category=${encodeURIComponent(category)}` : ""}`, EMPTY_OVERVIEW),
+  topSkills: (limit: number, category?: string) =>
+    dashboardFetch<SkillRow[]>(`/api/skills/top?limit=${limit}${catParam(category)}`, []),
+  highestPayingSkills: (limit: number, category?: string) =>
+    dashboardFetch<HighestPayingSkillRow[]>(`/api/skills/highest-paying?limit=${limit}${catParam(category)}`, []),
+  salaryByLevel: (category?: string) =>
+    dashboardFetch<SalaryByLevelRow[]>(`/api/salary/by-level${category ? `?category=${encodeURIComponent(category)}` : ""}`, []),
+  topCompanies: (limit: number, category?: string) =>
+    dashboardFetch<CompanyRow[]>(`/api/companies/top?limit=${limit}${catParam(category)}`, []),
 };
 
 /* ───── Auth types ───── */
