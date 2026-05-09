@@ -83,6 +83,7 @@ export type UserResponse = {
   graduation_year: number | null;
   open_to_internship: boolean;
   part_time_ok: boolean;
+  cv_file_url: string | null;
   created_at: string;
 };
 

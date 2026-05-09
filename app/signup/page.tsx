@@ -13,6 +13,9 @@ import SkillPillSelect from "@/components/auth/SkillPillSelect";
 import CityPillSelect from "@/components/auth/CityPillSelect";
 import TitlePillSelect from "@/components/auth/TitlePillSelect";
 
+type Step2Mode = "choice" | "cv" | "manual";
+type CvStep = "idle" | "reading" | "analyzing" | "done" | "error";
+
 export default function SignUpPage() {
   const { login } = useAuth();
   const router = useRouter();
@@ -29,6 +32,7 @@ export default function SignUpPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Step 2
+  const [step2Mode, setStep2Mode] = useState<Step2Mode>("choice");
   const [experienceLevel, setExperienceLevel] = useState("");
   const [desiredTitles, setDesiredTitles] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
@@ -43,19 +47,26 @@ export default function SignUpPage() {
   const [partTimeOk, setPartTimeOk] = useState(false);
 
   // CV upload
-  const [cvLoading, setCvLoading] = useState(false);
+  const [cvStep, setCvStep] = useState<CvStep>("idle");
   const [cvError, setCvError] = useState("");
+  const [cvFileName, setCvFileName] = useState("");
+  const [dragOver, setDragOver] = useState(false);
 
   async function handleCvUpload(file: File) {
     if (!file.name.toLowerCase().endsWith(".pdf")) {
       setCvError("Chỉ hỗ trợ file PDF");
+      setCvStep("error");
       return;
     }
-    setCvLoading(true);
+    setCvFileName(file.name);
     setCvError("");
+    setCvStep("reading");
+
+    // Brief "reading" state then move to analyzing
+    await new Promise((r) => setTimeout(r, 600));
+    setCvStep("analyzing");
+
     try {
-      // Need token — but user isn't signed up yet. Use step 1 data to signup first, then upload.
-      // Actually, we'll signup with empty profile, upload CV, then update profile.
       const { access_token } = await authApi.signup({
         email,
         password,
@@ -67,29 +78,19 @@ export default function SignUpPage() {
       const res = await cvApi.upload(access_token, file);
       if (res.error) {
         setCvError(res.error);
-        setCvLoading(false);
+        setCvStep("error");
         return;
       }
-      const d = res.extracted;
-      if (d.full_name) setFullName(d.full_name);
-      if (d.skills?.length) setSkills(d.skills);
-      if (d.desired_titles?.length) setDesiredTitles(d.desired_titles);
-      if (d.preferred_cities?.length) setCities(d.preferred_cities);
-      if (d.experience_level) setExperienceLevel(d.experience_level);
-      if (d.salary_min_m) setSalaryMin(String(d.salary_min_m));
-      if (d.salary_max_m) setSalaryMax(String(d.salary_max_m));
-      if (d.education?.[0]?.university) setUniversity(d.education[0].university);
-      if (d.education?.[0]?.graduation_year) setGraduationYear(String(d.education[0].graduation_year));
+      setCvStep("done");
       // Auto-login and redirect
       const user = await authApi.getMe(access_token);
       login(access_token, user);
-      toast.success("CV đã được phân tích! Kiểm tra và cập nhật profile của bạn.");
+      toast.success("CV đã được phân tích! Kiểm tra và cập nhật profile.");
       router.push("/profile");
     } catch (err) {
       const apiErr = err as ApiError;
       setCvError(apiErr.message || "Không thể phân tích CV");
-    } finally {
-      setCvLoading(false);
+      setCvStep("error");
     }
   }
 
@@ -114,7 +115,10 @@ export default function SignUpPage() {
 
   function goStep2(e: FormEvent) {
     e.preventDefault();
-    if (validateStep1()) setStep(2);
+    if (validateStep1()) {
+      setStep2Mode("choice");
+      setStep(2);
+    }
   }
 
   async function onSubmit(e: FormEvent) {
@@ -152,11 +156,6 @@ export default function SignUpPage() {
   }
 
   async function skipAndSubmit() {
-    setDesiredTitles([]);
-    setSkills([]);
-    setSalaryMin("");
-    setSalaryMax("");
-    setCities([]);
     setError("");
     setLoading(true);
 
@@ -180,6 +179,12 @@ export default function SignUpPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function resetCv() {
+    setCvStep("idle");
+    setCvError("");
+    setCvFileName("");
   }
 
   const slideVariants = {
@@ -307,7 +312,7 @@ export default function SignUpPage() {
                 </motion.button>
               </motion.form>
             ) : (
-              <motion.form
+              <motion.div
                 key="step2"
                 custom={2}
                 variants={slideVariants}
@@ -315,186 +320,332 @@ export default function SignUpPage() {
                 animate="center"
                 exit="exit"
                 transition={{ duration: 0.3 }}
-                onSubmit={onSubmit}
                 className="space-y-5"
               >
-                <p className="text-sm text-slate-500">
-                  Thiết lập profile để AI match job chính xác hơn.
-                  Bạn có thể bỏ qua và cập nhật sau.
-                </p>
+                {step2Mode === "choice" && (
+                  <>
+                    <p className="text-sm text-slate-500 text-center">
+                      Thiết lập hồ sơ để AI match job chính xác hơn
+                    </p>
 
-                {/* CV Upload */}
-                <div className="rounded-xl border-2 border-dashed border-slate-200 p-5 text-center hover:border-brand-400 transition-colors">
-                  {cvLoading ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-sm text-slate-600">Đang phân tích CV...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-sm font-medium text-slate-700 mb-1">
-                        Upload CV (PDF) — AI tự động điền profile
-                      </p>
-                      <p className="text-xs text-slate-400 mb-3">
-                        Hỗ trợ file PDF, tối đa 5MB
-                      </p>
-                      <label className="inline-block cursor-pointer rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
-                        Chọn file PDF
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          className="hidden"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) handleCvUpload(f);
-                          }}
-                        />
-                      </label>
-                      {cvError && (
-                        <p className="mt-2 text-xs text-red-500">{cvError}</p>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <div className="relative flex items-center gap-3">
-                  <div className="flex-1 h-px bg-slate-200" />
-                  <span className="text-xs text-slate-400 font-medium">hoặc điền tay</span>
-                  <div className="flex-1 h-px bg-slate-200" />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Cấp độ kinh nghiệm
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {EXPERIENCE_OPTIONS.map((opt) => {
-                      const active = experienceLevel === opt.value;
-                      return (
-                        <motion.button
-                          key={opt.value}
-                          type="button"
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() =>
-                            setExperienceLevel(active ? "" : opt.value)
-                          }
-                          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 border ${
-                            active
-                              ? "bg-brand-600 text-white border-brand-600 shadow-sm"
-                              : "bg-white text-slate-600 border-slate-200 hover:border-brand-300"
-                          }`}
-                        >
-                          {opt.label}
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {experienceLevel === "student" && (
-                  <div className="space-y-3 p-4 rounded-lg bg-indigo-50/50 border border-indigo-100">
-                    <p className="text-sm font-semibold text-indigo-700">Thông tin sinh viên</p>
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-slate-700">Trường đại học</label>
-                      <input
-                        value={university}
-                        onChange={(e) => setUniversity(e.target.value)}
-                        placeholder="VD: Đại học Bách Khoa TP.HCM"
-                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="block text-sm font-medium text-slate-700">Năm tốt nghiệp</label>
-                      <select
-                        value={graduationYear}
-                        onChange={(e) => setGraduationYear(e.target.value)}
-                        className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200 bg-white"
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Upload CV card */}
+                      <motion.button
+                        type="button"
+                        onClick={() => setStep2Mode("cv")}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex flex-col items-center gap-3 rounded-xl border-2 border-slate-200 p-6 text-center hover:border-brand-400 hover:bg-brand-50/30 transition-all duration-200"
                       >
-                        <option value="">Chưa chọn</option>
-                        {Array.from({ length: 9 }, (_, i) => 2024 + i).map((y) => (
-                          <option key={y} value={y}>{y}</option>
-                        ))}
-                      </select>
+                        <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center">
+                          <svg className="w-6 h-6 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                          </svg>
+                        </div>
+                        <span className="text-sm font-semibold text-slate-800">Upload CV</span>
+                        <span className="text-xs text-slate-500">AI tự điền hồ sơ</span>
+                      </motion.button>
+
+                      {/* Manual card */}
+                      <motion.button
+                        type="button"
+                        onClick={() => setStep2Mode("manual")}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex flex-col items-center gap-3 rounded-xl border-2 border-slate-200 p-6 text-center hover:border-brand-400 hover:bg-brand-50/30 transition-all duration-200"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                          <svg className="w-6 h-6 text-slate-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                          </svg>
+                        </div>
+                        <span className="text-sm font-semibold text-slate-800">Điền tay</span>
+                        <span className="text-xs text-slate-500">Nhập thông tin trực tiếp</span>
+                      </motion.button>
                     </div>
-                    <div className="flex items-center gap-6">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={openToInternship}
-                          onChange={(e) => setOpenToInternship(e.target.checked)}
-                          className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                        />
-                        <span className="text-sm text-slate-700">Sẵn sàng thực tập</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={partTimeOk}
-                          onChange={(e) => setPartTimeOk(e.target.checked)}
-                          className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                        />
-                        <span className="text-sm text-slate-700">Có thể part-time</span>
-                      </label>
-                    </div>
-                  </div>
+
+                    <button
+                      type="button"
+                      onClick={skipAndSubmit}
+                      disabled={loading}
+                      className="w-full text-center text-xs text-slate-400 hover:text-slate-600 transition"
+                    >
+                      Bỏ qua, tôi sẽ cập nhật sau
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      className="w-full text-center text-xs text-slate-400 hover:text-slate-600 transition"
+                    >
+                      &larr; Quay lại
+                    </button>
+                  </>
                 )}
 
-                <TitlePillSelect value={desiredTitles} onChange={setDesiredTitles} />
+                {step2Mode === "cv" && (
+                  /* ── CV Upload Path ── */
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { resetCv(); setStep2Mode("choice"); }}
+                      className="text-xs text-slate-400 hover:text-slate-600 transition"
+                    >
+                      &larr; Quay lại chọn
+                    </button>
 
-                <SkillPillSelect value={skills} onChange={setSkills} />
+                    {cvStep === "idle" && (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                        onDragLeave={() => setDragOver(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setDragOver(false);
+                          const f = e.dataTransfer.files[0];
+                          if (f) handleCvUpload(f);
+                        }}
+                        className={`rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 ${
+                          dragOver
+                            ? "border-brand-500 bg-brand-50/50 scale-[1.01]"
+                            : "border-slate-200 hover:border-brand-400"
+                        }`}
+                      >
+                        <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-brand-50 flex items-center justify-center">
+                          <svg className="w-7 h-7 text-brand-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                          </svg>
+                        </div>
+                        <p className="text-sm font-medium text-slate-700 mb-1">
+                          Kéo thả file PDF vào đây
+                        </p>
+                        <p className="text-xs text-slate-400 mb-4">
+                          hoặc
+                        </p>
+                        <label className="inline-block cursor-pointer rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
+                          Chọn file PDF
+                          <input
+                            type="file"
+                            accept=".pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleCvUpload(f);
+                            }}
+                          />
+                        </label>
+                        <p className="text-xs text-slate-400 mt-3">
+                          Hỗ trợ file PDF, tối đa 5MB
+                        </p>
+                      </div>
+                    )}
 
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Mức lương mong muốn (triệu VND/tháng)
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input
-                      type="number"
-                      value={salaryMin}
-                      onChange={(e) => setSalaryMin(e.target.value)}
-                      placeholder="Từ (VD: 20)"
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
-                    />
-                    <input
-                      type="number"
-                      value={salaryMax}
-                      onChange={(e) => setSalaryMax(e.target.value)}
-                      placeholder="Đến (VD: 40)"
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
-                    />
-                  </div>
-                </div>
+                    {(cvStep === "reading" || cvStep === "analyzing" || cvStep === "done") && (
+                      <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
+                        {/* Step 1 — Reading PDF */}
+                        <ProcessStep
+                          label="Đang đọc file PDF..."
+                          doneLabel="Đã đọc file PDF"
+                          active={cvStep === "reading"}
+                          done={cvStep === "analyzing" || cvStep === "done"}
+                        />
 
-                <CityPillSelect value={cities} onChange={setCities} />
+                        {/* Step 2 — Analyzing CV */}
+                        <ProcessStep
+                          label="Đang phân tích CV bằng AI..."
+                          doneLabel="Phân tích CV hoàn tất"
+                          active={cvStep === "analyzing"}
+                          done={cvStep === "done"}
+                          showProgress={cvStep === "analyzing"}
+                        />
 
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
-                  >
-                    Quay lại
-                  </button>
-                  <motion.button
-                    type="submit"
-                    disabled={loading}
-                    whileHover={{ scale: 1.01, y: -1 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                    className="flex-1 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-60 transition-colors"
-                  >
-                    {loading ? "Đang tạo tài khoản..." : "Hoàn tất đăng ký"}
-                  </motion.button>
-                </div>
-                <button
-                  type="button"
-                  onClick={skipAndSubmit}
-                  disabled={loading}
-                  className="w-full text-center text-xs text-slate-400 hover:text-slate-600 transition"
-                >
-                  Bỏ qua, tôi sẽ cập nhật sau
-                </button>
-              </motion.form>
+                        {/* Step 3 — Done */}
+                        <ProcessStep
+                          label="Đang tạo tài khoản..."
+                          doneLabel="Hoàn tất!"
+                          active={cvStep === "done"}
+                          done={false}
+                        />
+
+                        {cvStep === "done" && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-center text-sm text-emerald-600 font-medium"
+                          >
+                            Đang chuyển hướng...
+                          </motion.p>
+                        )}
+                      </div>
+                    )}
+
+                    {cvStep === "error" && (
+                      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+                        <p className="text-sm text-red-600 mb-3">{cvError}</p>
+                        <div className="flex gap-3 justify-center">
+                          <button
+                            type="button"
+                            onClick={resetCv}
+                            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition"
+                          >
+                            Thử lại
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { resetCv(); setStep2Mode("manual"); }}
+                            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
+                          >
+                            Điền tay thay
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {step2Mode === "manual" && (
+                  /* ── Manual Form Path ── */
+                  <form onSubmit={onSubmit} className="space-y-5">
+                    <button
+                      type="button"
+                      onClick={() => setStep2Mode("choice")}
+                      className="text-xs text-slate-400 hover:text-slate-600 transition"
+                    >
+                      &larr; Quay lại chọn
+                    </button>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-700">
+                        Cấp độ kinh nghiệm
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {EXPERIENCE_OPTIONS.map((opt) => {
+                          const active = experienceLevel === opt.value;
+                          return (
+                            <motion.button
+                              key={opt.value}
+                              type="button"
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() =>
+                                setExperienceLevel(active ? "" : opt.value)
+                              }
+                              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 border ${
+                                active
+                                  ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+                                  : "bg-white text-slate-600 border-slate-200 hover:border-brand-300"
+                              }`}
+                            >
+                              {opt.label}
+                            </motion.button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {experienceLevel === "student" && (
+                      <div className="space-y-3 p-4 rounded-lg bg-indigo-50/50 border border-indigo-100">
+                        <p className="text-sm font-semibold text-indigo-700">Thông tin sinh viên</p>
+                        <div className="space-y-1">
+                          <label className="block text-sm font-medium text-slate-700">Trường đại học</label>
+                          <input
+                            value={university}
+                            onChange={(e) => setUniversity(e.target.value)}
+                            placeholder="VD: Đại học Bách Khoa TP.HCM"
+                            className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-sm font-medium text-slate-700">Năm tốt nghiệp</label>
+                          <select
+                            value={graduationYear}
+                            onChange={(e) => setGraduationYear(e.target.value)}
+                            className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200 bg-white"
+                          >
+                            <option value="">Chưa chọn</option>
+                            {Array.from({ length: 9 }, (_, i) => 2024 + i).map((y) => (
+                              <option key={y} value={y}>{y}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={openToInternship}
+                              onChange={(e) => setOpenToInternship(e.target.checked)}
+                              className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                            />
+                            <span className="text-sm text-slate-700">Sẵn sàng thực tập</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={partTimeOk}
+                              onChange={(e) => setPartTimeOk(e.target.checked)}
+                              className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                            />
+                            <span className="text-sm text-slate-700">Có thể part-time</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    <TitlePillSelect value={desiredTitles} onChange={setDesiredTitles} />
+                    <SkillPillSelect value={skills} onChange={setSkills} />
+
+                    <div className="space-y-1">
+                      <label className="block text-sm font-medium text-slate-700">
+                        Mức lương mong muốn (triệu VND/tháng)
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="number"
+                          value={salaryMin}
+                          onChange={(e) => setSalaryMin(e.target.value)}
+                          placeholder="Từ (VD: 20)"
+                          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
+                        />
+                        <input
+                          type="number"
+                          value={salaryMax}
+                          onChange={(e) => setSalaryMax(e.target.value)}
+                          placeholder="Đến (VD: 40)"
+                          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
+                        />
+                      </div>
+                    </div>
+
+                    <CityPillSelect value={cities} onChange={setCities} />
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setStep(1)}
+                        className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition"
+                      >
+                        Quay lại
+                      </button>
+                      <motion.button
+                        type="submit"
+                        disabled={loading}
+                        whileHover={{ scale: 1.01, y: -1 }}
+                        whileTap={{ scale: 0.98 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                        className="flex-1 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-60 transition-colors"
+                      >
+                        {loading ? "Đang tạo tài khoản..." : "Hoàn tất đăng ký"}
+                      </motion.button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={skipAndSubmit}
+                      disabled={loading}
+                      className="w-full text-center text-xs text-slate-400 hover:text-slate-600 transition"
+                    >
+                      Bỏ qua, tôi sẽ cập nhật sau
+                    </button>
+                  </form>
+                )}
+              </motion.div>
             )}
           </AnimatePresence>
 
@@ -504,6 +655,59 @@ export default function SignUpPage() {
             </a>
           </div>
         </motion.div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Reusable Process Step Component ── */
+
+function ProcessStep({
+  label,
+  doneLabel,
+  active,
+  done,
+  showProgress,
+}: {
+  label: string;
+  doneLabel: string;
+  active: boolean;
+  done: boolean;
+  showProgress?: boolean;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5">
+        {done ? (
+          <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        ) : active ? (
+          <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <div className="w-5 h-5 rounded-full border-2 border-slate-200" />
+        )}
+      </div>
+      <div className="flex-1">
+        <p className={`text-sm font-medium ${done ? "text-emerald-600" : active ? "text-slate-800" : "text-slate-400"}`}>
+          {done ? doneLabel : label}
+        </p>
+        {showProgress && (
+          <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full"
+              style={{
+                animation: "cvProgress 40s linear forwards",
+              }}
+            />
+            <style>{`
+              @keyframes cvProgress {
+                0% { width: 5%; }
+                100% { width: 85%; }
+              }
+            `}</style>
+          </div>
+        )}
       </div>
     </div>
   );
