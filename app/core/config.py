@@ -28,6 +28,16 @@ TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "dev-webhook-secr
 
 ALERT_INTERVAL_SECONDS = int(os.getenv("ALERT_INTERVAL_SECONDS", "7200"))
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
+
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "")
+MINIO_BUCKET = os.getenv("MINIO_BUCKET", "talentpuse-cvs")
+MINIO_SECURE = os.getenv("MINIO_SECURE", "true").lower() == "true"
+
 VN_TZ = timezone(timedelta(hours=7))
 ALERT_START_TIME = time(7, 30)
 ALERT_END_TIME = time(21, 30)

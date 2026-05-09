@@ -33,6 +33,7 @@ class User(Base):
     graduation_year: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     open_to_internship: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     part_time_ok: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    cv_file_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
