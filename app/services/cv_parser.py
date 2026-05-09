@@ -115,7 +115,7 @@ def parse_cv(text: str) -> CvExtractResult:
             ],
             temperature=0,
             response_format={"type": "json_object"},
-            timeout=30,
+            timeout=120,
         )
         content = response.choices[0].message.content
         data = json.loads(content)
