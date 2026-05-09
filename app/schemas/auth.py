@@ -50,7 +50,7 @@ class UserResponse(BaseModel):
     graduation_year: int | None
     open_to_internship: bool
     part_time_ok: bool
-    cv_file_url: str | None
+    cv_file_url: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
