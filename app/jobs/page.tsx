@@ -38,6 +38,7 @@ function JobBoardContent() {
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [salaryFilter, setSalaryFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const abortRef = useRef<AbortController>();
 
@@ -60,6 +61,7 @@ function JobBoardContent() {
         city: cityFilter === "all" ? null : cityFilter,
         level: levelFilter === "all" ? null : levelFilter,
         source: sourceFilter === "all" ? null : sourceFilter,
+        category: categoryFilter === "all" ? null : categoryFilter,
         has_salary: salaryFilter === "all" ? null : salaryFilter === "yes",
       }, controller.signal);
       if (!controller.signal.aborted) setData(res);
@@ -68,7 +70,7 @@ function JobBoardContent() {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [token, page, search, cityFilter, levelFilter, sourceFilter, salaryFilter]);
+  }, [token, page, search, cityFilter, levelFilter, sourceFilter, categoryFilter, salaryFilter]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -86,13 +88,14 @@ function JobBoardContent() {
     setCityFilter("all");
     setLevelFilter("all");
     setSourceFilter("all");
+    setCategoryFilter("all");
     setSalaryFilter("all");
     setPage(1);
   }
 
   const totalPages = data ? Math.ceil(data.total / PER_PAGE) : 0;
   const hasFilters =
-    search || cityFilter !== "all" || levelFilter !== "all" || sourceFilter !== "all" || salaryFilter !== "all";
+    search || cityFilter !== "all" || levelFilter !== "all" || sourceFilter !== "all" || categoryFilter !== "all" || salaryFilter !== "all";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-50/30">
@@ -173,6 +176,17 @@ function JobBoardContent() {
             <option value="all">Tất cả nguồn</option>
             {filters?.sources.map((s) => (
               <option key={s} value={s}>{SOURCE_LABEL[s] || s}</option>
+            ))}
+          </select>
+
+          <select
+            value={categoryFilter}
+            onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+          >
+            <option value="all">Tất cả ngành nghề</option>
+            {filters?.categories.map((c) => (
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
 

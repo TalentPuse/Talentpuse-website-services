@@ -324,6 +324,7 @@ export type FilterOptions = {
   cities: string[];
   levels: string[];
   sources: string[];
+  categories: string[];
 };
 
 export type MyAlertRow = {
@@ -360,6 +361,7 @@ export const jobsApi = {
       level?: string | null;
       source?: string | null;
       has_salary?: boolean | null;
+      category?: string | null;
     },
     signal?: AbortSignal,
   ) => {
@@ -370,6 +372,7 @@ export const jobsApi = {
     if (params.city) q.set("city", params.city);
     if (params.level) q.set("level", params.level);
     if (params.source) q.set("source", params.source);
+    if (params.category) q.set("category", params.category);
     if (params.has_salary !== undefined && params.has_salary !== null)
       q.set("has_salary", String(params.has_salary));
     return clientFetch<PublicJobList>(`/api/jobs?${q.toString()}`, {
