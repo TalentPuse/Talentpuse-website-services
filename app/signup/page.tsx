@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 
-import { authApi, ApiError } from "@/lib/api";
+import { authApi, cvApi, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthBrandPanel from "@/components/auth/AuthBrandPanel";
@@ -41,6 +41,57 @@ export default function SignUpPage() {
   const [graduationYear, setGraduationYear] = useState("");
   const [openToInternship, setOpenToInternship] = useState(false);
   const [partTimeOk, setPartTimeOk] = useState(false);
+
+  // CV upload
+  const [cvLoading, setCvLoading] = useState(false);
+  const [cvError, setCvError] = useState("");
+
+  async function handleCvUpload(file: File) {
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      setCvError("Chỉ hỗ trợ file PDF");
+      return;
+    }
+    setCvLoading(true);
+    setCvError("");
+    try {
+      // Need token — but user isn't signed up yet. Use step 1 data to signup first, then upload.
+      // Actually, we'll signup with empty profile, upload CV, then update profile.
+      const { access_token } = await authApi.signup({
+        email,
+        password,
+        full_name: fullName,
+        skills: [],
+        preferred_cities: [],
+        desired_titles: [],
+      });
+      const res = await cvApi.upload(access_token, file);
+      if (res.error) {
+        setCvError(res.error);
+        setCvLoading(false);
+        return;
+      }
+      const d = res.extracted;
+      if (d.full_name) setFullName(d.full_name);
+      if (d.skills?.length) setSkills(d.skills);
+      if (d.desired_titles?.length) setDesiredTitles(d.desired_titles);
+      if (d.preferred_cities?.length) setCities(d.preferred_cities);
+      if (d.experience_level) setExperienceLevel(d.experience_level);
+      if (d.salary_min_m) setSalaryMin(String(d.salary_min_m));
+      if (d.salary_max_m) setSalaryMax(String(d.salary_max_m));
+      if (d.education?.[0]?.university) setUniversity(d.education[0].university);
+      if (d.education?.[0]?.graduation_year) setGraduationYear(String(d.education[0].graduation_year));
+      // Auto-login and redirect
+      const user = await authApi.getMe(access_token);
+      login(access_token, user);
+      toast.success("CV đã được phân tích! Kiểm tra và cập nhật profile của bạn.");
+      router.push("/profile");
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setCvError(apiErr.message || "Không thể phân tích CV");
+    } finally {
+      setCvLoading(false);
+    }
+  }
 
   const EXPERIENCE_OPTIONS = [
     { value: "student", label: "Sinh viên" },
@@ -271,6 +322,46 @@ export default function SignUpPage() {
                   Thiết lập profile để AI match job chính xác hơn.
                   Bạn có thể bỏ qua và cập nhật sau.
                 </p>
+
+                {/* CV Upload */}
+                <div className="rounded-xl border-2 border-dashed border-slate-200 p-5 text-center hover:border-brand-400 transition-colors">
+                  {cvLoading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-sm text-slate-600">Đang phân tích CV...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-slate-700 mb-1">
+                        Upload CV (PDF) — AI tự động điền profile
+                      </p>
+                      <p className="text-xs text-slate-400 mb-3">
+                        Hỗ trợ file PDF, tối đa 5MB
+                      </p>
+                      <label className="inline-block cursor-pointer rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
+                        Chọn file PDF
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleCvUpload(f);
+                          }}
+                        />
+                      </label>
+                      {cvError && (
+                        <p className="mt-2 text-xs text-red-500">{cvError}</p>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <div className="relative flex items-center gap-3">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-xs text-slate-400 font-medium">hoặc điền tay</span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700">

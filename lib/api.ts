@@ -488,3 +488,63 @@ export const adminApi = {
     });
   },
 };
+
+/* ───── CV Upload ───── */
+
+export type CvExtractResponse = {
+  extracted: {
+    full_name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    location?: string | null;
+    summary?: string | null;
+    experience_level?: string | null;
+    years_of_experience?: number | null;
+    skills?: string[];
+    desired_titles?: string[];
+    preferred_cities?: string[];
+    salary_min_m?: number | null;
+    salary_max_m?: number | null;
+    education?: Array<{
+      university?: string | null;
+      major?: string | null;
+      degree?: string | null;
+      graduation_year?: number | null;
+      gpa?: number | null;
+    }>;
+    work_experience?: Array<{
+      title?: string;
+      company?: string;
+      start_date?: string | null;
+      end_date?: string | null;
+      highlights?: string[];
+    }>;
+    projects?: Array<{
+      name?: string | null;
+      description?: string | null;
+      tech_stack?: string[];
+    }>;
+    certifications?: string[];
+    languages?: string[];
+    _confidence?: Record<string, string>;
+  };
+  raw_text_length: number;
+  error?: string | null;
+};
+
+export const cvApi = {
+  upload: async (token: string, file: File): Promise<CvExtractResponse> => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${CLIENT_BASE}/api/cv/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `Upload failed (${res.status})`);
+    }
+    return res.json();
+  },
+};

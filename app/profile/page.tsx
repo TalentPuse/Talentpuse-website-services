@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 
-import { authApi, ApiError } from "@/lib/api";
+import { authApi, cvApi, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import SkillPillSelect from "@/components/auth/SkillPillSelect";
@@ -36,6 +36,37 @@ function ProfileContent() {
   const [partTimeOk, setPartTimeOk] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cvLoading, setCvLoading] = useState(false);
+  const [cvError, setCvError] = useState("");
+
+  async function handleCvUpload(file: File) {
+    if (!token) return;
+    setCvLoading(true);
+    setCvError("");
+    try {
+      const res = await cvApi.upload(token, file);
+      if (res.error) {
+        setCvError(res.error);
+        return;
+      }
+      const d = res.extracted;
+      setEditing(true);
+      if (d.skills?.length) setSkills(d.skills);
+      if (d.desired_titles?.length) setDesiredTitles(d.desired_titles);
+      if (d.preferred_cities?.length) setCities(d.preferred_cities);
+      if (d.experience_level) setExperienceLevel(d.experience_level);
+      if (d.salary_min_m) setSalaryMin(String(d.salary_min_m));
+      if (d.salary_max_m) setSalaryMax(String(d.salary_max_m));
+      if (d.education?.[0]?.university) setUniversity(d.education[0].university);
+      if (d.education?.[0]?.graduation_year) setGraduationYear(String(d.education[0].graduation_year));
+      toast.success("CV đã phân tích xong! Kiểm tra lại và nhấn Lưu.");
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setCvError(apiErr.message || "Không thể phân tích CV");
+    } finally {
+      setCvLoading(false);
+    }
+  }
 
   const EXPERIENCE_OPTIONS = [
     { value: "", label: "Chưa chọn" },
@@ -134,6 +165,40 @@ function ProfileContent() {
 
           {/* Telegram alert */}
           {token && <TelegramLinkCard token={token} />}
+
+          {/* CV Upload */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-3">Upload CV</h2>
+            <div className="rounded-xl border-2 border-dashed border-slate-200 p-5 text-center hover:border-brand-400 transition-colors">
+              {cvLoading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm text-slate-600">Đang phân tích CV bằng AI...</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-600 mb-3">
+                    Upload CV (PDF) — AI tự động cập nhật hồ sơ của bạn
+                  </p>
+                  <label className="inline-block cursor-pointer rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors">
+                    Chọn file PDF
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleCvUpload(f);
+                      }}
+                    />
+                  </label>
+                  {cvError && (
+                    <p className="mt-2 text-xs text-red-500">{cvError}</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
 
           {/* Profile form */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-6">
