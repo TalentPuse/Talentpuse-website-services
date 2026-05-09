@@ -5,9 +5,6 @@ import json
 import logging
 from dataclasses import dataclass, field
 
-import fitz  # PyMuPDF
-from openai import OpenAI
-
 from app.core.config import OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL
 
 logger = logging.getLogger(__name__)
@@ -87,6 +84,8 @@ class CvExtractResult:
 
 
 def extract_text(pdf_bytes: bytes) -> str:
+    import fitz
+
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     pages = []
     for page in doc:
@@ -105,6 +104,8 @@ def parse_cv(text: str) -> CvExtractResult:
         return CvExtractResult(error="PDF không chứa text (có thể là file scan ảnh)")
 
     try:
+        from openai import OpenAI
+
         client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
