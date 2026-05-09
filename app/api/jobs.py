@@ -27,6 +27,7 @@ async def list_jobs(
     level: str | None = Query(None),
     source: str | None = Query(None),
     has_salary: bool | None = Query(None),
+    category: str | None = Query(None),
     _user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PublicJobList:
@@ -49,6 +50,9 @@ async def list_jobs(
         conditions.append("f.salary_vnd_monthly_avg IS NOT NULL")
     elif has_salary is False:
         conditions.append("f.salary_vnd_monthly_avg IS NULL")
+    if category:
+        conditions.append("f.job_category = :category")
+        params["category"] = category
 
     where_extra = (" AND " + " AND ".join(conditions)) if conditions else ""
 
@@ -128,7 +132,9 @@ async def get_filters(
             array_agg(DISTINCT f.job_level ORDER BY f.job_level)
                 FILTER (WHERE f.job_level IS NOT NULL) AS levels,
             array_agg(DISTINCT f.source ORDER BY f.source)
-                FILTER (WHERE f.source IS NOT NULL) AS sources
+                FILTER (WHERE f.source IS NOT NULL) AS sources,
+            array_agg(DISTINCT f.job_category ORDER BY f.job_category)
+                FILTER (WHERE f.job_category IS NOT NULL) AS categories
         FROM dbt_dev_gold.fct_jobs_daily f
         WHERE f.is_active
     """))
@@ -137,6 +143,7 @@ async def get_filters(
         cities=row["cities"] or [],
         levels=row["levels"] or [],
         sources=row["sources"] or [],
+        categories=row["categories"] or [],
     )
 
 

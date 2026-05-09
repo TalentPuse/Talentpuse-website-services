@@ -30,6 +30,7 @@ class FilterOptions(BaseModel):
     cities: list[str]
     levels: list[str]
     sources: list[str]
+    categories: list[str]
 
 
 class MyAlertRow(BaseModel):
