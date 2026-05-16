@@ -26,13 +26,13 @@ export default function ConnectionCard({
   token,
 }: ConnectionCardProps) {
   if (comingSoon) return <ComingSoonCard icon={icon} name={name} description={description} color={color} bgColor={bgColor} />;
-  if (name === "Telegram" && token) return <TelegramCard token={token} icon={icon} color={color} bgColor={bgColor} />;
+  if (name === "Telegram" && token) return <TelegramCard token={token} icon={icon} name={name} description={description} color={color} bgColor={bgColor} />;
   return null;
 }
 
 /* ── Telegram (live) ── */
 
-function TelegramCard({ token, icon, color, bgColor }: { token: string; icon: React.ReactNode; color: string; bgColor: string }) {
+function TelegramCard({ token, icon, name, description, color, bgColor }: { token: string; icon: React.ReactNode; name: string; description: string; color: string; bgColor: string }) {
   const [status, setStatus] = useState<TelegramStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [linking, setLinking] = useState(false);
