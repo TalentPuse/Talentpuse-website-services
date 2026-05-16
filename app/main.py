@@ -11,10 +11,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import admin, auth, companies, cv, jobs, overview, salary, skills, telegram
 from app.core.config import (
     ALERT_END_TIME,
-    ALERT_INTERVAL_HOURS,
     ALERT_START_TIME,
     CORS_ORIGINS,
     VN_TZ,
+    get_alert_interval_hours,
 )
 from app.core.database import async_session_factory, close_db, init_db
 from app.services.job_alert import dispatch_alerts
@@ -28,11 +28,13 @@ def _next_alert_slot() -> datetime:
     now_vn = datetime.now(VN_TZ)
     today = now_vn.date()
 
+    interval_hours = get_alert_interval_hours()
+
     slots: list[datetime] = []
     t = datetime.combine(today, ALERT_START_TIME, tzinfo=VN_TZ)
     while t.time() <= ALERT_END_TIME:
         slots.append(t)
-        t += timedelta(hours=ALERT_INTERVAL_HOURS)
+        t += timedelta(hours=interval_hours)
 
     for slot in slots:
         if slot > now_vn + timedelta(seconds=60):
@@ -54,10 +56,12 @@ async def _alert_loop() -> None:
             if alert_loop_active and async_session_factory is not None:
                 async with async_session_factory() as db:
                     count = await dispatch_alerts(db)
-                    if count:
-                        logger.info("Alert dispatch: %d sent", count)
+                    logger.info("Alert dispatch completed: %d alerts sent", count)
         except Exception:
             logger.exception("Alert dispatch failed")
+        else:
+            if not alert_loop_active:
+                logger.debug("Alert loop paused (alert_loop_active=False)")
 
 
 @asynccontextmanager

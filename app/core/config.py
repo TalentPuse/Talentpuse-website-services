@@ -28,6 +28,10 @@ TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "dev-webhook-secr
 
 ALERT_INTERVAL_SECONDS = int(os.getenv("ALERT_INTERVAL_SECONDS", "7200"))
 
+
+def get_alert_interval_hours() -> float:
+    return max(ALERT_INTERVAL_SECONDS / 3600.0, 0.5)
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek/deepseek-v4-flash")
@@ -40,4 +44,3 @@ S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "talentpulse-raw")
 VN_TZ = timezone(timedelta(hours=7))
 ALERT_START_TIME = time(7, 30)
 ALERT_END_TIME = time(21, 30)
-ALERT_INTERVAL_HOURS = 2

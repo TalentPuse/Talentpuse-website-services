@@ -31,6 +31,9 @@ Thêm:
 # dbt build at 03:30
 30 3 * * * cd /path/to/pipeline_data/dbt_transform && DBT_PROFILES_DIR=. /path/to/.venv/bin/dbt build >> /var/log/tp-dbt.log 2>&1
 
+# Alert dispatch at 07:00 and 12:00 (after pipeline data is fresh)
+0 7,12 * * * cd /path/to/pipeline_data && DASHBOARD_API_URL=http://tp-backend:8001 TELEGRAM_WEBHOOK_SECRET=YOUR_SECRET bash scripts/dispatch_alerts.sh >> /var/log/tp-alerts.log 2>&1
+
 # Weekly log rotation
 0 0 * * 0 find /var/log/tp-*.log -size +10M -exec truncate -s 0 {} \;
 ```
