@@ -157,14 +157,14 @@ async def my_alerts(
     uid = str(user.id)
 
     count_result = await db.execute(
-        text("SELECT count(*) FROM app.alert_logs WHERE user_id = :uid"),
+        text("SELECT count(DISTINCT source_job_id) FROM app.alert_logs WHERE user_id = :uid"),
         {"uid": uid},
     )
     total = count_result.scalar()
 
     offset = (page - 1) * per_page
     result = await db.execute(text("""
-        SELECT
+        SELECT DISTINCT ON (al.source_job_id)
             al.source_job_id,
             f.source,
             f.title,
@@ -180,7 +180,7 @@ async def my_alerts(
         LEFT JOIN dbt_dev_silver.silver_job_detail sd
             ON sd.source = f.source AND sd.source_job_id = f.source_job_id
         WHERE al.user_id = :uid
-        ORDER BY al.sent_at DESC
+        ORDER BY al.source_job_id, al.sent_at DESC
         LIMIT :limit OFFSET :offset
     """), {"uid": uid, "limit": per_page, "offset": offset})
 
