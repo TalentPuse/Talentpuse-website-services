@@ -11,12 +11,17 @@ import KpiCard from "@/components/KpiCard";
 export default function AdminStatsPage() {
   const { token } = useAuth();
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
     try {
+      setError(null);
       setStats(await adminApi.stats(token));
-    } catch {}
+    } catch (err) {
+      console.error("Failed to load admin stats:", err);
+      setError("Không thể tải thống kê. Vui lòng thử lại.");
+    }
   }, [token]);
 
   useEffect(() => {
@@ -31,6 +36,13 @@ export default function AdminStatsPage() {
         <h1 className="text-2xl font-bold text-slate-900">Tổng quan hệ thống</h1>
         <p className="mt-1 text-sm text-slate-500">Thống kê realtime — tự cập nhật mỗi 30 giây</p>
       </header>
+
+      {error && (
+        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {error}
+          <button onClick={load} className="ml-3 underline font-medium hover:text-red-900">Thử lại</button>
+        </div>
+      )}
 
       {stats ? (
         <motion.div

@@ -28,7 +28,9 @@ export default function AdminAlertsPage() {
         date_to: dateTo || undefined,
       });
       setData(res);
-    } catch {}
+    } catch (err) {
+      console.error("Failed to load alert logs:", err);
+    }
   }, [token, page, dateFrom, dateTo]);
 
   useEffect(() => {

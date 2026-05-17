@@ -32,7 +32,9 @@ export default function AdminConfigPage() {
       setInterval_(String(c.alert_interval_seconds));
       setLoopActive(c.alert_loop_active);
       setDirty(false);
-    } catch {}
+    } catch (err) {
+      console.error("Failed to load config:", err);
+    }
   }, [token]);
 
   useEffect(() => {

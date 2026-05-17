@@ -119,7 +119,9 @@ export default function AdminJobsPage() {
         ].sort();
         setLevels(uniqueLevels);
       }
-    } catch {}
+    } catch (err) {
+      console.error("Failed to load jobs:", err);
+    }
   }, [token, page, search, cityFilter, levelFilter, salaryFilter]);
 
   useEffect(() => {

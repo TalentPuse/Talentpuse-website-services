@@ -31,7 +31,9 @@ export default function AdminUsersPage() {
         tier: tierFilter === "all" ? null : tierFilter,
       });
       setData(res);
-    } catch {}
+    } catch (err) {
+      console.error("Failed to load users:", err);
+    }
   }, [token, page, search, statusFilter, tierFilter]);
 
   useEffect(() => {
