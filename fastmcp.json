@@ -1,0 +1,24 @@
+{
+  "$schema": "https://gofastmcp.com/public/schemas/fastmcp.json/v1.json",
+  "source": {
+    "type": "filesystem",
+    "path": "server.py",
+    "entrypoint": "mcp"
+  },
+  "environment": {
+    "type": "uv",
+    "python": ">=3.11",
+    "requirements": "requirements.txt"
+  },
+  "deployment": {
+    "transport": "http",
+    "host": "0.0.0.0",
+    "port": 8080,
+    "log_level": "INFO",
+    "env": {
+      "DATABASE_URL": "${DATABASE_URL}",
+      "DASHBOARD_API_URL": "${DASHBOARD_API_URL}",
+      "DASHBOARD_API_SECRET": "${DASHBOARD_API_SECRET}"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+services:
+  mcp:
+    image: ${MCP_IMAGE:-tp-mcp-local}
+    build:
+      context: ..
+      dockerfile: mcp_server/Dockerfile
+    container_name: tp-mcp
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://metabase_ro:metabase_ro@localhost:5432/warehouse}
+      DASHBOARD_API_URL: ${DASHBOARD_API_URL:-http://backend:8001}
+      DASHBOARD_API_SECRET: ${DASHBOARD_API_SECRET:-}
+    networks:
+      - talentpulse
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  talentpulse:
+    external: true
