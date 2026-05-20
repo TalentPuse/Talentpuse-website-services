@@ -17,11 +17,10 @@ class TestCallMcpTool:
 
         mock_client = AsyncMock()
         mock_client.call_tool = AsyncMock(return_value=[mock_text])
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch(
-            "app.services.agent.services.mcp_client.get_mcp_client",
-            AsyncMock(return_value=mock_client),
-        ):
+        with patch("app.services.agent.services.mcp_client.Client", return_value=mock_client):
             result = await call_mcp_tool("query_skill_gap", {"user_skills": "python"})
 
         assert "pytorch" in result
@@ -35,23 +34,10 @@ class TestCallMcpTool:
 
         mock_client = AsyncMock()
         mock_client.call_tool = AsyncMock(return_value=[])
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
 
-        with patch(
-            "app.services.agent.services.mcp_client.get_mcp_client",
-            AsyncMock(return_value=mock_client),
-        ):
+        with patch("app.services.agent.services.mcp_client.Client", return_value=mock_client):
             result = await call_mcp_tool("get_user_profile", {"user_id": "x"})
 
         assert result == ""
-
-    @pytest.mark.asyncio
-    async def test_close_client(self):
-        import app.services.agent.services.mcp_client as mod
-
-        mock_client = AsyncMock()
-        mod._client = mock_client
-
-        await mod.close_mcp_client()
-
-        mock_client.close.assert_called_once()
-        assert mod._client is None

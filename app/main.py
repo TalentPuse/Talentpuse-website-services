@@ -17,7 +17,6 @@ from app.core.config import (
     get_alert_interval_hours,
 )
 from app.core.database import async_session_factory, close_db, init_db
-from app.services.agent.services.mcp_client import close_mcp_client
 from app.services.job_alert import dispatch_alerts
 
 logger = logging.getLogger(__name__)
@@ -71,7 +70,6 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(_alert_loop())
     yield
     task.cancel()
-    await close_mcp_client()
     await close_db()
 
 
