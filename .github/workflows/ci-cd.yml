@@ -65,7 +65,7 @@ jobs:
 
   deploy:
     name: Deploy to Server
-    runs-on: [self-hosted, Linux, X64, talentpulse_backend]
+    runs-on: [self-hosted, Linux, X64, mcp_warehouse]
     needs: build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     timeout-minutes: 10
