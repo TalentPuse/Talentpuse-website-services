@@ -41,6 +41,8 @@ S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minioadmin")
 S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "talentpulse-raw")
 
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8080")
+
 VN_TZ = timezone(timedelta(hours=7))
 ALERT_START_TIME = time(7, 30)
 ALERT_END_TIME = time(21, 30)

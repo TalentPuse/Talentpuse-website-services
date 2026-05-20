@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, auth, companies, cv, jobs, overview, salary, skills, telegram
+from app.api import admin, auth, chat, companies, cv, jobs, overview, salary, skills, telegram
 from app.core.config import (
     ALERT_END_TIME,
     ALERT_START_TIME,
@@ -17,6 +17,7 @@ from app.core.config import (
     get_alert_interval_hours,
 )
 from app.core.database import async_session_factory, close_db, init_db
+from app.services.agent.services.mcp_client import close_mcp_client
 from app.services.job_alert import dispatch_alerts
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(_alert_loop())
     yield
     task.cancel()
+    await close_mcp_client()
     await close_db()
 
 
@@ -96,6 +98,7 @@ app.include_router(auth.router)
 app.include_router(jobs.router)
 app.include_router(telegram.router)
 app.include_router(admin.router)
+app.include_router(chat.router)
 app.include_router(cv.router)
 
 
