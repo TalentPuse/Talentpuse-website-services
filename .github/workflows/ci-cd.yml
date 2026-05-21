@@ -88,6 +88,9 @@ jobs:
           fi
 
           export MCP_IMAGE=${REGISTRY}/${IMAGE_NAME}-mcp_talentpulse:${IMAGE_TAG}
+          export DATABASE_URL=${{ secrets.DATABASE_URL }}
+          export DASHBOARD_API_URL=${{ secrets.DASHBOARD_API_URL }}
+          export DASHBOARD_API_SECRET=${{ secrets.DASHBOARD_API_SECRET }}
           docker compose up -d --no-build
           docker image prune -f
 
