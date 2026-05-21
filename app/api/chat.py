@@ -162,6 +162,18 @@ async def send_message(
     past_msgs = list(reversed(history.scalars().all()))
     agent_messages = [{"role": m.role, "content": m.content} for m in past_msgs]
 
+    # Inject user context so agent knows who to call get_user_profile for
+    user_context = {
+        "role": "system",
+        "content": (
+            f"User ID: {current_user.id}\n"
+            f"User email: {current_user.email}\n"
+            f"User name: {current_user.full_name}\n"
+            f"When you need user profile, call get_user_profile with user_id=\"{current_user.id}\" — do NOT ask the user for their ID."
+        ),
+    }
+    agent_messages.insert(0, user_context)
+
     # 4. Call agent
     agent = get_agent()
     result = await agent.ainvoke({"messages": agent_messages})
