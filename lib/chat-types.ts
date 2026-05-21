@@ -1,3 +1,10 @@
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+};
+
 export type AlertCardData = {
   title: string | null;
   company_name: string | null;
@@ -5,13 +12,4 @@ export type AlertCardData = {
   salary_million: number | null;
   source_url: string | null;
   source: string | null;
-};
-
-export type ChatMessage = {
-  id: string;
-  role: "bot" | "user";
-  type: "alert" | "text";
-  content: string;
-  alerts?: AlertCardData[];
-  timestamp: Date;
 };

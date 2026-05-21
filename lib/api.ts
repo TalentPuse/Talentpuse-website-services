@@ -593,3 +593,61 @@ export const cvApi = {
     return res.json();
   },
 };
+
+/* ───── Chat types & API ───── */
+
+export type ChatRoom = {
+  id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+  last_message: string | null;
+};
+
+export type ChatMessageResponse = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+};
+
+export type ChatReplyResponse = {
+  user_message: ChatMessageResponse;
+  assistant_message: ChatMessageResponse;
+};
+
+export const chatApi = {
+  listRooms: (token: string) =>
+    clientFetch<ChatRoom[]>("/api/chat/rooms", {
+      headers: authHeaders(token),
+    }),
+
+  createRoom: (token: string, title?: string) =>
+    clientFetch<ChatRoom>("/api/chat/rooms", {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify({ title: title || null }),
+    }),
+
+  deleteRoom: (token: string, roomId: string) =>
+    fetch(`${CLIENT_BASE}/api/chat/rooms/${roomId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getMessages: (token: string, roomId: string, limit = 50) =>
+    clientFetch<ChatMessageResponse[]>(
+      `/api/chat/rooms/${roomId}/messages?limit=${limit}`,
+      { headers: authHeaders(token) },
+    ),
+
+  sendMessage: (token: string, roomId: string, content: string) =>
+    clientFetch<ChatReplyResponse>(
+      `/api/chat/rooms/${roomId}/messages`,
+      {
+        method: "POST",
+        headers: authHeaders(token),
+        body: JSON.stringify({ content }),
+      },
+    ),
+};
