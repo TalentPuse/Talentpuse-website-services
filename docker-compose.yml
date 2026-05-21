@@ -21,6 +21,7 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-talentpulse-raw}
+      MCP_SERVER_URL: ${MCP_SERVER_URL:-http://tp-mcp:8080/mcp/}
     networks:
       - talentpulse
     restart: unless-stopped
