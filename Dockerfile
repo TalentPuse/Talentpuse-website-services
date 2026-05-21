@@ -5,8 +5,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY . /app/mcp_server/
 
 EXPOSE 8080
 
-CMD ["python", "-m", "server"]
+CMD ["python", "-m", "mcp_server.server"]
