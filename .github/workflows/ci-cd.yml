@@ -91,8 +91,16 @@ jobs:
           export DATABASE_URL=${{ secrets.DATABASE_URL }}
           export DASHBOARD_API_URL=${{ secrets.DASHBOARD_API_URL }}
           export DASHBOARD_API_SECRET=${{ secrets.DASHBOARD_API_SECRET }}
-          docker compose up -d --no-build
+
+          # Remove old container if exists (handles manual runs, name conflicts)
+          docker rm -f tp-mcp 2>/dev/null || true
+
+          docker compose up -d --no-build --force-recreate
           docker image prune -f
+
+          # Ensure container is on talentpulse network
+          docker network connect talentpulse tp-mcp 2>/dev/null || true
 
           echo "MCP deployment successful!"
           docker compose ps
+          docker logs tp-mcp --tail 5
