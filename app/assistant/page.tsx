@@ -185,10 +185,71 @@ function AssistantContent() {
         />
       )}
 
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Chat header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-white shrink-0">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden p-1.5 rounded-lg hover:bg-slate-100"
+          >
+            <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-semibold text-slate-900 truncate">
+              {activeRoomId
+                ? rooms.find((r) => r.id === activeRoomId)?.title || "Cuộc trò chuyện"
+                : "AI Career Advisor"}
+            </h2>
+            <p className="text-xs text-slate-400">
+              Tư vấn kỹ năng, lộ trình nghề, thị trường việc làm
+            </p>
+          </div>
+        </div>
+
+        {/* Chat content */}
+        <div className="flex-1 overflow-hidden p-4 pt-2">
+          <ChatWindow
+            messages={messages}
+            onSend={handleSend}
+            loading={loadingMessages}
+            isTyping={isTyping}
+          />
+        </div>
+
+        {/* Suggestions — only when no active room and no messages */}
+        {!activeRoomId && messages.length === 0 && !isTyping && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-4 pb-4"
+          >
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <p className="text-sm text-slate-500 mb-3">
+                Thử hỏi một trong những câu sau:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => handleSend(s)}
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 transition-colors shadow-sm"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </div>
+
       {/* Sidebar — Room List */}
       <aside
-        className={`fixed md:static z-40 top-0 left-0 h-full w-72 bg-white border-r border-slate-200 flex flex-col shrink-0 transition-transform md:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed md:static z-40 top-0 right-0 h-full w-72 bg-white border-l border-slate-200 flex flex-col shrink-0 transition-transform md:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {/* Sidebar header */}
@@ -274,67 +335,6 @@ function AssistantContent() {
           )}
         </div>
       </aside>
-
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Chat header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 bg-white shrink-0">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="md:hidden p-1.5 rounded-lg hover:bg-slate-100"
-          >
-            <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold text-slate-900 truncate">
-              {activeRoomId
-                ? rooms.find((r) => r.id === activeRoomId)?.title || "Cuộc trò chuyện"
-                : "AI Career Advisor"}
-            </h2>
-            <p className="text-xs text-slate-400">
-              Tư vấn kỹ năng, lộ trình nghề, thị trường việc làm
-            </p>
-          </div>
-        </div>
-
-        {/* Chat content */}
-        <div className="flex-1 overflow-hidden p-4 pt-2">
-          <ChatWindow
-            messages={messages}
-            onSend={handleSend}
-            loading={loadingMessages}
-            isTyping={isTyping}
-          />
-        </div>
-
-        {/* Suggestions — only when no active room and no messages */}
-        {!activeRoomId && messages.length === 0 && !isTyping && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="px-4 pb-4"
-          >
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <p className="text-sm text-slate-500 mb-3">
-                Thử hỏi một trong những câu sau:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleSend(s)}
-                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 transition-colors shadow-sm"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </div>
     </div>
   );
 }
