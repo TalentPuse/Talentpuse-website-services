@@ -8,6 +8,10 @@ from app.services.agent.config import cfg
 async def call_mcp_tool(name: str, arguments: dict) -> str:
     async with Client(cfg["mcp"]["server_url"]) as client:
         result = await client.call_tool(name, arguments)
-        if result.content:
-            return "\n".join(c.text for c in result.content if hasattr(c, "text"))
-        return str(result.data) if result.data else ""
+        # Handle both CallToolResult (.content) and plain list returns
+        items = result.content if hasattr(result, "content") else result
+        if items:
+            return "\n".join(
+                c.text if hasattr(c, "text") else str(c) for c in items
+            )
+        return ""
