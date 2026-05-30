@@ -792,6 +792,13 @@ export type InterviewSession = {
   created_at: string;
 };
 
+export type Evaluation = {
+  score: number;
+  strengths: string;
+  improvements: string;
+  suggested_answer: string;
+};
+
 export type SessionAnswer = {
   id: string;
   question: InterviewQuestion;
