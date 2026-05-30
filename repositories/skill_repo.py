@@ -14,7 +14,9 @@ class SkillRepository(BaseRepository):
         category: str | None = None,
         limit: int = 20,
     ) -> list[SkillGapRow]:
-        args: list = [exclude_skills, limit]
+        # Normalize to lowercase for case-insensitive exclusion
+        lowered = tuple(s.lower() for s in exclude_skills)
+        args: list = [lowered, limit]
 
         rows = await self._fetch(
             """
@@ -22,7 +24,7 @@ class SkillRepository(BaseRepository):
                    ROUND(avg_salary_vnd / 1e6) AS avg_salary_m
             FROM dbt_dev_gold.mart_skill_demand
             WHERE n_jobs >= 3
-              AND NOT (skill = ANY($1))
+              AND NOT (LOWER(skill) = ANY($1))
             ORDER BY n_jobs DESC
             LIMIT $2
             """,
