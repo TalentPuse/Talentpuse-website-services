@@ -8,9 +8,11 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import asyncio
 from fastapi.testclient import TestClient
 
 from app.core.security import get_current_user
+from app.core.database import init_db, async_session_factory
 from app.main import app
 
 
@@ -54,6 +56,11 @@ def client(mock_user):
         return mock_user
 
     app.dependency_overrides[get_current_user] = override_get_current_user
+
+    # Initialize database for API tests
+    if async_session_factory is None:
+        asyncio.run(init_db())
+
     try:
         yield TestClient(app)
     finally:
@@ -87,16 +94,16 @@ class TestSessionEndpoints:
         mock_message.created_at = "2024-01-01T00:00:00"
 
         with patch(
-            "app.services.interview_agent.api.interview_router.create_session",
+            "app.services.interview_agent.storage.session_store.create_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.api.interview_router.create_message",
+            "app.services.interview_agent.storage.message_store.create_message",
             return_value=mock_message,
         ), patch(
-            "app.services.interview_agent.api.interview_router.update_session",
+            "app.services.interview_agent.storage.session_store.update_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.api.interview_router.get_session_messages",
+            "app.services.interview_agent.storage.message_store.get_session_messages",
             return_value=[mock_message],
         ):
             response = client.post(

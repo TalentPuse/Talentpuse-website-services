@@ -12,6 +12,22 @@ import pytest
 from sqlalchemy import select
 
 
+@pytest.fixture
+async def db_session():
+    """Async database session fixture for tests."""
+    from app.core.database import async_session_factory, init_db
+
+    # Initialize database if not already initialized
+    if async_session_factory is None:
+        await init_db()
+
+    if async_session_factory is None:
+        pytest.skip("Database not available - skipping storage tests")
+
+    async with async_session_factory() as session:
+        yield session
+
+
 @pytest.mark.asyncio
 class TestSessionStore:
     """Test interview session storage operations."""

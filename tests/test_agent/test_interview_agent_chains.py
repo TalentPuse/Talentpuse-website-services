@@ -268,13 +268,17 @@ class TestInterviewAgentFactory:
         """Test that reset_interview_agent clears all singletons."""
         from app.services.interview_agent.chains import reset_interview_agent
 
-        import app.services.interview_agent.chains as mod
-        mod._interview_agent = MagicMock()
-        mod._tech_agent = MagicMock()
-        mod._behavioral_agent = MagicMock()
+        # Set the agents to non-None values
+        import app.services.interview_agent.chains.tech_interview_chain as tech_mod
+        import app.services.interview_agent.chains.behavioral_interview_chain as behav_mod
+        import app.services.interview_agent.chains as init_mod
+
+        tech_mod._tech_agent = MagicMock()
+        behav_mod._behavioral_agent = MagicMock()
+        init_mod._interview_agent = MagicMock()
 
         reset_interview_agent()
 
-        assert mod._interview_agent is None
-        assert mod._tech_agent is None
-        assert mod._behavioral_agent is None
+        assert tech_mod._tech_agent is None
+        assert behav_mod._behavioral_agent is None
+        assert init_mod._interview_agent is None
