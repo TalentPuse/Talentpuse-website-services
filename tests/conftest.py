@@ -4,18 +4,21 @@ This file provides common fixtures for all tests.
 """
 from __future__ import annotations
 
+import sys
 import pytest
-import asyncio
 
 from app.core.database import async_session_factory, init_db
 
 
 @pytest.fixture(autouse=True, scope="session")
 def setup_event_loop():
-    """Set up event loop for the test session."""
-    import asyncio.windows_events
-    policy = asyncio.windows_events.WindowsSelectorEventLoopPolicy()
-    asyncio.set_event_loop_policy(policy)
+    """Set up event loop for the test session (cross-platform)."""
+    import asyncio
+    # Only use WindowsSelectorEventLoopPolicy on Windows
+    if sys.platform == "win32":
+        import asyncio.windows_events
+        policy = asyncio.windows_events.WindowsSelectorEventLoopPolicy()
+        asyncio.set_event_loop_policy(policy)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     yield
