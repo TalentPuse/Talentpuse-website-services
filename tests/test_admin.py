@@ -108,6 +108,12 @@ async def test_stats_success():
     mock_stats = AdminStats(
         total_users=10, active_users=8, telegram_linked=3,
         alerts_today=5, alerts_this_week=20, total_alerts=100,
+        total_interview_sessions=0, total_interview_answers=0,
+        total_chat_rooms=0, total_chat_messages=0,
+        active_jobs=500, alert_subscribers=7,
+        user_signups_daily=[], alerts_daily=[],
+        tier_breakdown=[], alert_channel_breakdown=[],
+        session_mode_breakdown=[],
     )
 
     with patch("app.api.admin.get_admin_stats", new_callable=AsyncMock, return_value=mock_stats):

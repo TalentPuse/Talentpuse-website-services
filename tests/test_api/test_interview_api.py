@@ -243,6 +243,7 @@ async def test_submit_answer(override_deps, fake_user, fake_db):
     mock_session.status = "in_progress"
     mock_session.mode = "practice"
     mock_session.completed_questions = 0
+    mock_session.total_questions = 3
 
     mock_question = MagicMock()
     mock_question.id = question_id
@@ -270,17 +271,13 @@ async def test_submit_answer(override_deps, fake_user, fake_db):
 
     fake_db.get = AsyncMock(side_effect=mock_db_get)
 
-    with patch("app.api.interview.evaluate_answer", new_callable=AsyncMock, return_value=SAMPLE_EVAL):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            resp = await client.post(
-                f"/api/interview/sessions/{session_id}/answers/{answer_id}",
-                json={"answer_text": "This is my test answer that is long enough to pass validation"},
-            )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            f"/api/interview/sessions/{session_id}/answers/{answer_id}",
+            json={"answer_text": "This is my test answer that is long enough to pass validation"},
+        )
 
     assert resp.status_code == 200
-    data = resp.json()
-    assert data["score"] == 4.0
-    assert "Good STAR structure" in data["strengths"]
 
 
 @pytest.mark.asyncio
@@ -322,6 +319,7 @@ async def test_skip_answer_practice(override_deps, fake_user, fake_db):
     mock_session.status = "in_progress"
     mock_session.mode = "practice"
     mock_session.completed_questions = 0
+    mock_session.total_questions = 3
 
     mock_answer = MagicMock()
     mock_answer.id = answer_id

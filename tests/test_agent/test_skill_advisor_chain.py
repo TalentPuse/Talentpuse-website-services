@@ -48,6 +48,7 @@ class TestGetAgent:
         tools = call_kwargs.kwargs.get("tools", call_kwargs[1].get("tools", []))
         tool_names = [t.name for t in tools]
         assert "query_skill_gap" in tool_names
-        assert "get_user_profile" in tool_names
+        assert "get_cv_writing_guide" in tool_names
+        assert "search_jobs_realtime" in tool_names
 
         mod._agent = None
