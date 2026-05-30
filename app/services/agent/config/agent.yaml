@@ -2,7 +2,7 @@ llm:
   model: "${OPENAI_MODEL}"
   base_url: "${OPENAI_BASE_URL}"
   temperature: 0.7
-  max_tokens: 2048
+  max_tokens: 4096
 
 mcp:
   server_url: "${MCP_SERVER_URL}"
@@ -12,4 +12,5 @@ agent:
   max_history_messages: 20
   tools:
     - query_skill_gap
-    - get_user_profile
+    - get_cv_writing_guide
+    - search_jobs_realtime

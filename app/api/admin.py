@@ -12,6 +12,7 @@ from app.models.user import User
 from app.schemas.admin import (
     AdminJobList,
     AdminStats,
+    AdminUserProfile,
     AdminUserList,
     AlertLogList,
     ConfigUpdate,
@@ -21,6 +22,7 @@ from app.schemas.admin import (
 from app.services.admin import (
     get_admin_stats,
     get_system_config,
+    get_user_profile,
     list_alertable_jobs,
     list_alert_logs,
     list_users,
@@ -52,6 +54,18 @@ async def users(
     db: AsyncSession = Depends(get_db),
 ) -> AdminUserList:
     return await list_users(db, page=page, per_page=per_page, search=search, is_active=is_active, tier=tier)
+
+
+@router.get("/users/{user_id}", response_model=AdminUserProfile)
+async def user_profile(
+    user_id: str,
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> AdminUserProfile:
+    profile = await get_user_profile(db, user_id)
+    if not profile:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User không tồn tại")
+    return profile
 
 
 @router.put("/users/{user_id}/toggle-active")

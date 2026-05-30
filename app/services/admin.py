@@ -13,11 +13,16 @@ from app.schemas.admin import (
     AdminJobList,
     AdminJobRow,
     AdminStats,
+    AdminUserProfile,
     AdminUserList,
     AdminUserRow,
     AlertLogList,
     AlertLogRow,
+    ChannelBreakdown,
+    SessionModeBreakdown,
     SystemConfig,
+    TierBreakdown,
+    TimeSeriesPoint,
 )
 
 logger = logging.getLogger(__name__)
@@ -27,9 +32,12 @@ VALID_TIERS = {"free", "pro", "enterprise"}
 
 async def get_admin_stats(db: AsyncSession) -> AdminStats:
     now_vn = datetime.now(VN_TZ)
-    today_start = now_vn.replace(hour=0, minute=0, second=0, microsecond=0)
-    week_start = today_start - timedelta(days=now_vn.weekday())
+    today_start = now_vn.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    week_start = (now_vn - timedelta(days=now_vn.weekday())).replace(
+        hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+    )
 
+    # Core KPIs
     result = await db.execute(text("""
         SELECT
             (SELECT count(*) FROM app.users)::int AS total_users,
@@ -37,8 +45,75 @@ async def get_admin_stats(db: AsyncSession) -> AdminStats:
             (SELECT count(*) FROM app.telegram_connections WHERE status = 'active')::int AS telegram_linked,
             (SELECT count(*) FROM app.alert_logs WHERE sent_at >= :today)::int AS alerts_today,
             (SELECT count(*) FROM app.alert_logs WHERE sent_at >= :week)::int AS alerts_this_week,
-            (SELECT count(*) FROM app.alert_logs)::int AS total_alerts
+            (SELECT count(*) FROM app.alert_logs)::int AS total_alerts,
+            (SELECT count(*) FROM app.interview_sessions)::int AS total_interview_sessions,
+            (SELECT count(*) FROM app.interview_answers WHERE answered_at IS NOT NULL)::int AS total_interview_answers,
+            (SELECT count(*) FROM app.chat_rooms)::int AS total_chat_rooms,
+            (SELECT count(*) FROM app.chat_messages)::int AS total_chat_messages,
+            (SELECT count(DISTINCT source_job_id) FROM dbt_dev_gold.fct_jobs_daily WHERE is_active)::int AS active_jobs,
+            (SELECT count(*) FROM app.alert_subscriptions WHERE enabled)::int AS alert_subscribers
     """), {"today": today_start, "week": week_start})
+
+    row = result.mappings().first()
+
+    # User signups daily (last 30 days)
+    signup_rows = await db.execute(text("""
+        SELECT date(created_at)::text AS d, count(*)::int AS c
+        FROM app.users
+        WHERE created_at >= now() - interval '30 days'
+        GROUP BY 1 ORDER BY 1
+    """))
+    user_signups_daily = [TimeSeriesPoint(date=r["d"], value=r["c"]) for r in signup_rows.mappings()]
+
+    # Alerts daily (last 30 days)
+    alert_rows = await db.execute(text("""
+        SELECT date(sent_at)::text AS d, count(*)::int AS c
+        FROM app.alert_logs
+        WHERE sent_at >= now() - interval '30 days'
+        GROUP BY 1 ORDER BY 1
+    """))
+    alerts_daily = [TimeSeriesPoint(date=r["d"], value=r["c"]) for r in alert_rows.mappings()]
+
+    # Tier breakdown
+    tier_rows = await db.execute(text("""
+        SELECT subscription_tier AS tier, count(*)::int AS c
+        FROM app.users GROUP BY subscription_tier ORDER BY c DESC
+    """))
+    tier_breakdown = [TierBreakdown(tier=r["tier"], count=r["c"]) for r in tier_rows.mappings()]
+
+    # Alert channel breakdown
+    channel_rows = await db.execute(text("""
+        SELECT channel, count(*)::int AS c
+        FROM app.alert_logs GROUP BY channel ORDER BY c DESC
+    """))
+    alert_channel_breakdown = [ChannelBreakdown(channel=r["channel"], count=r["c"]) for r in channel_rows.mappings()]
+
+    # Session mode breakdown
+    session_rows = await db.execute(text("""
+        SELECT mode, status, count(*)::int AS c
+        FROM app.interview_sessions GROUP BY mode, status ORDER BY c DESC
+    """))
+    session_mode_breakdown = [SessionModeBreakdown(mode=r["mode"], status=r["status"], count=r["c"]) for r in session_rows.mappings()]
+
+    return AdminStats(
+        total_users=row["total_users"],
+        active_users=row["active_users"],
+        telegram_linked=row["telegram_linked"],
+        alerts_today=row["alerts_today"],
+        alerts_this_week=row["alerts_this_week"],
+        total_alerts=row["total_alerts"],
+        total_interview_sessions=row["total_interview_sessions"],
+        total_interview_answers=row["total_interview_answers"],
+        total_chat_rooms=row["total_chat_rooms"],
+        total_chat_messages=row["total_chat_messages"],
+        active_jobs=row["active_jobs"],
+        alert_subscribers=row["alert_subscribers"],
+        user_signups_daily=user_signups_daily,
+        alerts_daily=alerts_daily,
+        tier_breakdown=tier_breakdown,
+        alert_channel_breakdown=alert_channel_breakdown,
+        session_mode_breakdown=session_mode_breakdown,
+    )
 
     row = result.mappings().first()
     return AdminStats(**row)
@@ -121,6 +196,62 @@ async def list_users(
         ))
 
     return AdminUserList(users=users, total=total, page=page, per_page=per_page)
+
+
+async def get_user_profile(db: AsyncSession, user_id: str) -> AdminUserProfile | None:
+    result = await db.execute(text("""
+        SELECT
+            u.id, u.email, u.full_name, u.is_active, u.is_admin,
+            u.subscription_tier, u.experience_level, u.university,
+            u.graduation_year, u.open_to_internship, u.part_time_ok,
+            u.skills, u.desired_titles, u.preferred_cities,
+            u.desired_salary_min, u.desired_salary_max, u.cv_file_url,
+            u.created_at, u.updated_at,
+            tc.status AS telegram_status,
+            tc.telegram_username,
+            COALESCE(asub.enabled, false) AS alert_enabled,
+            COALESCE(al_count.cnt, 0)::int AS alerts_sent
+        FROM app.users u
+        LEFT JOIN app.telegram_connections tc ON tc.user_id = u.id
+        LEFT JOIN app.alert_subscriptions asub
+            ON asub.user_id = u.id AND asub.alert_type = 'job_match'
+        LEFT JOIN (
+            SELECT user_id, count(*) AS cnt
+            FROM app.alert_logs
+            GROUP BY user_id
+        ) al_count ON al_count.user_id = u.id
+        WHERE u.id = :uid
+    """), {"uid": user_id})
+
+    row = result.mappings().first()
+    if not row:
+        return None
+
+    return AdminUserProfile(
+        id=str(row["id"]),
+        email=row["email"],
+        full_name=row["full_name"],
+        is_active=row["is_active"],
+        is_admin=row["is_admin"],
+        subscription_tier=row["subscription_tier"],
+        experience_level=row["experience_level"],
+        university=row["university"],
+        graduation_year=row["graduation_year"],
+        open_to_internship=row["open_to_internship"],
+        part_time_ok=row["part_time_ok"],
+        skills=row["skills"] or [],
+        desired_titles=row["desired_titles"] or [],
+        preferred_cities=row["preferred_cities"] or [],
+        desired_salary_min=row["desired_salary_min"],
+        desired_salary_max=row["desired_salary_max"],
+        cv_file_url=row["cv_file_url"],
+        telegram_status=row["telegram_status"],
+        telegram_username=row["telegram_username"],
+        alert_enabled=row["alert_enabled"],
+        alerts_sent=row["alerts_sent"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
 
 
 async def toggle_user_active(db: AsyncSession, user_id: str, is_active: bool) -> bool:

@@ -14,13 +14,3 @@ async def query_skill_gap(user_skills: str) -> str:
         user_skills: Comma-separated list of skills the user already knows.
     """
     return await call_mcp_tool("query_skill_gap", {"user_skills": user_skills})
-
-
-@tool
-async def get_user_profile(user_id: str) -> str:
-    """Get user profile: skills, desired job titles, experience level.
-
-    Args:
-        user_id: The user's UUID.
-    """
-    return await call_mcp_tool("get_user_profile", {"user_id": user_id})

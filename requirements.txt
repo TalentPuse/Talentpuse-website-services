@@ -19,3 +19,4 @@ langchain>=1.0
 langchain-openai>=0.3
 fastmcp>=2.0
 pyyaml>=6.0
+resend>=2.0

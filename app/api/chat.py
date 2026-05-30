@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import json
+import logging
 import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from langchain_core.messages import AIMessageChunk
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import async_session_factory, get_db
 from app.core.security import get_current_user
 from app.models.chat import ChatMessage, ChatRoom
 from app.models.user import User
@@ -18,12 +22,45 @@ from app.schemas.chat import (
     ChatRoomCreate,
     ChatRoomResponse,
 )
-from app.services.agent import get_agent
+from app.services.agent import AgentContext, get_agent
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
+logger = logging.getLogger(__name__)
 
-# ─── Rooms ──────────────────────────────────────────────
+
+# ─── Helpers ────────────────────────────────────────────────
+
+
+def _build_profile_dict(user: User) -> dict:
+    return {
+        "full_name": user.full_name,
+        "email": user.email,
+        "skills": list(user.skills or []),
+        "desired_titles": list(user.desired_titles or []),
+        "experience_level": user.experience_level,
+        "preferred_cities": list(user.preferred_cities or []),
+        "desired_salary_min": user.desired_salary_min,
+        "desired_salary_max": user.desired_salary_max,
+        "university": user.university,
+        "graduation_year": user.graduation_year,
+    }
+
+
+async def _load_chat_history(
+    db: AsyncSession, room_id: uuid.UUID, limit: int = 20
+) -> list[dict]:
+    history = await db.execute(
+        select(ChatMessage)
+        .where(ChatMessage.room_id == room_id)
+        .order_by(ChatMessage.created_at.desc())
+        .limit(limit)
+    )
+    past_msgs = list(reversed(history.scalars().all()))
+    return [{"role": m.role, "content": m.content} for m in past_msgs]
+
+
+# ─── Rooms ──────────────────────────────────────────────────
 
 
 @router.get("/rooms", response_model=list[ChatRoomResponse])
@@ -92,7 +129,7 @@ async def delete_room(
     await db.commit()
 
 
-# ─── Messages ───────────────────────────────────────────
+# ─── Messages ───────────────────────────────────────────────
 
 
 @router.get("/rooms/{room_id}/messages", response_model=list[ChatMessageResponse])
@@ -153,36 +190,24 @@ async def send_message(
     await db.refresh(user_msg)
 
     # 3. Load recent history for context
-    history = await db.execute(
-        select(ChatMessage)
-        .where(ChatMessage.room_id == uuid.UUID(room_id))
-        .order_by(ChatMessage.created_at.desc())
-        .limit(20)
-    )
-    past_msgs = list(reversed(history.scalars().all()))
-    agent_messages = [{"role": m.role, "content": m.content} for m in past_msgs]
+    agent_messages = await _load_chat_history(db, uuid.UUID(room_id))
 
-    # Inject user context so agent knows who to call get_user_profile for
-    user_context = {
-        "role": "system",
-        "content": (
-            f"User ID: {current_user.id}\n"
-            f"User email: {current_user.email}\n"
-            f"User name: {current_user.full_name}\n"
-            f"When you need user profile, call get_user_profile with user_id=\"{current_user.id}\" — do NOT ask the user for their ID."
-        ),
-    }
-    agent_messages.insert(0, user_context)
+    # 4. Build context
+    profile_dict = _build_profile_dict(current_user)
+    agent_ctx = AgentContext(profile=profile_dict)
 
-    # 4. Call agent
+    # 5. Call agent
     agent = get_agent()
-    result = await agent.ainvoke({"messages": agent_messages})
+    result = await agent.ainvoke(
+        {"messages": agent_messages},
+        context=agent_ctx,
+    )
 
-    # 5. Extract reply
+    # 6. Extract reply
     last_msg = result["messages"][-1]
     reply_text = last_msg.content if hasattr(last_msg, "content") else str(last_msg)
 
-    # 6. Save assistant message
+    # 7. Save assistant message
     bot_msg = ChatMessage(
         room_id=uuid.UUID(room_id),
         role="assistant",
@@ -190,7 +215,7 @@ async def send_message(
     )
     db.add(bot_msg)
 
-    # 7. Update room timestamp
+    # 8. Update room timestamp
     room.updated_at = func.now()
 
     await db.commit()
@@ -209,4 +234,106 @@ async def send_message(
             content=bot_msg.content,
             created_at=bot_msg.created_at,
         ),
+    )
+
+
+# ─── Streaming ──────────────────────────────────────────────
+
+
+@router.post("/rooms/{room_id}/messages/stream")
+async def send_message_stream(
+    room_id: str,
+    body: ChatMessageSend,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    room = await db.get(ChatRoom, uuid.UUID(room_id))
+    if not room or room.user_id != current_user.id:
+        raise HTTPException(404, "Room not found")
+
+    # 1. Save user message
+    user_msg = ChatMessage(
+        room_id=uuid.UUID(room_id),
+        role="user",
+        content=body.content,
+    )
+    db.add(user_msg)
+
+    # 2. Auto-generate room title from first message
+    if room.title == "Cuộc trò chuyện mới":
+        room.title = body.content[:60] + ("..." if len(body.content) > 60 else "")
+
+    await db.commit()
+    await db.refresh(user_msg)
+
+    # 3. Load recent history
+    agent_messages = await _load_chat_history(db, uuid.UUID(room_id))
+
+    # 4. Build context
+    profile_dict = _build_profile_dict(current_user)
+    agent_ctx = AgentContext(profile=profile_dict)
+
+    uid = uuid.UUID(room_id)
+
+    async def _token_generator():
+        agent = get_agent()
+        full_response = ""
+
+        user_msg_data = {
+            "type": "user_message",
+            "id": str(user_msg.id),
+            "role": user_msg.role,
+            "content": user_msg.content,
+            "created_at": user_msg.created_at.isoformat(),
+        }
+        yield f"data: {json.dumps(user_msg_data, ensure_ascii=False)}\n\n"
+
+        try:
+            async for chunk in agent.astream(
+                {"messages": agent_messages},
+                context=agent_ctx,
+                stream_mode="messages",
+            ):
+                msg, metadata = chunk
+                if isinstance(msg, AIMessageChunk) and msg.content:
+                    full_response += msg.content
+                    yield f"data: {json.dumps({'type': 'token', 'content': msg.content}, ensure_ascii=False)}\n\n"
+
+            # Save assistant message using a fresh DB session
+            async with async_session_factory() as db_sess:
+                bot_msg = ChatMessage(
+                    room_id=uid,
+                    role="assistant",
+                    content=full_response,
+                )
+                db_sess.add(bot_msg)
+                room_obj = await db_sess.get(ChatRoom, uid)
+                if room_obj:
+                    room_obj.updated_at = func.now()
+                await db_sess.commit()
+                await db_sess.refresh(bot_msg)
+
+                done_payload = {
+                    "type": "done",
+                    "assistant_message": {
+                        "id": str(bot_msg.id),
+                        "role": bot_msg.role,
+                        "content": bot_msg.content,
+                        "created_at": bot_msg.created_at.isoformat(),
+                    },
+                }
+                yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
+
+        except Exception:
+            logger.exception("Streaming error in room %s", room_id)
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Loi khi tao phan hoi'}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        _token_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )

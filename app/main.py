@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, auth, chat, companies, cv, jobs, overview, salary, skills, telegram
+from app.api import admin, auth, chat, companies, cv, email, interview, jobs, overview, salary, skills, telegram
 from app.core.config import (
     ALERT_END_TIME,
     ALERT_START_TIME,
@@ -95,9 +95,11 @@ app.include_router(companies.router)
 app.include_router(auth.router)
 app.include_router(jobs.router)
 app.include_router(telegram.router)
+app.include_router(email.router)
 app.include_router(admin.router)
 app.include_router(chat.router)
 app.include_router(cv.router)
+app.include_router(interview.router)
 
 
 @app.get("/", tags=["health"])

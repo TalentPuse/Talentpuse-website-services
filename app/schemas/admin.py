@@ -5,13 +5,48 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class TimeSeriesPoint(BaseModel):
+    date: str
+    value: int
+
+
+class TierBreakdown(BaseModel):
+    tier: str
+    count: int
+
+
+class ChannelBreakdown(BaseModel):
+    channel: str
+    count: int
+
+
+class SessionModeBreakdown(BaseModel):
+    mode: str
+    status: str
+    count: int
+
+
 class AdminStats(BaseModel):
+    # KPIs
     total_users: int
     active_users: int
     telegram_linked: int
     alerts_today: int
     alerts_this_week: int
     total_alerts: int
+    total_interview_sessions: int
+    total_interview_answers: int
+    total_chat_rooms: int
+    total_chat_messages: int
+    active_jobs: int
+    alert_subscribers: int
+
+    # Charts
+    user_signups_daily: list[TimeSeriesPoint]
+    alerts_daily: list[TimeSeriesPoint]
+    tier_breakdown: list[TierBreakdown]
+    alert_channel_breakdown: list[ChannelBreakdown]
+    session_mode_breakdown: list[SessionModeBreakdown]
 
 
 class AdminUserRow(BaseModel):
@@ -71,6 +106,32 @@ class ConfigUpdate(BaseModel):
 
 class TierUpdate(BaseModel):
     tier: str
+
+
+class AdminUserProfile(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    is_active: bool
+    is_admin: bool
+    subscription_tier: str
+    experience_level: str | None = None
+    university: str | None = None
+    graduation_year: int | None = None
+    open_to_internship: bool = False
+    part_time_ok: bool = False
+    skills: list[str] = []
+    desired_titles: list[str] = []
+    preferred_cities: list[str] = []
+    desired_salary_min: int | None = None
+    desired_salary_max: int | None = None
+    cv_file_url: str | None = None
+    telegram_status: str | None = None
+    telegram_username: str | None = None
+    alert_enabled: bool = False
+    alerts_sent: int = 0
+    created_at: datetime
+    updated_at: datetime | None = None
 
 
 class AdminJobRow(BaseModel):
