@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import admin, auth, chat, companies, cv, email, interview, jobs, overview, salary, skills, telegram
+from app.services.interview_agent.api import interview_router as interview_agent_router
 from app.core.config import (
     ALERT_END_TIME,
     ALERT_START_TIME,
@@ -99,7 +100,8 @@ app.include_router(email.router)
 app.include_router(admin.router)
 app.include_router(chat.router)
 app.include_router(cv.router)
-app.include_router(interview.router)
+app.include_router(interview.router)  # OLD interview API (Q&A based)
+app.include_router(interview_agent_router)  # NEW chatbot-based interview (prefix already in router)
 
 
 @app.get("/", tags=["health"])

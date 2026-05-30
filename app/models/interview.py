@@ -42,15 +42,18 @@ class InterviewSession(Base):
         ForeignKey("app.users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    mode: Mapped[str] = mapped_column(String(10), nullable=False)
+    mode: Mapped[str] = mapped_column(String(20), nullable=False)  # "technical" or "behavioral"
     status: Mapped[str] = mapped_column(
-        String(15), nullable=False, server_default="in_progress"
-    )
+        String(20), nullable=False, server_default="created"
+    )  # "created", "in_progress", "completed", "abandoned"
     category: Mapped[str | None] = mapped_column(String(30), nullable=True)
-    target_role: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    target_role: Mapped[str | None] = mapped_column(String(255), nullable=True)
     total_questions: Mapped[int] = mapped_column(
-        SmallInteger, nullable=False, server_default="0"
+        SmallInteger, nullable=False, server_default="5"
     )
+    question_count: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, server_default="0"
+    )  # Number of questions exchanged (user messages)
     completed_questions: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, server_default="0"
     )
@@ -63,6 +66,9 @@ class InterviewSession(Base):
     started_at: Mapped[datetime] = mapped_column(server_default=func.now())
     completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(), onupdate=func.now()
+    )
 
 
 class InterviewAnswer(Base):
@@ -94,3 +100,35 @@ class InterviewAnswer(Base):
     )
     answered_at: Mapped[datetime | None] = mapped_column(nullable=True)
     skipped: Mapped[bool] = mapped_column(Boolean, server_default="false")
+
+
+class InterviewMessage(Base):
+    """Chat message for conversational interview sessions.
+
+    Supports the new chat-based interview approach where:
+    - User and AI have back-and-forth conversations
+    - AI can ask follow-up questions
+    - Messages stream via SSE
+    - Optional audio URLs for voice features
+    """
+
+    __tablename__ = "interview_messages"
+    __table_args__ = {"schema": "app"}
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("app.interview_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False)  # "user" or "assistant"
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    audio_url: Mapped[str | None] = mapped_column(
+        String(512), nullable=True
+    )  # TTS audio for assistant messages (future)
+    original_audio_url: Mapped[str | None] = mapped_column(
+        String(512), nullable=True
+    )  # STT audio for user messages (future)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())

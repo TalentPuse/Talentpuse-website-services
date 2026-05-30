@@ -1,0 +1,66 @@
+# Interview Agent Configuration
+
+llm:
+  model: "${INTERVIEW_MODEL:-gpt-4o-mini}"
+  base_url: "${OPENAI_BASE_URL}"
+  api_key: "${OPENAI_API_KEY}"
+  temperature: ${INTERVIEW_TEMPERATURE:-0.7}
+  max_tokens: ${INTERVIEW_MAX_TOKENS:-2000}
+
+evaluation:
+  model: "${INTERVIEW_EVAL_MODEL:-gpt-4o}"
+  temperature: ${INTERVIEW_EVAL_TEMPERATURE:-0.3}
+  max_tokens: ${INTERVIEW_EVAL_MAX_TOKENS:-1000}
+
+interview:
+  default_num_questions: ${INTERVIEW_DEFAULT_QUESTIONS:-5}
+  max_session_duration_minutes: ${INTERVIEW_MAX_DURATION_MINUTES:-60}
+  max_messages_per_session: ${INTERVIEW_MAX_MESSAGES:-100}
+
+  # Scoring thresholds
+  min_score: 1.0
+  max_score: 5.0
+  passing_score: 3.5
+
+voice:
+  enabled: ${VOICE_ENABLED:-false}
+  input_enabled: ${VOICE_INPUT_ENABLED:-false}
+  output_enabled: ${VOICE_OUTPUT_ENABLED:-false}
+  stt_service: ${VOICE_STT_SERVICE:-openai}
+  stt_model: ${VOICE_STT_MODEL:-whisper-1}
+  tts_service: ${VOICE_TTS_SERVICE:-openai}
+  tts_model: ${VOICE_TTS_MODEL:-tts-1}
+  tts_voice: ${VOICE_TTS_VOICE:-alloy}
+  max_audio_duration_sec: ${VOICE_MAX_AUDIO_DURATION_SEC:-300}
+  audio_bucket: ${VOICE_AUDIO_BUCKET:-interview-audios}
+  audio_retention_days: ${VOICE_AUDIO_RETENTION_DAYS:-30}
+
+storage:
+  # PostgreSQL for sessions and messages
+  database_url: "${DATABASE_URL}"
+
+  # S3/MinIO for audio files (future)
+  audio_storage_url: "${AUDIO_STORAGE_URL}"
+  audio_access_key: "${AUDIO_ACCESS_KEY}"
+  audio_secret_key: "${AUDIO_SECRET_KEY}"
+
+modes:
+  technical:
+    system_prompt_file: "tech_interviewer_system"
+    categories:
+      - system_design
+      - algorithms
+      - coding
+      - architecture
+      - tradeoffs
+
+  behavioral:
+    system_prompt_file: "behavioral_interviewer_system"
+    categories:
+      - leadership
+      - teamwork
+      - problem_solving
+      - communication
+      - adaptability
+      - conflict_resolution
+      - time_management
