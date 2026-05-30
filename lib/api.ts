@@ -799,6 +799,22 @@ export type Evaluation = {
   suggested_answer: string;
 };
 
+export type QuestionBreakdown = {
+  question_text: string;
+  score: number | null;
+  strengths: string | null;
+  improvements: string | null;
+  suggested_answer: string | null;
+};
+
+export type MockTestReport = {
+  session: SessionDetail;
+  overall_score: number;
+  overall_feedback: string;
+  improvement_plan: string;
+  questions: QuestionBreakdown[];
+};
+
 export type SessionAnswer = {
   id: string;
   question: InterviewQuestion;

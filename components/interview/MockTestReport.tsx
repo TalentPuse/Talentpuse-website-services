@@ -58,16 +58,16 @@ function BreakdownItem({ q, index }: { q: QuestionBreakdown; index: number }) {
       {open && (
         <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 space-y-3">
           <div>
-            <span className="text-xs font-semibold text-green-600">Diem manh:</span>
+            <span className="text-xs font-semibold text-green-600">Điểm mạnh:</span>
             <p className="text-sm text-slate-700">{q.strengths || "N/A"}</p>
           </div>
           <div>
-            <span className="text-xs font-semibold text-amber-600">Can cai thien:</span>
+            <span className="text-xs font-semibold text-amber-600">Cần cải thiện:</span>
             <p className="text-sm text-slate-700">{q.improvements || "N/A"}</p>
           </div>
           {q.suggested_answer && (
             <div>
-              <span className="text-xs font-semibold text-brand-600">Cau tra loi goi y:</span>
+              <span className="text-xs font-semibold text-brand-600">Câu trả lời gợi ý:</span>
               <p className="text-sm text-slate-700 whitespace-pre-wrap">{q.suggested_answer}</p>
             </div>
           )}
@@ -95,7 +95,7 @@ export default function MockTestReport({
             </svg>
           </button>
           <div>
-            <h1 className="text-xl font-bold text-slate-900">Bao cao Mock Test</h1>
+            <h1 className="text-xl font-bold text-slate-900">Báo cáo Mock Test</h1>
             <p className="text-sm text-slate-400">{report.session.target_role || "General"}</p>
           </div>
         </div>
@@ -104,14 +104,14 @@ export default function MockTestReport({
         <div className="bg-white rounded-2xl border border-slate-200 p-6 flex items-center gap-8">
           <ScoreGauge score={report.overall_score} />
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-slate-900 mb-2">Nhan xet tong</h3>
+            <h3 className="text-sm font-semibold text-slate-900 mb-2">Nhận xét tổng</h3>
             <p className="text-sm text-slate-600 leading-relaxed">{report.overall_feedback}</p>
           </div>
         </div>
 
         {/* Breakdown */}
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-900">Chi tiet tung cau</h3>
+          <h3 className="text-sm font-semibold text-slate-900">Chi tiết từng câu</h3>
           {report.questions.map((q, i) => (
             <BreakdownItem key={i} q={q} index={i} />
           ))}
@@ -119,13 +119,13 @@ export default function MockTestReport({
 
         {/* Improvement plan */}
         <div className="bg-brand-50 rounded-2xl border border-brand-200 p-6">
-          <h3 className="text-sm font-semibold text-brand-900 mb-3">Ke hoach cai thien</h3>
+          <h3 className="text-sm font-semibold text-brand-900 mb-3">Kế hoạch cải thiện</h3>
           <p className="text-sm text-brand-800 whitespace-pre-wrap leading-relaxed">{report.improvement_plan}</p>
         </div>
 
         <div className="text-center">
           <button onClick={onBack} className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium transition-colors">
-            Luyen tap them
+            Luyện tập thêm
           </button>
         </div>
       </div>
