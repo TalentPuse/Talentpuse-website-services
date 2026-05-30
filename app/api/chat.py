@@ -11,7 +11,8 @@ from langchain_core.messages import AIMessageChunk
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import async_session_factory, get_db
+from app.core import database as db_module
+from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.chat import ChatMessage, ChatRoom
 from app.models.user import User
@@ -300,7 +301,7 @@ async def send_message_stream(
                     yield f"data: {json.dumps({'type': 'token', 'content': msg.content}, ensure_ascii=False)}\n\n"
 
             # Save assistant message using a fresh DB session
-            async with async_session_factory() as db_sess:
+            async with db_module.async_session_factory() as db_sess:
                 bot_msg = ChatMessage(
                     room_id=uid,
                     role="assistant",
