@@ -20,14 +20,20 @@ export default function ChatWindow({
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const prevLenRef = useRef(0);
+
+  const lastContentLen =
+    messages.length > 0 ? messages[messages.length - 1].content.length : 0;
 
   useEffect(() => {
-    if (messages.length > prevLenRef.current || isTyping) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-    prevLenRef.current = messages.length;
-  }, [messages.length, isTyping]);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length, isTyping, lastContentLen]);
+
+  // Only show typing dots while waiting for first token
+  const showTyping =
+    isTyping &&
+    (messages.length === 0 ||
+      messages[messages.length - 1]?.role !== "assistant" ||
+      messages[messages.length - 1]?.content === "");
 
   function handleScroll() {
     if (!scrollRef.current || !onScrollTop) return;
@@ -67,7 +73,7 @@ export default function ChatWindow({
             {messages.map((msg) => (
               <ChatBubble key={msg.id} message={msg} />
             ))}
-            {isTyping && (
+            {showTyping && (
               <div className="flex gap-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white shrink-0 mt-0.5 shadow-sm">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

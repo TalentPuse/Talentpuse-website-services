@@ -56,7 +56,6 @@ const vi = {
     },
   },
   studentFeatures: {
-    comingSoon: "Sắp ra mắt",
     badge: "Dành cho Sinh viên",
     heading: "Khởi đầu sự nghiệp đúng cách",
     sub: "TalentPuse hỗ trợ sinh viên từ A đến Z — từ tìm việc đến phỏng vấn thành công",
@@ -151,7 +150,6 @@ const en: typeof vi = {
     },
   },
   studentFeatures: {
-    comingSoon: "Coming soon",
     badge: "For Students",
     heading: "Kick-start your career the right way",
     sub: "TalentPuse supports students from A to Z — from job hunting to interview success",

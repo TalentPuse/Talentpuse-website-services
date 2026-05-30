@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import ChatWindow from "@/components/chat/ChatWindow";
 import type { ChatMessage } from "@/lib/chat-types";
-import { chatApi, type ChatRoom } from "@/lib/api";
+import { chatApi, type ChatRoom, type SSEEvent } from "@/lib/api";
 
 const SUGGESTIONS = [
   "Tôi biết Python và SQL, nên học gì để làm AI Engineer?",
@@ -85,7 +85,7 @@ function AssistantContent() {
     };
   }, [token, activeRoomId]);
 
-  // Send message
+  // Send message with streaming
   async function handleSend(text: string) {
     if (!token || !text.trim() || isTyping) return;
 
@@ -104,43 +104,78 @@ function AssistantContent() {
       }
     }
 
-    // Optimistic: show user message immediately
+    // Optimistic: show user message + empty assistant placeholder
+    const tempUserId = `temp-user-${Date.now()}`;
+    const tempBotId = `temp-bot-${Date.now()}`;
+
     const tempUserMsg: ChatMessage = {
-      id: `temp-${Date.now()}`,
+      id: tempUserId,
       role: "user",
       content: text,
       timestamp: new Date(),
     };
-    setMessages((prev) => [...prev, tempUserMsg]);
+    const tempBotMsg: ChatMessage = {
+      id: tempBotId,
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, tempUserMsg, tempBotMsg]);
     setIsTyping(true);
     setSidebarOpen(false);
 
     try {
-      const reply = await chatApi.sendMessage(token, roomId, text);
+      const stream = chatApi.sendMessageStream(token, roomId, text);
 
-      // Replace temp message + add bot reply
-      setMessages((prev) => [
-        ...prev.filter((m) => m.id !== tempUserMsg.id),
-        {
-          id: reply.user_message.id,
-          role: reply.user_message.role,
-          content: reply.user_message.content,
-          timestamp: new Date(reply.user_message.created_at),
-        },
-        {
-          id: reply.assistant_message.id,
-          role: reply.assistant_message.role,
-          content: reply.assistant_message.content,
-          timestamp: new Date(reply.assistant_message.created_at),
-        },
-      ]);
+      for await (const event of stream) {
+        if (event.type === "user_message") {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempUserId
+                ? {
+                    id: event.id,
+                    role: event.role,
+                    content: event.content,
+                    timestamp: new Date(event.created_at),
+                  }
+                : m,
+            ),
+          );
+        } else if (event.type === "token") {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempBotId
+                ? { ...m, content: m.content + event.content }
+                : m,
+            ),
+          );
+        } else if (event.type === "done") {
+          const am = event.assistant_message;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempBotId
+                ? {
+                    id: am.id,
+                    role: am.role,
+                    content: am.content,
+                    timestamp: new Date(am.created_at),
+                  }
+                : m,
+            ),
+          );
+        } else if (event.type === "error") {
+          toast.error(event.message || "Lỗi khi tạo phản hồi");
+          setMessages((prev) => prev.filter((m) => m.id !== tempBotId));
+        }
+      }
 
-      // Refresh rooms to get updated title/timestamp
       fetchRooms();
     } catch {
       toast.error("Gửi tin nhắn thất bại, thử lại nhé");
-      // Remove optimistic message on error
-      setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
+      setMessages((prev) =>
+        prev.filter((m) => m.id !== tempUserId && m.id !== tempBotId),
+      );
     } finally {
       setIsTyping(false);
     }

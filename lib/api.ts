@@ -244,6 +244,11 @@ export const authApi = {
 
 /* ───── Admin types ───── */
 
+export type TimeSeriesPoint = { date: string; value: number };
+export type TierBreakdown = { tier: string; count: number };
+export type ChannelBreakdown = { channel: string; count: number };
+export type SessionModeBreakdown = { mode: string; status: string; count: number };
+
 export type AdminStats = {
   total_users: number;
   active_users: number;
@@ -251,6 +256,43 @@ export type AdminStats = {
   alerts_today: number;
   alerts_this_week: number;
   total_alerts: number;
+  total_interview_sessions: number;
+  total_interview_answers: number;
+  total_chat_rooms: number;
+  total_chat_messages: number;
+  active_jobs: number;
+  alert_subscribers: number;
+  user_signups_daily: TimeSeriesPoint[];
+  alerts_daily: TimeSeriesPoint[];
+  tier_breakdown: TierBreakdown[];
+  alert_channel_breakdown: ChannelBreakdown[];
+  session_mode_breakdown: SessionModeBreakdown[];
+};
+
+export type AdminUserProfile = {
+  id: string;
+  email: string;
+  full_name: string;
+  is_active: boolean;
+  is_admin: boolean;
+  subscription_tier: string;
+  experience_level: string | null;
+  university: string | null;
+  graduation_year: number | null;
+  open_to_internship: boolean;
+  part_time_ok: boolean;
+  skills: string[];
+  desired_titles: string[];
+  preferred_cities: string[];
+  desired_salary_min: number | null;
+  desired_salary_max: number | null;
+  cv_file_url: string | null;
+  telegram_status: string | null;
+  telegram_username: string | null;
+  alert_enabled: boolean;
+  alerts_sent: number;
+  created_at: string;
+  updated_at: string | null;
 };
 
 export type AdminUserRow = {
@@ -470,6 +512,11 @@ export const adminApi = {
       { method: "PUT", headers: adminHeaders(token) },
     ),
 
+  getUserProfile: (token: string, userId: string) =>
+    clientFetch<AdminUserProfile>(`/api/admin/users/${userId}`, {
+      headers: adminHeaders(token),
+    }),
+
   updateUserTier: (token: string, userId: string, tier: string) =>
     clientFetch<{ ok: boolean; tier: string }>(
       `/api/admin/users/${userId}/tier`,
@@ -616,6 +663,12 @@ export type ChatReplyResponse = {
   assistant_message: ChatMessageResponse;
 };
 
+export type SSEEvent =
+  | { type: "user_message"; id: string; role: "user"; content: string; created_at: string }
+  | { type: "token"; content: string }
+  | { type: "done"; assistant_message: ChatMessageResponse }
+  | { type: "error"; message: string };
+
 export const chatApi = {
   listRooms: (token: string) =>
     clientFetch<ChatRoom[]>("/api/chat/rooms", {
@@ -650,4 +703,171 @@ export const chatApi = {
         body: JSON.stringify({ content }),
       },
     ),
+
+  sendMessageStream: async function* (
+    token: string,
+    roomId: string,
+    content: string,
+  ): AsyncGenerator<SSEEvent> {
+    const res = await fetch(
+      `${CLIENT_BASE}/api/chat/rooms/${roomId}/messages/stream`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content }),
+      },
+    );
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw {
+        message: body.detail ?? "Stream request failed",
+        status: res.status,
+      } as ApiError;
+    }
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data: ")) continue;
+        const jsonStr = trimmed.slice(6);
+        if (!jsonStr) continue;
+        try {
+          yield JSON.parse(jsonStr) as SSEEvent;
+        } catch {
+          /* skip malformed */
+        }
+      }
+    }
+  },
+};
+
+/* ───── Interview types & API ───── */
+
+export type InterviewCategory = {
+  id: string;
+  label: string;
+  label_vi: string;
+  description: string;
+  count: number;
+};
+
+export type InterviewQuestion = {
+  id: string;
+  text: string;
+  category: string;
+  difficulty: string;
+  answer_tips: string | null;
+  star_cues: Record<string, string> | null;
+};
+
+export type InterviewSession = {
+  id: string;
+  mode: "practice" | "mock_test";
+  status: string;
+  category: string | null;
+  target_role: string | null;
+  total_questions: number;
+  completed_questions: number;
+  overall_score: number | null;
+  overall_feedback: string | null;
+  improvement_plan: string | null;
+  time_limit_seconds: number | null;
+  started_at: string;
+  completed_at: string | null;
+  created_at: string;
+};
+
+export type SessionAnswer = {
+  id: string;
+  question: InterviewQuestion;
+  order_index: number;
+  answer_text: string | null;
+  score: number | null;
+  strengths: string | null;
+  improvements: string | null;
+  suggested_answer: string | null;
+  time_spent_seconds: number | null;
+  skipped: boolean;
+  answered_at: string | null;
+};
+
+export type SessionDetail = InterviewSession & {
+  answers: SessionAnswer[];
+};
+
+export const interviewApi = {
+  getCategories: () =>
+    fetchJson<InterviewCategory[]>("/api/interview/categories", []),
+
+  createSession: (token: string, body: {
+    mode: "practice" | "mock_test";
+    category?: string;
+    target_role?: string;
+    num_questions?: number;
+    time_limit_seconds?: number;
+  }) =>
+    clientFetch<SessionDetail>("/api/interview/sessions", {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(body),
+    }),
+
+  listSessions: (token: string) =>
+    clientFetch<InterviewSession[]>("/api/interview/sessions", {
+      headers: authHeaders(token),
+    }),
+
+  getSession: (token: string, sessionId: string) =>
+    clientFetch<SessionDetail>(`/api/interview/sessions/${sessionId}`, {
+      headers: authHeaders(token),
+    }),
+
+  submitAnswer: (token: string, sessionId: string, answerId: string, body: {
+    answer_text: string;
+    time_spent_seconds?: number;
+  }) =>
+    clientFetch<{ status: string; session_status: string }>(
+      `/api/interview/sessions/${sessionId}/answers/${answerId}`,
+      {
+        method: "POST",
+        headers: authHeaders(token),
+        body: JSON.stringify(body),
+      },
+    ),
+
+  skipAnswer: (token: string, sessionId: string, answerId: string) =>
+    clientFetch<{ status: string }>(
+      `/api/interview/sessions/${sessionId}/answers/${answerId}/skip`,
+      {
+        method: "POST",
+        headers: authHeaders(token),
+      },
+    ),
+
+  completeSession: (token: string, sessionId: string) =>
+    clientFetch<SessionDetail>(`/api/interview/sessions/${sessionId}/complete`, {
+      method: "POST",
+      headers: authHeaders(token),
+    }),
+
+  abandonSession: (token: string, sessionId: string) =>
+    fetch(`${CLIENT_BASE}/api/interview/sessions/${sessionId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
 };

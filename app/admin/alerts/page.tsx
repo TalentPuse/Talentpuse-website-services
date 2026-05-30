@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 
-import { adminApi, AlertLogList } from "@/lib/api";
+import { adminApi, AlertLogList, AdminUserList } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import AdminLayout from "@/components/admin/AdminLayout";
 
@@ -16,7 +16,18 @@ export default function AdminAlertsPage() {
   const [page, setPage] = useState(1);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [users, setUsers] = useState<{ id: string; email: string; full_name: string }[]>([]);
+  const [userSearch, setUserSearch] = useState("");
   const [dispatching, setDispatching] = useState(false);
+
+  // Load users for filter dropdown
+  useEffect(() => {
+    if (!token) return;
+    adminApi.users(token, { per_page: 100, search: userSearch || undefined })
+      .then((res: AdminUserList) => setUsers(res.users.map((u) => ({ id: u.id, email: u.email, full_name: u.full_name }))))
+      .catch(() => {});
+  }, [token, userSearch]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -24,6 +35,7 @@ export default function AdminAlertsPage() {
       const res = await adminApi.alertLogs(token, {
         page,
         per_page: PER_PAGE,
+        user_id: selectedUserId || undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
       });
@@ -31,7 +43,7 @@ export default function AdminAlertsPage() {
     } catch (err) {
       console.error("Failed to load alert logs:", err);
     }
-  }, [token, page, dateFrom, dateTo]);
+  }, [token, page, selectedUserId, dateFrom, dateTo]);
 
   useEffect(() => {
     load();
@@ -52,6 +64,7 @@ export default function AdminAlertsPage() {
   }
 
   const totalPages = data ? Math.ceil(data.total / PER_PAGE) : 0;
+  const hasFilters = dateFrom || dateTo || selectedUserId;
 
   return (
     <AdminLayout>
@@ -74,9 +87,26 @@ export default function AdminAlertsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-500">Từ</label>
+      <div className="flex flex-wrap items-end gap-3 mb-6">
+        {/* User filter */}
+        <div className="min-w-[220px]">
+          <label className="block text-xs text-slate-500 mb-1">User</label>
+          <select
+            value={selectedUserId}
+            onChange={(e) => { setSelectedUserId(e.target.value); setPage(1); }}
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
+          >
+            <option value="">Tất cả users</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.full_name} ({u.email})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">Từ</label>
           <input
             type="date"
             value={dateFrom}
@@ -84,8 +114,8 @@ export default function AdminAlertsPage() {
             className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-500">Đến</label>
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">Đến</label>
           <input
             type="date"
             value={dateTo}
@@ -93,10 +123,10 @@ export default function AdminAlertsPage() {
             className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
           />
         </div>
-        {(dateFrom || dateTo) && (
+        {hasFilters && (
           <button
-            onClick={() => { setDateFrom(""); setDateTo(""); setPage(1); }}
-            className="text-xs text-brand-600 hover:text-brand-700 font-medium"
+            onClick={() => { setSelectedUserId(""); setDateFrom(""); setDateTo(""); setPage(1); }}
+            className="text-xs text-brand-600 hover:text-brand-700 font-medium pb-1"
           >
             Xoá bộ lọc
           </button>
