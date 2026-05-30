@@ -10,17 +10,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-
-@pytest.fixture
-def client(db_session):
-    """Create test client with interview router."""
-    from app.main import app
-
-    return TestClient(app)
+from app.core.security import get_current_user
+from app.main import app
 
 
 @pytest.fixture
-def mock_user(db_session):
+def mock_user():
     """Create mock authenticated user."""
     user = MagicMock()
     user.id = uuid.uuid4()
@@ -52,17 +47,60 @@ def mock_user(db_session):
     return user
 
 
+@pytest.fixture
+def client(mock_user):
+    """Create test client with mocked authentication."""
+    async def override_get_current_user():
+        return mock_user
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides = {}
+
+
 class TestSessionEndpoints:
     """Test session CRUD endpoints."""
 
     def test_create_session_technical(self, client, mock_user):
         """Test creating a technical interview session."""
+        mock_session = MagicMock()
+        mock_session.id = uuid.uuid4()
+        mock_session.user_id = mock_user.id
+        mock_session.mode = "technical"
+        mock_session.status = "in_progress"
+        mock_session.target_role = "Backend Engineer"
+        mock_session.question_count = 0
+        mock_session.overall_score = None
+        mock_session.overall_feedback = None
+        mock_session.improvement_plan = None
+        mock_session.created_at = "2024-01-01T00:00:00"
+        mock_session.updated_at = "2024-01-01T00:00:00"
+
+        mock_message = MagicMock()
+        mock_message.id = uuid.uuid4()
+        mock_message.session_id = mock_session.id
+        mock_message.role = "assistant"
+        mock_message.content = "Xin chào! Tôi là interviewer kỹ thuật..."
+        mock_message.audio_url = None
+        mock_message.created_at = "2024-01-01T00:00:00"
+
         with patch(
-            "app.services.interview_agent.api.interview_router.get_current_user",
-            return_value=mock_user,
+            "app.services.interview_agent.api.interview_router.create_session",
+            return_value=mock_session,
+        ), patch(
+            "app.services.interview_agent.api.interview_router.create_message",
+            return_value=mock_message,
+        ), patch(
+            "app.services.interview_agent.api.interview_router.update_session",
+            return_value=mock_session,
+        ), patch(
+            "app.services.interview_agent.api.interview_router.get_session_messages",
+            return_value=[mock_message],
         ):
             response = client.post(
-                "/api/interview/sessions",
+                "/api/interview-agent/sessions",
                 json={
                     "mode": "technical",
                     "target_role": "Backend Engineer",
@@ -80,19 +118,15 @@ class TestSessionEndpoints:
 
     def test_create_session_behavioral(self, client, mock_user):
         """Test creating a behavioral interview session."""
-        with patch(
-            "app.services.interview_agent.api.interview_router.get_current_user",
-            return_value=mock_user,
-        ):
-            response = client.post(
-                "/api/interview/sessions",
-                json={
-                    "mode": "behavioral",
-                    "target_role": "Frontend Developer",
-                    "num_questions": 3,
-                },
-                headers={"Authorization": "Bearer fake-token"},
-            )
+        response = client.post(
+            "/api/interview-agent/sessions",
+            json={
+                "mode": "behavioral",
+                "target_role": "Frontend Developer",
+                "num_questions": 3,
+            },
+            headers={"Authorization": "Bearer fake-token"},
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -102,14 +136,11 @@ class TestSessionEndpoints:
     def test_list_sessions(self, client, mock_user):
         """Test listing user's interview sessions."""
         with patch(
-            "app.services.interview_agent.api.interview_router.get_current_user",
-            return_value=mock_user,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.list_user_sessions",
+            "app.services.interview_agent.storage.session_store.list_user_sessions",
             return_value=[],
         ):
             response = client.get(
-                "/api/interview/sessions",
+                "/api/interview-agent/sessions",
                 headers={"Authorization": "Bearer fake-token"},
             )
 
@@ -127,17 +158,14 @@ class TestSessionEndpoints:
         mock_session.status = "in_progress"
 
         with patch(
-            "app.services.interview_agent.api.interview_router.get_current_user",
-            return_value=mock_user,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.get_session",
+            "app.services.interview_agent.storage.session_store.get_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.api.interview_router.get_session_messages",
+            "app.services.interview_agent.storage.message_store.get_session_messages",
             return_value=[],
         ):
             response = client.get(
-                f"/api/interview/sessions/{session_id}",
+                f"/api/interview-agent/sessions/{session_id}",
                 headers={"Authorization": "Bearer fake-token"},
             )
 
@@ -154,14 +182,11 @@ class TestSessionEndpoints:
         mock_session.user_id = mock_user.id
 
         with patch(
-            "app.services.interview_agent.api.interview_router.get_current_user",
-            return_value=mock_user,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.get_session",
+            "app.services.interview_agent.storage.session_store.get_session",
             return_value=mock_session,
         ):
             response = client.delete(
-                f"/api/interview/sessions/{session_id}",
+                f"/api/interview-agent/sessions/{session_id}",
                 headers={"Authorization": "Bearer fake-token"},
             )
 
@@ -191,17 +216,14 @@ class TestMessageEndpoints:
         }
 
         with patch(
-            "app.services.interview_agent.api.interview_router.get_current_user",
-            return_value=mock_user,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.get_session",
+            "app.services.interview_agent.storage.session_store.get_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.api.interview_router.get_interview_agent",
+            "app.services.interview_agent.chains.get_interview_agent",
             return_value=mock_agent,
         ):
             response = client.post(
-                f"/api/interview/sessions/{session_id}/messages",
+                f"/api/interview-agent/sessions/{session_id}/messages",
                 json={"content": "I'd design it using microservices."},
                 headers={"Authorization": "Bearer fake-token"},
             )
@@ -238,17 +260,14 @@ class TestMessageEndpoints:
         mock_agent.astream = mock_astream
 
         with patch(
-            "app.services.interview_agent.api.interview_router.get_current_user",
-            return_value=mock_user,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.get_session",
+            "app.services.interview_agent.storage.session_store.get_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.api.interview_router.get_interview_agent",
+            "app.services.interview_agent.chains.get_interview_agent",
             return_value=mock_agent,
         ):
             response = client.post(
-                f"/api/interview/sessions/{session_id}/messages/stream",
+                f"/api/interview-agent/sessions/{session_id}/messages/stream",
                 json={"content": "I led a team through a difficult project."},
                 headers={"Authorization": "Bearer fake-token"},
             )
@@ -272,13 +291,10 @@ class TestSessionCompletion:
         mock_session.status = "in_progress"
 
         with patch(
-            "app.services.interview_agent.api.interview_router.get_current_user",
-            return_value=mock_user,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.get_session",
+            "app.services.interview_agent.storage.session_store.get_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.api.interview_router.generate_session_summary",
+            "app.services.interview_agent.evaluation.summarizer.generate_session_summary",
             return_value=MagicMock(
                 overall_score=4.2,
                 overall_feedback="Strong performance",
@@ -289,7 +305,7 @@ class TestSessionCompletion:
             ),
         ):
             response = client.post(
-                f"/api/interview/sessions/{session_id}/complete",
+                f"/api/interview-agent/sessions/{session_id}/complete",
                 json={"force": False},
                 headers={"Authorization": "Bearer fake-token"},
             )

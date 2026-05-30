@@ -157,7 +157,7 @@ async def generate_session_summary(
     Returns:
         SessionSummary with overall_score, feedback, strengths, improvements, plan
     """
-    llm = create_evaluation_llm()
+    llm = create_llm()
 
     # Build prompt
     profile_text = _format_profile(profile)
@@ -187,8 +187,12 @@ async def generate_session_summary(
 
         result = json.loads(content)
 
+        # Clamp overall_score between 1.0 and 5.0
+        overall_score = float(result.get("overall_score", 3.0))
+        overall_score = max(1.0, min(5.0, overall_score))
+
         return SessionSummary(
-            overall_score=float(result["overall_score"]),
+            overall_score=overall_score,
             overall_feedback=str(result["overall_feedback"]),
             strengths=list(result.get("strengths", [])),
             improvements=list(result.get("improvements", [])),

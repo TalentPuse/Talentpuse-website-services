@@ -251,7 +251,7 @@ class TestInterviewAgentFactory:
             "app.services.interview_agent.chains.behavioral_interview_chain.create_llm",
             return_value=mock_llm,
         ), patch(
-            "app.services.interview_agent.chains.behavioral_interview_channel.create_agent",
+            "app.services.interview_agent.chains.behavioral_interview_chain.create_agent",
             return_value=mock_agent,
         ):
             agent1 = get_interview_agent(mode="behavioral")

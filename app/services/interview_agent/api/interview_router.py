@@ -42,7 +42,7 @@ from app.services.interview_agent.storage import (
     get_session_messages,
 )
 
-router = APIRouter(prefix="/api/interview", tags=["interview"])
+router = APIRouter(prefix="/api/interview-agent", tags=["interview-agent"])
 logger = logging.getLogger(__name__)
 
 

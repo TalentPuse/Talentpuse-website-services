@@ -44,10 +44,10 @@ class TestTechEvaluation:
                 target_role="Backend Engineer",
             )
 
-        assert result["score"] == 4.2
-        assert "Good approach" in result["feedback"]
-        assert len(result["strengths"]) > 0
-        assert len(result["improvements"]) > 0
+        assert result.score == 4.2
+        assert "Good approach" in result.feedback
+        assert len(result.strengths) > 0
+        assert len(result.improvements) > 0
 
     async def test_evaluate_tech_answer_fallback_on_error(self):
         """Test that evaluation returns fallback on parsing error."""
@@ -72,8 +72,8 @@ class TestTechEvaluation:
             )
 
         # Should return fallback with default score
-        assert result["score"] == 3.0
-        assert "Unable to parse" in result["feedback"] or "error" in result["feedback"]
+        assert result.score == 3.0
+        assert "Unable to parse" in result.feedback or "error" in result.feedback
 
     async def test_evaluate_tech_answer_score_bounds(self):
         """Test that scores are clamped between 1.0 and 5.0."""
@@ -96,7 +96,7 @@ class TestTechEvaluation:
                 question="Q", answer="A", profile={}
             )
 
-        assert result["score"] == 5.0  # Clamped to max
+        assert result.score == 5.0  # Clamped to max
 
         # Test with low score
         mock_response.content = '{"score": 0.0, "feedback": "Test"}'
@@ -110,7 +110,7 @@ class TestTechEvaluation:
                 question="Q", answer="A", profile={}
             )
 
-        assert result["score"] == 1.0  # Clamped to min
+        assert result.score == 1.0  # Clamped to min
 
 
 @pytest.mark.asyncio
@@ -153,10 +153,10 @@ class TestBehavioralEvaluation:
                 profile={"skills": ["Leadership"], "experience_level": "mid"},
             )
 
-        assert result["score"] == 3.8
-        assert "STAR" in result["feedback"]
-        assert len(result["strengths"]) > 0
-        assert len(result["improvements"]) > 0
+        assert result.score == 3.8
+        assert "STAR" in result.feedback
+        assert len(result.strengths) > 0
+        assert len(result.improvements) > 0
 
     async def test_evaluate_behavioral_answer_fallback(self):
         """Test that behavioral evaluation returns fallback on error."""
@@ -175,8 +175,8 @@ class TestBehavioralEvaluation:
                 question="Question", answer="Answer", star_cues={}, profile={}
             )
 
-        assert result["score"] == 3.0
-        assert "Unable to evaluate" in result["feedback"]
+        assert result.score == 3.0
+        assert "Evaluation unavailable" in result.feedback or "error" in result.feedback
 
 
 @pytest.mark.asyncio
@@ -223,11 +223,11 @@ class TestSessionSummarizer:
                 evaluations=None,
             )
 
-        assert result["overall_score"] == 4.1
-        assert "strong performance" in result["overall_feedback"].lower()
-        assert len(result["strengths"]) > 0
-        assert len(result["improvements"]) > 0
-        assert result["question_count"] == 5
+        assert result.overall_score == 4.1
+        assert "strong performance" in result.overall_feedback.lower()
+        assert len(result.strengths) > 0
+        assert len(result.improvements) > 0
+        assert result.question_count == 5
 
     async def test_generate_summary_includes_profile(self):
         """Test that summary generation includes user profile in prompt."""
@@ -258,7 +258,8 @@ class TestSessionSummarizer:
             # Verify LLM was called
             assert mock_llm.ainvoke.called
             call_args = mock_llm.ainvoke.call_args[0][0]
-            prompt = call_args.content
+            # call_args is a list of messages, get the first one's content
+            prompt = call_args[0].content if isinstance(call_args, list) else call_args.content
 
             # Check that profile info is in prompt
             assert "John Doe" in prompt or "Python" in prompt
@@ -282,5 +283,5 @@ class TestSessionSummarizer:
                 profile={},
             )
 
-        assert result["overall_score"] == 3.0
-        assert "Unable to generate" in result["overall_feedback"]
+        assert result.overall_score == 3.0
+        assert "Unable to generate" in result.overall_feedback

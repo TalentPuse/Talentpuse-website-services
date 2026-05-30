@@ -104,8 +104,12 @@ async def evaluate_tech_answer(
 
         result = json.loads(content)
 
+        # Clamp score between 1.0 and 5.0
+        score = float(result.get("score", 3.0))
+        score = max(1.0, min(5.0, score))
+
         return InterviewEvaluation(
-            score=float(result["score"]),
+            score=score,
             feedback=str(result["feedback"]),
             strengths=list(result.get("strengths", [])),
             improvements=list(result.get("improvements", [])),
@@ -190,7 +194,7 @@ async def evaluate_behavioral_answer(
     Returns:
         InterviewEvaluation with score, feedback, strengths, improvements
     """
-    llm = create_evaluation_llm()
+    llm = create_llm()
 
     # Format prompt with STAR cues
     prompt = BEHAVIORAL_EVALUATION_PROMPT.format(
@@ -216,8 +220,12 @@ async def evaluate_behavioral_answer(
 
         result = json.loads(content)
 
+        # Clamp score between 1.0 and 5.0
+        score = float(result.get("score", 3.0))
+        score = max(1.0, min(5.0, score))
+
         return InterviewEvaluation(
-            score=float(result["score"]),
+            score=score,
             feedback=str(result["feedback"]),
             strengths=list(result.get("strengths", [])),
             improvements=list(result.get("improvements", [])),
