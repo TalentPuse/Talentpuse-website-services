@@ -38,6 +38,7 @@ async def create_session(
             status="created",
             target_role=target_role,
             question_count=0,
+            total_questions=num_questions,
         )
         db_sess.add(session)
         await db_sess.commit()

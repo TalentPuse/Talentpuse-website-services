@@ -90,6 +90,7 @@ def _session_to_response(session, messages: list = None) -> SessionResponse:
         status=session.status,  # type: ignore
         target_role=session.target_role,
         question_count=session.question_count,
+        total_questions=session.total_questions,
         overall_score=session.overall_score,
         overall_feedback=session.overall_feedback,
         improvement_plan=session.improvement_plan,
@@ -307,6 +308,7 @@ async def send_interview_message_stream(
     - type: "user_message" - User message data
     - type: "token" - Streaming tokens
     - type: "done" - Complete message data
+    - type: "session_completed" - Auto-completion with summary
     - type: "error" - Error message
     """
     session = await get_session(session_id)
@@ -317,6 +319,16 @@ async def send_interview_message_stream(
     if session.status != "in_progress":
         raise HTTPException(
             status_code=400, detail=f"Cannot send message to {session.status} session"
+        )
+
+    # Pre-check: reject if question limit already reached
+    if session.question_count >= session.total_questions:
+        async def _reject_generator():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Phiên phỏng vấn đã đủ số câu hỏi.'}, ensure_ascii=False)}\n\n"
+        return StreamingResponse(
+            _reject_generator(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
         )
 
     # 1. Save user message
@@ -394,6 +406,52 @@ async def send_interview_message_stream(
                     },
                 }
                 yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
+
+                # Auto-complete if question limit reached
+                if new_count >= session.total_questions:
+                    # Notify frontend that summary is being generated
+                    yield f"data: {json.dumps({'type': 'completing', 'message': 'Đang tổng hợp kết quả...'}, ensure_ascii=False)}\n\n"
+
+                    # Reload all messages for summary generation
+                    all_msgs_result = await db_sess.execute(
+                        select(InterviewMessage)
+                        .where(InterviewMessage.session_id == uid)
+                        .order_by(InterviewMessage.created_at.asc())
+                    )
+                    all_msgs = list(all_msgs_result.scalars().all())
+                    message_dicts = [{"role": m.role, "content": m.content} for m in all_msgs]
+
+                    # Generate evaluation summary
+                    profile_dict = _build_profile_dict(current_user)
+                    summary = await generate_session_summary(
+                        mode=session.mode,
+                        messages=message_dicts,
+                        profile=profile_dict,
+                        target_role=session.target_role or "Software Engineer",
+                    )
+
+                    # Update session to completed
+                    if session_obj:
+                        session_obj.status = "completed"
+                        session_obj.overall_score = summary.overall_score
+                        session_obj.overall_feedback = summary.overall_feedback
+                        session_obj.improvement_plan = summary.improvement_plan
+                        session_obj.completed_at = func.now()
+                    await db_sess.commit()
+
+                    # Emit session_completed event with full summary
+                    completed_payload = {
+                        "type": "session_completed",
+                        "session_id": str(uid),
+                        "mode": session.mode,
+                        "overall_score": summary.overall_score,
+                        "overall_feedback": summary.overall_feedback,
+                        "strengths": summary.strengths,
+                        "improvements": summary.improvements,
+                        "improvement_plan": summary.improvement_plan,
+                        "question_count": summary.question_count,
+                    }
+                    yield f"data: {json.dumps(completed_payload, ensure_ascii=False)}\n\n"
 
         except Exception:
             logger.exception("Streaming error in session %s", session_id)

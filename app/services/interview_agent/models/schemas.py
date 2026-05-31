@@ -82,6 +82,7 @@ class SessionResponse(BaseModel):
     status: Literal["created", "in_progress", "completed", "abandoned"]
     target_role: Optional[str] = None
     question_count: int = 0
+    total_questions: int = 5
     overall_score: Optional[float] = None
     overall_feedback: Optional[str] = None
     improvement_plan: Optional[str] = None
@@ -164,7 +165,21 @@ class SESEndEvent(BaseModel):
     message: MessageResponse = Field(..., description="Final message data")
 
 
-SSEEvent = SSETokenEvent | SSEMessageEvent | SSEErrorEvent | SESEndEvent
+class SSESessionCompletedEvent(BaseModel):
+    """Server-Sent Event for auto-completion after question limit reached."""
+
+    type: Literal["session_completed"] = "session_completed"
+    session_id: UUID
+    mode: Literal["technical", "behavioral"]
+    overall_score: float = Field(..., ge=1.0, le=5.0)
+    overall_feedback: str
+    strengths: list[str] = Field(default_factory=list)
+    improvements: list[str] = Field(default_factory=list)
+    improvement_plan: str
+    question_count: int
+
+
+SSEEvent = SSETokenEvent | SSEMessageEvent | SSEErrorEvent | SESEndEvent | SSESessionCompletedEvent
 
 
 # =============================================================================
