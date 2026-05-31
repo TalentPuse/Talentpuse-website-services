@@ -234,35 +234,43 @@ class TestInterviewAgentFactory:
         mod._interview_agent = None
         mod._behavioral_agent = None
 
-    def test_get_interview_agent_singleton(self):
-        """Test that get_interview_agent returns singleton across calls."""
+    def test_get_interview_agent_returns_correct_agent(self):
+        """Test that get_interview_agent returns correct agent per mode."""
         from app.services.interview_agent.chains import get_interview_agent
 
-        # Reset singleton
-        import app.services.interview_agent.chains as mod
-        mod._interview_agent = None
-        mod._tech_agent = None
-        mod._behavioral_agent = None
+        # Reset singletons
+        import app.services.interview_agent.chains.tech_interview_chain as tech_mod
+        import app.services.interview_agent.chains.behavioral_interview_chain as behav_mod
+        tech_mod._tech_agent = None
+        behav_mod._behavioral_agent = None
 
         mock_llm = MagicMock()
-        mock_agent = MagicMock()
+        mock_behavioral_agent = MagicMock()
+        mock_tech_agent = MagicMock()
 
         with patch(
             "app.services.interview_agent.chains.behavioral_interview_chain.create_llm",
             return_value=mock_llm,
         ), patch(
             "app.services.interview_agent.chains.behavioral_interview_chain.create_agent",
-            return_value=mock_agent,
+            return_value=mock_behavioral_agent,
+        ), patch(
+            "app.services.interview_agent.chains.tech_interview_chain.create_llm",
+            return_value=mock_llm,
+        ), patch(
+            "app.services.interview_agent.chains.tech_interview_chain.create_agent",
+            return_value=mock_tech_agent,
         ):
-            agent1 = get_interview_agent(mode="behavioral")
-            agent2 = get_interview_agent(mode="technical")  # Should return same singleton
+            behavioral = get_interview_agent(mode="behavioral")
+            technical = get_interview_agent(mode="technical")
 
-        # Both calls should return the same singleton instance
-        assert agent1 is agent2
+        # Each mode should return its own agent instance
+        assert behavioral is mock_behavioral_agent
+        assert technical is mock_tech_agent
 
         # Cleanup
-        mod._interview_agent = None
-        mod._behavioral_agent = None
+        tech_mod._tech_agent = None
+        behav_mod._behavioral_agent = None
 
     def test_reset_interview_agent(self):
         """Test that reset_interview_agent clears all singletons."""
@@ -271,14 +279,11 @@ class TestInterviewAgentFactory:
         # Set the agents to non-None values
         import app.services.interview_agent.chains.tech_interview_chain as tech_mod
         import app.services.interview_agent.chains.behavioral_interview_chain as behav_mod
-        import app.services.interview_agent.chains as init_mod
 
         tech_mod._tech_agent = MagicMock()
         behav_mod._behavioral_agent = MagicMock()
-        init_mod._interview_agent = MagicMock()
 
         reset_interview_agent()
 
         assert tech_mod._tech_agent is None
         assert behav_mod._behavioral_agent is None
-        assert init_mod._interview_agent is None
