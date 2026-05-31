@@ -10,7 +10,7 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import async_session_factory
+from app.core import database as db_module
 from app.models.interview import InterviewSession
 
 
@@ -31,7 +31,7 @@ async def create_session(
     Returns:
         Created InterviewSession instance
     """
-    async with async_session_factory() as db_sess:
+    async with db_module.async_session_factory() as db_sess:
         session = InterviewSession(
             user_id=user_id,
             mode=mode,
@@ -54,7 +54,7 @@ async def get_session(session_id: UUID) -> Optional[InterviewSession]:
     Returns:
         InterviewSession or None if not found
     """
-    async with async_session_factory() as db_sess:
+    async with db_module.async_session_factory() as db_sess:
         result = await db_sess.execute(
             select(InterviewSession).where(InterviewSession.id == session_id)
         )
@@ -74,7 +74,7 @@ async def update_session(
     Returns:
         Updated InterviewSession or None if not found
     """
-    async with async_session_factory() as db_sess:
+    async with db_module.async_session_factory() as db_sess:
         await db_sess.execute(
             update(InterviewSession)
             .where(InterviewSession.id == session_id)
@@ -101,7 +101,7 @@ async def list_user_sessions(
     Returns:
         List of InterviewSession
     """
-    async with async_session_factory() as db_sess:
+    async with db_module.async_session_factory() as db_sess:
         query = select(InterviewSession).where(InterviewSession.user_id == user_id)
 
         if status:

@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import async_session_factory
+from app.core import database as db_module
 from app.models.interview import InterviewMessage
 
 
@@ -34,7 +34,7 @@ async def create_message(
     Returns:
         Created InterviewMessage instance
     """
-    async with async_session_factory() as db_sess:
+    async with db_module.async_session_factory() as db_sess:
         message = InterviewMessage(
             session_id=session_id,
             role=role,
@@ -61,7 +61,7 @@ async def get_session_messages(
     Returns:
         List of InterviewMessage ordered by created_at
     """
-    async with async_session_factory() as db_sess:
+    async with db_module.async_session_factory() as db_sess:
         query = select(InterviewMessage).where(
             InterviewMessage.session_id == session_id
         )
@@ -86,7 +86,7 @@ async def create_message_batch(
     Returns:
         List of created InterviewMessage instances
     """
-    async with async_session_factory() as db_sess:
+    async with db_module.async_session_factory() as db_sess:
         message_objects = [
             InterviewMessage(
                 session_id=msg["session_id"],

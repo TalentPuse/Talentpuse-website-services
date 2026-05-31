@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 import pytest
 
-from app.core.database import async_session_factory, init_db
+from app.core import database as db_module
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -29,8 +29,8 @@ def setup_event_loop():
 async def initialize_database():
     """Initialize database for each test session."""
     # Only initialize if not already initialized
-    if async_session_factory is None:
-        await init_db()
+    if db_module.async_session_factory is None:
+        await db_module.init_db()
     yield
     # No cleanup needed between tests
 
@@ -46,8 +46,8 @@ async def db_session():
         # Use db_session for database operations
         result = await db_session.execute(query)
     """
-    if async_session_factory is None:
+    if db_module.async_session_factory is None:
         pytest.fail("Database not initialized. Call init_db() first.")
 
-    async with async_session_factory() as session:
+    async with db_module.async_session_factory() as session:
         yield session

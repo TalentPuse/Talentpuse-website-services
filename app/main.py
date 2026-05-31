@@ -17,7 +17,7 @@ from app.core.config import (
     VN_TZ,
     get_alert_interval_hours,
 )
-from app.core.database import async_session_factory, close_db, init_db
+from app.core import database as db_module
 from app.services.job_alert import dispatch_alerts
 
 logger = logging.getLogger(__name__)
@@ -54,8 +54,8 @@ async def _alert_loop() -> None:
         await asyncio.sleep(max(wait_seconds, 10))
 
         try:
-            if alert_loop_active and async_session_factory is not None:
-                async with async_session_factory() as db:
+            if alert_loop_active and db_module.async_session_factory is not None:
+                async with db_module.async_session_factory() as db:
                     count = await dispatch_alerts(db)
                     logger.info("Alert dispatch completed: %d alerts sent", count)
         except Exception:
@@ -67,11 +67,11 @@ async def _alert_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
+    await db_module.init_db()
     task = asyncio.create_task(_alert_loop())
     yield
     task.cancel()
-    await close_db()
+    await db_module.close_db()
 
 
 app = FastAPI(

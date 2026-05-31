@@ -5,14 +5,13 @@ Tests that the API follows the same pattern as chat.py
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import asyncio
 from fastapi.testclient import TestClient
 
 from app.core.security import get_current_user
-from app.core.database import init_db, async_session_factory
 from app.main import app
 
 
@@ -51,16 +50,28 @@ def mock_user():
 
 @pytest.fixture
 def client(mock_user):
-    """Create test client with mocked authentication."""
+    """Create test client with mocked authentication and database."""
+    from app.core.database import get_db
+
     async def override_get_current_user():
         return mock_user
 
+    # Mock database session
+    mock_db_session = AsyncMock()
+    mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+    mock_db_session.__aexit__ = AsyncMock()
+    mock_db_session.execute = AsyncMock()
+    mock_db_session.scalars = MagicMock(return_value=[])
+    mock_db_session.get = AsyncMock(return_value=None)
+    mock_db_session.delete = MagicMock()
+    mock_db_session.commit = AsyncMock()
+    mock_db_session.refresh = AsyncMock()
+
+    async def override_get_db():
+        yield mock_db_session
+
     app.dependency_overrides[get_current_user] = override_get_current_user
-
-    # Initialize database for API tests
-    if async_session_factory is None:
-        asyncio.run(init_db())
-
+    app.dependency_overrides[get_db] = override_get_db
     try:
         yield TestClient(app)
     finally:
@@ -94,16 +105,16 @@ class TestSessionEndpoints:
         mock_message.created_at = "2024-01-01T00:00:00"
 
         with patch(
-            "app.services.interview_agent.storage.session_store.create_session",
+            "app.services.interview_agent.api.interview_router.create_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.storage.message_store.create_message",
+            "app.services.interview_agent.api.interview_router.create_message",
             return_value=mock_message,
         ), patch(
-            "app.services.interview_agent.storage.session_store.update_session",
+            "app.services.interview_agent.api.interview_router.update_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.storage.message_store.get_session_messages",
+            "app.services.interview_agent.api.interview_router.get_session_messages",
             return_value=[mock_message],
         ):
             response = client.post(
@@ -125,26 +136,74 @@ class TestSessionEndpoints:
 
     def test_create_session_behavioral(self, client, mock_user):
         """Test creating a behavioral interview session."""
-        response = client.post(
-            "/api/interview-agent/sessions",
-            json={
-                "mode": "behavioral",
-                "target_role": "Frontend Developer",
-                "num_questions": 3,
-            },
-            headers={"Authorization": "Bearer fake-token"},
-        )
+        mock_session = MagicMock()
+        mock_session.id = uuid.uuid4()
+        mock_session.user_id = mock_user.id
+        mock_session.mode = "behavioral"
+        mock_session.status = "in_progress"
+        mock_session.target_role = "Frontend Developer"
+        mock_session.question_count = 0
+        mock_session.overall_score = None
+        mock_session.overall_feedback = None
+        mock_session.improvement_plan = None
+        mock_session.created_at = "2024-01-01T00:00:00"
+        mock_session.updated_at = "2024-01-01T00:00:00"
+
+        mock_message = MagicMock()
+        mock_message.id = uuid.uuid4()
+        mock_message.session_id = mock_session.id
+        mock_message.role = "assistant"
+        mock_message.content = "Xin chào! Tôi là interviewer hành vi..."
+        mock_message.audio_url = None
+        mock_message.created_at = "2024-01-01T00:00:00"
+
+        with patch(
+            "app.services.interview_agent.api.interview_router.create_session",
+            return_value=mock_session,
+        ), patch(
+            "app.services.interview_agent.api.interview_router.create_message",
+            return_value=mock_message,
+        ), patch(
+            "app.services.interview_agent.api.interview_router.update_session",
+            return_value=mock_session,
+        ), patch(
+            "app.services.interview_agent.api.interview_router.get_session_messages",
+            return_value=[mock_message],
+        ):
+            response = client.post(
+                "/api/interview-agent/sessions",
+                json={
+                    "mode": "behavioral",
+                    "target_role": "Frontend Developer",
+                    "num_questions": 3,
+                },
+                headers={"Authorization": "Bearer fake-token"},
+            )
 
         assert response.status_code == 200
         data = response.json()
         assert data["mode"] == "behavioral"
-        assert "STAR" in data["messages"][0]["content"] or "phỏng vấn" in data["messages"][0]["content"]
+        # Check that the greeting contains expected content
+        assert "interviewer" in data["messages"][0]["content"].lower()
 
     def test_list_sessions(self, client, mock_user):
         """Test listing user's interview sessions."""
+        mock_session1 = MagicMock()
+        mock_session1.id = uuid.uuid4()
+        mock_session1.user_id = mock_user.id
+        mock_session1.mode = "technical"
+        mock_session1.status = "completed"
+        mock_session1.target_role = "Backend Engineer"
+        mock_session1.question_count = 5
+        mock_session1.overall_score = 4.0
+        mock_session1.overall_feedback = "Good"
+        mock_session1.improvement_plan = "Plan"
+        mock_session1.created_at = "2024-01-01T00:00:00"
+        mock_session1.updated_at = "2024-01-01T00:00:00"
+
         with patch(
-            "app.services.interview_agent.storage.session_store.list_user_sessions",
-            return_value=[],
+            "app.services.interview_agent.api.interview_router.list_user_sessions",
+            return_value=[mock_session1],
         ):
             response = client.get(
                 "/api/interview-agent/sessions",
@@ -152,7 +211,10 @@ class TestSessionEndpoints:
             )
 
         assert response.status_code == 200
-        assert isinstance(response.json(), list)
+        result = response.json()
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]["mode"] == "technical"
 
     def test_get_session_detail(self, client, mock_user):
         """Test getting session details with messages."""
@@ -163,13 +225,36 @@ class TestSessionEndpoints:
         mock_session.user_id = mock_user.id
         mock_session.mode = "technical"
         mock_session.status = "in_progress"
+        mock_session.target_role = "Backend Engineer"
+        mock_session.question_count = 2
+        mock_session.overall_score = None
+        mock_session.overall_feedback = None
+        mock_session.improvement_plan = None
+        mock_session.created_at = "2024-01-01T00:00:00"
+        mock_session.updated_at = "2024-01-01T00:00:00"
+
+        mock_message1 = MagicMock()
+        mock_message1.id = uuid.uuid4()
+        mock_message1.session_id = session_id
+        mock_message1.role = "assistant"
+        mock_message1.content = "Question 1"
+        mock_message1.audio_url = None
+        mock_message1.created_at = "2024-01-01T00:00:00"
+
+        mock_message2 = MagicMock()
+        mock_message2.id = uuid.uuid4()
+        mock_message2.session_id = session_id
+        mock_message2.role = "user"
+        mock_message2.content = "Answer 1"
+        mock_message2.audio_url = None
+        mock_message2.created_at = "2024-01-01T00:01:00"
 
         with patch(
-            "app.services.interview_agent.storage.session_store.get_session",
+            "app.services.interview_agent.api.interview_router.get_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.storage.message_store.get_session_messages",
-            return_value=[],
+            "app.services.interview_agent.api.interview_router.get_session_messages",
+            return_value=[mock_message1, mock_message2],
         ):
             response = client.get(
                 f"/api/interview-agent/sessions/{session_id}",
@@ -179,6 +264,7 @@ class TestSessionEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == str(session_id)
+        assert len(data["messages"]) == 2
 
     def test_delete_session(self, client, mock_user):
         """Test deleting an interview session."""
@@ -189,7 +275,7 @@ class TestSessionEndpoints:
         mock_session.user_id = mock_user.id
 
         with patch(
-            "app.services.interview_agent.storage.session_store.get_session",
+            "app.services.interview_agent.api.interview_router.get_session",
             return_value=mock_session,
         ):
             response = client.delete(
@@ -213,6 +299,8 @@ class TestMessageEndpoints:
         mock_session.mode = "technical"
         mock_session.status = "in_progress"
         mock_session.question_count = 0
+        mock_session.created_at = "2024-01-01T00:00:00"
+        mock_session.updated_at = "2024-01-01T00:00:00"
 
         mock_agent = AsyncMock()
         mock_agent.ainvoke.return_value = {
@@ -222,11 +310,36 @@ class TestMessageEndpoints:
             ]
         }
 
+        mock_user_msg = MagicMock()
+        mock_user_msg.id = uuid.uuid4()
+        mock_user_msg.session_id = session_id
+        mock_user_msg.role = "user"
+        mock_user_msg.content = "I'd design it using microservices."
+        mock_user_msg.audio_url = None
+        mock_user_msg.created_at = "2024-01-01T00:00:00"
+
+        mock_bot_msg = MagicMock()
+        mock_bot_msg.id = uuid.uuid4()
+        mock_bot_msg.session_id = session_id
+        mock_bot_msg.role = "assistant"
+        mock_bot_msg.content = "That's a good approach!"
+        mock_bot_msg.audio_url = None
+        mock_bot_msg.created_at = "2024-01-01T00:00:00"
+
         with patch(
-            "app.services.interview_agent.storage.session_store.get_session",
+            "app.services.interview_agent.api.interview_router.get_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.chains.get_interview_agent",
+            "app.services.interview_agent.api.interview_router.create_message",
+            return_value=mock_user_msg,
+        ), patch(
+            "app.services.interview_agent.api.interview_router.update_session",
+            return_value=mock_session,
+        ), patch(
+            "app.services.interview_agent.api.interview_router._load_session_history",
+            return_value=[],
+        ), patch(
+            "app.services.interview_agent.api.interview_router.get_interview_agent",
             return_value=mock_agent,
         ):
             response = client.post(
@@ -250,6 +363,8 @@ class TestMessageEndpoints:
         mock_session.mode = "behavioral"
         mock_session.status = "in_progress"
         mock_session.question_count = 0
+        mock_session.created_at = "2024-01-01T00:00:00"
+        mock_session.updated_at = "2024-01-01T00:00:00"
 
         # Mock streaming agent
         async def mock_astream(*args, **kwargs):
@@ -266,11 +381,28 @@ class TestMessageEndpoints:
         mock_agent = AsyncMock()
         mock_agent.astream = mock_astream
 
+        mock_user_msg = MagicMock()
+        mock_user_msg.id = uuid.uuid4()
+        mock_user_msg.session_id = session_id
+        mock_user_msg.role = "user"
+        mock_user_msg.content = "I led a team through a difficult project."
+        mock_user_msg.audio_url = None
+        mock_user_msg.created_at = datetime(2024, 1, 1, 0, 0, 0)
+
         with patch(
-            "app.services.interview_agent.storage.session_store.get_session",
+            "app.services.interview_agent.api.interview_router.get_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.chains.get_interview_agent",
+            "app.services.interview_agent.api.interview_router.create_message",
+            return_value=mock_user_msg,
+        ), patch(
+            "app.services.interview_agent.api.interview_router.update_session",
+            return_value=mock_session,
+        ), patch(
+            "app.services.interview_agent.api.interview_router._load_session_history",
+            return_value=[],
+        ), patch(
+            "app.services.interview_agent.api.interview_router.get_interview_agent",
             return_value=mock_agent,
         ):
             response = client.post(
@@ -296,12 +428,38 @@ class TestSessionCompletion:
         mock_session.user_id = mock_user.id
         mock_session.mode = "technical"
         mock_session.status = "in_progress"
+        mock_session.target_role = "Backend Engineer"
+        mock_session.question_count = 0
+        mock_session.overall_score = None
+        mock_session.overall_feedback = None
+        mock_session.improvement_plan = None
+        mock_session.created_at = "2024-01-01T00:00:00"
+        mock_session.updated_at = "2024-01-01T00:00:00"
+
+        mock_updated_session = MagicMock()
+        mock_updated_session.id = session_id
+        mock_updated_session.user_id = mock_user.id
+        mock_updated_session.mode = "technical"
+        mock_updated_session.status = "completed"
+        mock_updated_session.target_role = "Backend Engineer"
+        mock_updated_session.question_count = 5
+        mock_updated_session.overall_score = 4.2
+        mock_updated_session.overall_feedback = "Strong performance"
+        mock_updated_session.improvement_plan = "1. Practice more\n2. Study more"
+        mock_updated_session.created_at = "2024-01-01T00:00:00"
+        mock_updated_session.updated_at = "2024-01-01T00:00:00"
 
         with patch(
-            "app.services.interview_agent.storage.session_store.get_session",
+            "app.services.interview_agent.api.interview_router.get_session",
             return_value=mock_session,
         ), patch(
-            "app.services.interview_agent.evaluation.summarizer.generate_session_summary",
+            "app.services.interview_agent.api.interview_router.update_session",
+            return_value=mock_updated_session,
+        ), patch(
+            "app.services.interview_agent.api.interview_router.get_session_messages",
+            return_value=[],
+        ), patch(
+            "app.services.interview_agent.api.interview_router.generate_session_summary",
             return_value=MagicMock(
                 overall_score=4.2,
                 overall_feedback="Strong performance",

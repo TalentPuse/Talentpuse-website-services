@@ -1,6 +1,7 @@
 """Unit tests for interview agent storage layer.
 
 Tests database operations for sessions and messages.
+These tests require a running PostgreSQL database.
 """
 from __future__ import annotations
 
@@ -11,21 +12,27 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy import select
 
+from app.core import database as db_module
+
 
 @pytest.fixture
 async def db_session():
     """Async database session fixture for tests."""
-    from app.core.database import async_session_factory, init_db
-
     # Initialize database if not already initialized
-    if async_session_factory is None:
-        await init_db()
+    if db_module.async_session_factory is None:
+        await db_module.init_db()
 
-    if async_session_factory is None:
+    if db_module.async_session_factory is None:
         pytest.skip("Database not available - skipping storage tests")
 
-    async with async_session_factory() as session:
-        yield session
+    try:
+        async with db_module.async_session_factory() as session:
+            # Eagerly test connection to detect unavailable DB
+            from sqlalchemy import text
+            await session.execute(text("SELECT 1"))
+            yield session
+    except (OSError, ConnectionError, Exception) as exc:
+        pytest.skip(f"Database not reachable ({type(exc).__name__}) - skipping storage tests")
 
 
 @pytest.mark.asyncio

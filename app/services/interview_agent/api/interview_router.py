@@ -338,7 +338,7 @@ async def send_interview_message_stream(
     profile_dict = _build_profile_dict(current_user)
     agent_ctx = AgentContext(profile=profile_dict)
 
-    uid = uuid.UUID(session_id)
+    uid = session_id if isinstance(session_id, uuid.UUID) else uuid.UUID(session_id)
 
     async def _token_generator():
         agent = get_interview_agent(mode=session.mode)  # type: ignore
