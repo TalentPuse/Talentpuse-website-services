@@ -30,7 +30,7 @@ def get_behavioral_interview_agent():
     _behavioral_agent = create_agent(
         model=llm,
         tools=[],  # Interview doesn't need tools, just conversation
-        prompt=BEHAVIORAL_INTERVIEWER_SYSTEM,
+        system_prompt=BEHAVIORAL_INTERVIEWER_SYSTEM,
         middleware=[inject_user_profile],
         context_schema=AgentContext,
     )

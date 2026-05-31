@@ -30,7 +30,7 @@ def get_tech_interview_agent():
     _tech_agent = create_agent(
         model=llm,
         tools=[],  # Interview doesn't need tools, just conversation
-        prompt=TECH_INTERVIEWER_SYSTEM,
+        system_prompt=TECH_INTERVIEWER_SYSTEM,
         middleware=[inject_user_profile],
         context_schema=AgentContext,
     )
