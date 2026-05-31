@@ -915,6 +915,7 @@ export type InterviewAgentSession = {
   status: "created" | "in_progress" | "completed" | "abandoned";
   target_role: string | null;
   question_count: number;
+  total_questions: number;
   overall_score: number | null;
   overall_feedback: string | null;
   improvement_plan: string | null;
@@ -938,6 +939,8 @@ export type InterviewAgentSSEEvent =
   | { type: "user_message"; id: string; session_id: string; role: "user"; content: string; created_at: string }
   | { type: "token"; content: string }
   | { type: "done"; assistant_message: InterviewAgentMessage }
+  | { type: "completing"; message: string }
+  | { type: "session_completed"; session_id: string; mode: InterviewAgentMode; overall_score: number; overall_feedback: string; strengths: string[]; improvements: string[]; improvement_plan: string; question_count: number }
   | { type: "error"; message: string };
 
 export const interviewAgentApi = {
