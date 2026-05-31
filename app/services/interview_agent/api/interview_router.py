@@ -72,9 +72,9 @@ async def _load_session_history(
 ) -> list[dict]:
     """Load message history for context."""
     history = await db.execute(
-        select(db_module.interview.InterviewMessage)
-        .where(db_module.interview.InterviewMessage.session_id == session_id)
-        .order_by(db_module.interview.InterviewMessage.created_at.desc())
+        select(InterviewMessage)
+        .where(InterviewMessage.session_id == session_id)
+        .order_by(InterviewMessage.created_at.desc())
         .limit(limit)
     )
     past_msgs = list(reversed(history.scalars().all()))
@@ -369,14 +369,14 @@ async def send_interview_message_stream(
 
             # Save assistant message using a fresh DB session
             async with db_module.async_session_factory() as db_sess:
-                bot_msg = db_module.interview.InterviewMessage(
+                bot_msg = InterviewMessage(
                     session_id=uid,
                     role="assistant",
                     content=full_response,
                 )
                 db_sess.add(bot_msg)
                 session_obj = await db_sess.get(
-                    db_module.interview.InterviewSession, uid
+                    InterviewSession, uid
                 )
                 if session_obj:
                     session_obj.updated_at = func.now()
