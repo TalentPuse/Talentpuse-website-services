@@ -13,8 +13,9 @@ from app.services.interview_agent.chains.tech_interview_chain import (
     reset_tech_agent,
 )
 
-# Singleton agent instance (cached after first call)
-_interview_agent = None
+# Separate singletons per mode
+_tech_agent = None
+_behavioral_agent = None
 
 
 def get_interview_agent(mode: str = "behavioral"):
@@ -26,22 +27,14 @@ def get_interview_agent(mode: str = "behavioral"):
     Returns:
         LangChain agent for interview conversations
     """
-    global _interview_agent
-    if _interview_agent is not None:
-        return _interview_agent
-
     if mode == "technical":
-        _interview_agent = get_tech_interview_agent()
+        return get_tech_interview_agent()
     else:
-        _interview_agent = get_behavioral_interview_agent()
-
-    return _interview_agent
+        return get_behavioral_interview_agent()
 
 
 def reset_interview_agent():
-    """Reset interview agent singleton."""
-    global _interview_agent
-    _interview_agent = None
+    """Reset all interview agent singletons."""
     reset_tech_agent()
     reset_behavioral_agent()
 
@@ -52,6 +45,3 @@ __all__ = [
     "get_interview_agent",
     "reset_interview_agent",
 ]
-
-
-
