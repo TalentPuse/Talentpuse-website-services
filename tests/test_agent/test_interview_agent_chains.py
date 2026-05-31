@@ -64,7 +64,7 @@ class TestTechInterviewAgent:
             assert mock_create.called
             call_kwargs = mock_create.call_args.kwargs
             assert "model" in call_kwargs
-            assert "prompt" in call_kwargs
+            assert "system_prompt" in call_kwargs
             assert "middleware" in call_kwargs
             assert "context_schema" in call_kwargs
 
@@ -148,7 +148,7 @@ class TestBehavioralInterviewAgent:
             assert mock_create.called
             call_kwargs = mock_create.call_args.kwargs
             assert "model" in call_kwargs
-            assert "prompt" in call_kwargs
+            assert "system_prompt" in call_kwargs
             assert "middleware" in call_kwargs
             assert "context_schema" in call_kwargs
 
