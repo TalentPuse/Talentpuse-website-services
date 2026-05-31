@@ -894,3 +894,135 @@ export const interviewApi = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 };
+
+/* ───── Interview Agent types & API (new chatbot-based) ───── */
+
+export type InterviewAgentMode = "technical" | "behavioral";
+
+export type InterviewAgentMessage = {
+  id: string;
+  session_id: string;
+  role: "user" | "assistant";
+  content: string;
+  audio_url: string | null;
+  created_at: string;
+};
+
+export type InterviewAgentSession = {
+  id: string;
+  user_id: string;
+  mode: InterviewAgentMode;
+  status: "created" | "in_progress" | "completed" | "abandoned";
+  target_role: string | null;
+  question_count: number;
+  overall_score: number | null;
+  overall_feedback: string | null;
+  improvement_plan: string | null;
+  created_at: string;
+  updated_at: string;
+  messages: InterviewAgentMessage[];
+};
+
+export type InterviewAgentSummary = {
+  session_id: string;
+  mode: InterviewAgentMode;
+  overall_score: number;
+  overall_feedback: string;
+  strengths: string[];
+  improvements: string[];
+  improvement_plan: string;
+  question_count: number;
+};
+
+export type InterviewAgentSSEEvent =
+  | { type: "user_message"; id: string; session_id: string; role: "user"; content: string; created_at: string }
+  | { type: "token"; content: string }
+  | { type: "done"; assistant_message: InterviewAgentMessage }
+  | { type: "error"; message: string };
+
+export const interviewAgentApi = {
+  createSession: (token: string, body: {
+    mode: InterviewAgentMode;
+    target_role?: string;
+    num_questions?: number;
+  }) =>
+    clientFetch<InterviewAgentSession>("/api/interview-agent/sessions", {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(body),
+    }),
+
+  listSessions: (token: string) =>
+    clientFetch<InterviewAgentSession[]>("/api/interview-agent/sessions", {
+      headers: authHeaders(token),
+    }),
+
+  getSession: (token: string, sessionId: string) =>
+    clientFetch<InterviewAgentSession>(`/api/interview-agent/sessions/${sessionId}`, {
+      headers: authHeaders(token),
+    }),
+
+  deleteSession: (token: string, sessionId: string) =>
+    fetch(`${CLIENT_BASE}/api/interview-agent/sessions/${sessionId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  completeSession: (token: string, sessionId: string) =>
+    clientFetch<InterviewAgentSummary>(`/api/interview-agent/sessions/${sessionId}/complete`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify({ force: false }),
+    }),
+
+  sendMessageStream: async function* (
+    token: string,
+    sessionId: string,
+    content: string,
+  ): AsyncGenerator<InterviewAgentSSEEvent> {
+    const res = await fetch(
+      `${CLIENT_BASE}/api/interview-agent/sessions/${sessionId}/messages/stream`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content }),
+      },
+    );
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw {
+        message: body.detail ?? "Stream request failed",
+        status: res.status,
+      } as ApiError;
+    }
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data: ")) continue;
+        const jsonStr = trimmed.slice(6);
+        if (!jsonStr) continue;
+        try {
+          yield JSON.parse(jsonStr) as InterviewAgentSSEEvent;
+        } catch {
+          /* skip malformed */
+        }
+      }
+    }
+  },
+};
