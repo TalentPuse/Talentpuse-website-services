@@ -1,9 +1,15 @@
 """Integration tests for interview agent API endpoints.
 
 Tests that the API follows the same pattern as chat.py
+
+NOTE: We use sys.modules + patch.object because ``api/__init__.py``
+exports an ``interview_router`` APIRouter instance that shadows the
+Python module of the same name.  Plain ``patch("...interview_router.xxx")``
+resolves to the router object, not the module.
 """
 from __future__ import annotations
 
+import sys
 import uuid
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -13,6 +19,9 @@ from fastapi.testclient import TestClient
 
 from app.core.security import get_current_user
 from app.main import app
+
+# Resolve the *module* object directly — bypasses the APIRouter shadow.
+_router_mod = sys.modules["app.services.interview_agent.api.interview_router"]
 
 
 @pytest.fixture
@@ -104,19 +113,10 @@ class TestSessionEndpoints:
         mock_message.audio_url = None
         mock_message.created_at = "2024-01-01T00:00:00"
 
-        with patch(
-            "app.services.interview_agent.api.interview_router.create_session",
-            return_value=mock_session,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.create_message",
-            return_value=mock_message,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.update_session",
-            return_value=mock_session,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.get_session_messages",
-            return_value=[mock_message],
-        ):
+        with patch.object(_router_mod, "create_session", return_value=mock_session), \
+             patch.object(_router_mod, "create_message", return_value=mock_message), \
+             patch.object(_router_mod, "update_session", return_value=mock_session), \
+             patch.object(_router_mod, "get_session_messages", return_value=[mock_message]):
             response = client.post(
                 "/api/interview-agent/sessions",
                 json={
@@ -157,19 +157,10 @@ class TestSessionEndpoints:
         mock_message.audio_url = None
         mock_message.created_at = "2024-01-01T00:00:00"
 
-        with patch(
-            "app.services.interview_agent.api.interview_router.create_session",
-            return_value=mock_session,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.create_message",
-            return_value=mock_message,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.update_session",
-            return_value=mock_session,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.get_session_messages",
-            return_value=[mock_message],
-        ):
+        with patch.object(_router_mod, "create_session", return_value=mock_session), \
+             patch.object(_router_mod, "create_message", return_value=mock_message), \
+             patch.object(_router_mod, "update_session", return_value=mock_session), \
+             patch.object(_router_mod, "get_session_messages", return_value=[mock_message]):
             response = client.post(
                 "/api/interview-agent/sessions",
                 json={
@@ -201,10 +192,7 @@ class TestSessionEndpoints:
         mock_session1.created_at = "2024-01-01T00:00:00"
         mock_session1.updated_at = "2024-01-01T00:00:00"
 
-        with patch(
-            "app.services.interview_agent.api.interview_router.list_user_sessions",
-            return_value=[mock_session1],
-        ):
+        with patch.object(_router_mod, "list_user_sessions", return_value=[mock_session1]):
             response = client.get(
                 "/api/interview-agent/sessions",
                 headers={"Authorization": "Bearer fake-token"},
@@ -249,13 +237,8 @@ class TestSessionEndpoints:
         mock_message2.audio_url = None
         mock_message2.created_at = "2024-01-01T00:01:00"
 
-        with patch(
-            "app.services.interview_agent.api.interview_router.get_session",
-            return_value=mock_session,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.get_session_messages",
-            return_value=[mock_message1, mock_message2],
-        ):
+        with patch.object(_router_mod, "get_session", return_value=mock_session), \
+             patch.object(_router_mod, "get_session_messages", return_value=[mock_message1, mock_message2]):
             response = client.get(
                 f"/api/interview-agent/sessions/{session_id}",
                 headers={"Authorization": "Bearer fake-token"},
@@ -274,10 +257,7 @@ class TestSessionEndpoints:
         mock_session.id = session_id
         mock_session.user_id = mock_user.id
 
-        with patch(
-            "app.services.interview_agent.api.interview_router.get_session",
-            return_value=mock_session,
-        ):
+        with patch.object(_router_mod, "get_session", return_value=mock_session):
             response = client.delete(
                 f"/api/interview-agent/sessions/{session_id}",
                 headers={"Authorization": "Bearer fake-token"},
@@ -326,22 +306,11 @@ class TestMessageEndpoints:
         mock_bot_msg.audio_url = None
         mock_bot_msg.created_at = "2024-01-01T00:00:00"
 
-        with patch(
-            "app.services.interview_agent.api.interview_router.get_session",
-            return_value=mock_session,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.create_message",
-            return_value=mock_user_msg,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.update_session",
-            return_value=mock_session,
-        ), patch(
-            "app.services.interview_agent.api.interview_router._load_session_history",
-            return_value=[],
-        ), patch(
-            "app.services.interview_agent.api.interview_router.get_interview_agent",
-            return_value=mock_agent,
-        ):
+        with patch.object(_router_mod, "get_session", return_value=mock_session), \
+             patch.object(_router_mod, "create_message", side_effect=[mock_user_msg, mock_bot_msg]), \
+             patch.object(_router_mod, "update_session", return_value=mock_session), \
+             patch.object(_router_mod, "_load_session_history", return_value=[]), \
+             patch.object(_router_mod, "get_interview_agent", return_value=mock_agent):
             response = client.post(
                 f"/api/interview-agent/sessions/{session_id}/messages",
                 json={"content": "I'd design it using microservices."},
@@ -389,22 +358,11 @@ class TestMessageEndpoints:
         mock_user_msg.audio_url = None
         mock_user_msg.created_at = datetime(2024, 1, 1, 0, 0, 0)
 
-        with patch(
-            "app.services.interview_agent.api.interview_router.get_session",
-            return_value=mock_session,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.create_message",
-            return_value=mock_user_msg,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.update_session",
-            return_value=mock_session,
-        ), patch(
-            "app.services.interview_agent.api.interview_router._load_session_history",
-            return_value=[],
-        ), patch(
-            "app.services.interview_agent.api.interview_router.get_interview_agent",
-            return_value=mock_agent,
-        ):
+        with patch.object(_router_mod, "get_session", return_value=mock_session), \
+             patch.object(_router_mod, "create_message", return_value=mock_user_msg), \
+             patch.object(_router_mod, "update_session", return_value=mock_session), \
+             patch.object(_router_mod, "_load_session_history", return_value=[]), \
+             patch.object(_router_mod, "get_interview_agent", return_value=mock_agent):
             response = client.post(
                 f"/api/interview-agent/sessions/{session_id}/messages/stream",
                 json={"content": "I led a team through a difficult project."},
@@ -449,26 +407,17 @@ class TestSessionCompletion:
         mock_updated_session.created_at = "2024-01-01T00:00:00"
         mock_updated_session.updated_at = "2024-01-01T00:00:00"
 
-        with patch(
-            "app.services.interview_agent.api.interview_router.get_session",
-            return_value=mock_session,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.update_session",
-            return_value=mock_updated_session,
-        ), patch(
-            "app.services.interview_agent.api.interview_router.get_session_messages",
-            return_value=[],
-        ), patch(
-            "app.services.interview_agent.api.interview_router.generate_session_summary",
-            return_value=MagicMock(
-                overall_score=4.2,
-                overall_feedback="Strong performance",
-                strengths=["Good technical depth"],
-                improvements=["Could quantify more"],
-                improvement_plan="1. Practice more\n2. Study more",
-                question_count=5,
-            ),
-        ):
+        with patch.object(_router_mod, "get_session", return_value=mock_session), \
+             patch.object(_router_mod, "update_session", return_value=mock_updated_session), \
+             patch.object(_router_mod, "get_session_messages", return_value=[]), \
+             patch.object(_router_mod, "generate_session_summary", return_value=MagicMock(
+                 overall_score=4.2,
+                 overall_feedback="Strong performance",
+                 strengths=["Good technical depth"],
+                 improvements=["Could quantify more"],
+                 improvement_plan="1. Practice more\n2. Study more",
+                 question_count=5,
+             )):
             response = client.post(
                 f"/api/interview-agent/sessions/{session_id}/complete",
                 json={"force": False},
