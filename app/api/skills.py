@@ -38,14 +38,14 @@ async def top_skills(
     result = await db.execute(
         text("""
             select
-                sk.skill_name_norm as skill,
+                sk.skill_name as skill,
                 count(distinct (f.source, f.source_job_id))::int as n_jobs,
                 round((100.0 * count(distinct (f.source, f.source_job_id)) / :total)::numeric, 1)::float as pct_of_jobs
             from dbt_dev_gold.fct_jobs_daily f
-            join dbt_dev_silver.silver_skill_long sk
+            join dbt_dev_silver.silver_skill_enriched sk
                 on sk.source = f.source and sk.source_job_id = f.source_job_id
             where f.is_active and f.job_category = :category
-            group by sk.skill_name_norm
+            group by sk.skill_name
             order by n_jobs desc
             limit :limit
         """),
@@ -79,17 +79,17 @@ async def highest_paying_skills(
     result = await db.execute(
         text("""
             select
-                sk.skill_name_norm as skill,
+                sk.skill_name as skill,
                 count(distinct (f.source, f.source_job_id))::int as n_jobs,
                 round((avg(f.salary_vnd_monthly_avg) / 1000000.0)::numeric, 1)::float as avg_salary_million
             from dbt_dev_gold.fct_jobs_daily f
-            join dbt_dev_silver.silver_skill_long sk
+            join dbt_dev_silver.silver_skill_enriched sk
                 on sk.source = f.source and sk.source_job_id = f.source_job_id
             where f.is_active
                 and f.job_category = :category
                 and f.salary_vnd_monthly_avg is not null
                 and f.salary_vnd_monthly_avg <= 200000000
-            group by sk.skill_name_norm
+            group by sk.skill_name
             order by avg_salary_million desc
             limit :limit
         """),

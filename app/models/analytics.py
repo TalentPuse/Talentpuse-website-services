@@ -56,12 +56,14 @@ silver_job_detail = Table(
     schema="dbt_dev_silver",
 )
 
-silver_skill_long = Table(
-    "silver_skill_long",
+silver_skill_enriched = Table(
+    "silver_skill_enriched",
     analytics_meta,
     Column("source", String),
     Column("source_job_id", String),
-    Column("skill_name_norm", String),
-    Column("skill_weight", Float),
+    Column("skill_name", String),
+    Column("skill_category", String),
+    Column("importance", String),
+    Column("confidence", String),
     schema="dbt_dev_silver",
 )

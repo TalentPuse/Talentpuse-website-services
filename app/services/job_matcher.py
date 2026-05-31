@@ -27,7 +27,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.alert_log import AlertLog
-from app.models.analytics import fct_jobs_daily, silver_job_detail, silver_skill_long
+from app.models.analytics import fct_jobs_daily, silver_job_detail, silver_skill_enriched
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -298,16 +298,16 @@ class JobMatcher:
 
         skill_subq = (
             select(
-                silver_skill_long.c.source,
-                silver_skill_long.c.source_job_id,
+                silver_skill_enriched.c.source,
+                silver_skill_enriched.c.source_job_id,
                 (
                     func.count()
-                    .filter(silver_skill_long.c.skill_name_norm == any_(skills))
+                    .filter(silver_skill_enriched.c.skill_name == any_(skills))
                     .cast(Float)
                     / func.greatest(func.count(), 1)
                 ).label("skill_ratio"),
             )
-            .group_by(silver_skill_long.c.source, silver_skill_long.c.source_job_id)
+            .group_by(silver_skill_enriched.c.source, silver_skill_enriched.c.source_job_id)
             .subquery("sk")
         )
 
