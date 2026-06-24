@@ -20,6 +20,8 @@ export default function AdminAlertsPage() {
   const [users, setUsers] = useState<{ id: string; email: string; full_name: string }[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [dispatching, setDispatching] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
 
   // Load users for filter dropdown
   useEffect(() => {
@@ -63,27 +65,72 @@ export default function AdminAlertsPage() {
     }
   }
 
+  async function onEmailTest() {
+    if (!token) return;
+    const email = testEmail.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Email không hợp lệ");
+      return;
+    }
+    setSendingTest(true);
+    try {
+      const res = await adminApi.emailTest(token, email);
+      toast.success(`Đã gửi email test đến ${res.to} (id: ${res.message_id?.slice(0, 8)}…)`);
+    } catch (err) {
+      const msg = (err as { message?: string })?.message || "Gửi email test thất bại";
+      toast.error(msg);
+    } finally {
+      setSendingTest(false);
+    }
+  }
+
   const totalPages = data ? Math.ceil(data.total / PER_PAGE) : 0;
   const hasFilters = dateFrom || dateTo || selectedUserId;
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Alert Logs</h1>
           <p className="mt-1 text-sm text-slate-500">
             {data ? `${data.total} alert đã gửi` : "Đang tải..."}
           </p>
         </div>
-        <motion.button
-          onClick={onDispatch}
-          disabled={dispatching}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-60 transition-colors"
-        >
-          {dispatching ? "Đang gửi..." : "Gửi alert ngay"}
-        </motion.button>
+        <div className="flex flex-wrap items-end gap-3">
+          {/* Email test */}
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Gửi email test</label>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") onEmailTest(); }}
+                placeholder="email@example.com"
+                className="w-56 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+              />
+              <motion.button
+                onClick={onEmailTest}
+                disabled={sendingTest}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-900 disabled:opacity-60 transition-colors"
+              >
+                {sendingTest ? "Đang gửi..." : "Gửi test"}
+              </motion.button>
+            </div>
+          </div>
+          {/* Dispatch all */}
+          <motion.button
+            onClick={onDispatch}
+            disabled={dispatching}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-60 transition-colors"
+          >
+            {dispatching ? "Đang gửi..." : "Gửi alert ngay"}
+          </motion.button>
+        </div>
       </div>
 
       {/* Filters */}

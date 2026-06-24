@@ -83,6 +83,23 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function onToggleEmail(user: AdminUserRow) {
+    if (!token) return;
+    const action = user.email_alert_enabled ? "tắt" : "bật";
+    if (!confirm(`Bạn có chắc muốn ${action} email alert cho ${user.email}?`)) return;
+    try {
+      await adminApi.toggleEmailAlert(token, user.id, !user.email_alert_enabled);
+      toast.success(`Đã ${action} email alert ${user.email}`);
+      load();
+      if (profile?.id === user.id) {
+        const p = await adminApi.getUserProfile(token, user.id);
+        setProfile(p);
+      }
+    } catch {
+      toast.error("Thao tác thất bại");
+    }
+  }
+
   async function openProfile(userId: string) {
     if (!token) return;
     setProfileLoading(true);
@@ -156,6 +173,7 @@ export default function AdminUsersPage() {
                     <th className="px-4 py-3 font-medium">Gói</th>
                     <th className="px-4 py-3 font-medium">Trạng thái</th>
                     <th className="px-4 py-3 font-medium">Telegram</th>
+                    <th className="px-4 py-3 font-medium">Email</th>
                     <th className="px-4 py-3 font-medium text-right">Alerts</th>
                     <th className="px-4 py-3 font-medium">Ngày tạo</th>
                     <th className="px-4 py-3 font-medium">Actions</th>
@@ -209,6 +227,20 @@ export default function AdminUsersPage() {
                           <span className="text-xs text-slate-400">—</span>
                         )}
                       </td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => onToggleEmail(u)}
+                          disabled={!u.is_active}
+                          title={u.is_active ? "Bật/tắt email alert" : "User đã bị ban"}
+                          className={`rounded-md px-3 py-1.5 text-xs font-medium transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                            u.email_alert_enabled
+                              ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                              : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                          }`}
+                        >
+                          {u.email_alert_enabled ? "Bật" : "Tắt"}
+                        </button>
+                      </td>
                       <td className="px-4 py-3 text-right tabular-nums">{u.alerts_sent}</td>
                       <td className="px-4 py-3 text-slate-500 text-xs">
                         {new Date(u.created_at).toLocaleDateString("vi-VN")}
@@ -229,7 +261,7 @@ export default function AdminUsersPage() {
                   ))}
                   {data && data.users.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="px-4 py-12 text-center text-slate-400">
+                      <td colSpan={10} className="px-4 py-12 text-center text-slate-400">
                         Không tìm thấy người dùng nào
                       </td>
                     </tr>
@@ -413,12 +445,37 @@ export default function AdminUsersPage() {
 
                   {/* Alert */}
                   <div>
-                    <p className="text-xs font-medium text-slate-500 mb-1">Job Alert</p>
+                    <p className="text-xs font-medium text-slate-500 mb-1">Job Alert (Telegram)</p>
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       profile.alert_enabled ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
                     }`}>
                       {profile.alert_enabled ? "Đã bật" : "Tắt"}
                     </span>
+                  </div>
+
+                  {/* Email alert */}
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 mb-1">Email Alert</p>
+                    <button
+                      onClick={async () => {
+                        if (!token) return;
+                        try {
+                          await adminApi.toggleEmailAlert(token, profile.id, !profile.email_alert_enabled);
+                          const p = await adminApi.getUserProfile(token, profile.id);
+                          setProfile(p);
+                          toast.success(`Đã ${profile.email_alert_enabled ? "tắt" : "bật"} email alert`);
+                        } catch {
+                          toast.error("Thao tác thất bại");
+                        }
+                      }}
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition ${
+                        profile.email_alert_enabled
+                          ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      }`}
+                    >
+                      {profile.email_alert_enabled ? "Đã bật" : "Tắt"} — click để đổi
+                    </button>
                   </div>
 
                   {/* Dates */}

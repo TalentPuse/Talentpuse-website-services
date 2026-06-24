@@ -290,6 +290,7 @@ export type AdminUserProfile = {
   telegram_status: string | null;
   telegram_username: string | null;
   alert_enabled: boolean;
+  email_alert_enabled: boolean;
   alerts_sent: number;
   created_at: string;
   updated_at: string | null;
@@ -308,6 +309,7 @@ export type AdminUserRow = {
   telegram_status: string | null;
   telegram_username: string | null;
   alert_enabled: boolean;
+  email_alert_enabled: boolean;
   alerts_sent: number;
   created_at: string;
 };
@@ -523,6 +525,12 @@ export const adminApi = {
       { method: "PUT", headers: adminHeaders(token), body: JSON.stringify({ tier }) },
     ),
 
+  toggleEmailAlert: (token: string, userId: string, enabled: boolean) =>
+    clientFetch<{ ok: boolean; email_alert_enabled: boolean }>(
+      `/api/admin/users/${userId}/email-alert`,
+      { method: "PUT", headers: adminHeaders(token), body: JSON.stringify({ enabled }) },
+    ),
+
   alertLogs: (
     token: string,
     params: { page?: number; per_page?: number; user_id?: string; date_from?: string; date_to?: string },
@@ -555,6 +563,12 @@ export const adminApi = {
       method: "POST",
       headers: adminHeaders(token),
     }),
+
+  emailTest: (token: string, to: string) =>
+    clientFetch<{ ok: boolean; message_id: string; to: string }>(
+      "/api/admin/alerts/email-test",
+      { method: "POST", headers: adminHeaders(token), body: JSON.stringify({ to }) },
+    ),
 
   jobs: (
     token: string,
