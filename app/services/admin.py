@@ -161,11 +161,14 @@ async def list_users(
             tc.status AS telegram_status,
             tc.telegram_username,
             COALESCE(asub.enabled, false) AS alert_enabled,
+            COALESCE(asub_email.enabled, false) AS email_alert_enabled,
             COALESCE(al_count.cnt, 0)::int AS alerts_sent
         FROM app.users u
         LEFT JOIN app.telegram_connections tc ON tc.user_id = u.id
         LEFT JOIN app.alert_subscriptions asub
             ON asub.user_id = u.id AND asub.alert_type = 'job_match'
+        LEFT JOIN app.alert_subscriptions asub_email
+            ON asub_email.user_id = u.id AND asub_email.alert_type = 'email_job_match'
         LEFT JOIN (
             SELECT user_id, count(*) AS cnt
             FROM app.alert_logs
@@ -191,6 +194,7 @@ async def list_users(
             telegram_status=row["telegram_status"],
             telegram_username=row["telegram_username"],
             alert_enabled=row["alert_enabled"],
+            email_alert_enabled=row["email_alert_enabled"],
             alerts_sent=row["alerts_sent"],
             created_at=row["created_at"],
         ))
@@ -210,11 +214,14 @@ async def get_user_profile(db: AsyncSession, user_id: str) -> AdminUserProfile |
             tc.status AS telegram_status,
             tc.telegram_username,
             COALESCE(asub.enabled, false) AS alert_enabled,
+            COALESCE(asub_email.enabled, false) AS email_alert_enabled,
             COALESCE(al_count.cnt, 0)::int AS alerts_sent
         FROM app.users u
         LEFT JOIN app.telegram_connections tc ON tc.user_id = u.id
         LEFT JOIN app.alert_subscriptions asub
             ON asub.user_id = u.id AND asub.alert_type = 'job_match'
+        LEFT JOIN app.alert_subscriptions asub_email
+            ON asub_email.user_id = u.id AND asub_email.alert_type = 'email_job_match'
         LEFT JOIN (
             SELECT user_id, count(*) AS cnt
             FROM app.alert_logs
@@ -248,6 +255,7 @@ async def get_user_profile(db: AsyncSession, user_id: str) -> AdminUserProfile |
         telegram_status=row["telegram_status"],
         telegram_username=row["telegram_username"],
         alert_enabled=row["alert_enabled"],
+        email_alert_enabled=row["email_alert_enabled"],
         alerts_sent=row["alerts_sent"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
@@ -273,6 +281,31 @@ async def update_user_tier(db: AsyncSession, user_id: str, tier: str) -> bool:
         {"tier": tier, "uid": user_id},
     )
     if result.rowcount == 0:
+        return False
+    await db.commit()
+    return True
+
+
+async def set_user_email_alert(db: AsyncSession, user_id: str, enabled: bool) -> bool:
+    """Upsert an email_job_match AlertSubscription for a user.
+
+    Returns False if the user does not exist.
+    """
+    exists = await db.execute(
+        text("SELECT 1 FROM app.users WHERE id = :uid"),
+        {"uid": user_id},
+    )
+    if exists.first() is None:
+        return False
+
+    result = await db.execute(text("""
+        INSERT INTO app.alert_subscriptions (id, user_id, alert_type, enabled)
+        VALUES (gen_random_uuid(), :uid, 'email_job_match', :enabled)
+        ON CONFLICT (user_id, alert_type)
+        DO UPDATE SET enabled = EXCLUDED.enabled, updated_at = now()
+        RETURNING id
+    """), {"uid": user_id, "enabled": enabled})
+    if result.first() is None:
         return False
     await db.commit()
     return True

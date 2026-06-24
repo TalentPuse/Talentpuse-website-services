@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import config as cfg
@@ -16,6 +17,8 @@ from app.schemas.admin import (
     AdminUserList,
     AlertLogList,
     ConfigUpdate,
+    EmailAlertUpdate,
+    EmailTestRequest,
     SystemConfig,
     TierUpdate,
 )
@@ -26,11 +29,14 @@ from app.services.admin import (
     list_alertable_jobs,
     list_alert_logs,
     list_users,
+    set_user_email_alert,
     toggle_user_active,
     update_system_config,
     update_user_tier,
 )
+from app.services.email import send_job_alert_email
 from app.services.job_alert import dispatch_alerts
+from app.services.job_matcher import MatchedJob
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -164,3 +170,74 @@ async def internal_dispatch(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret")
     count = await dispatch_alerts(db)
     return {"dispatched": count}
+
+
+@router.put("/users/{user_id}/email-alert")
+async def toggle_email_alert(
+    user_id: str,
+    data: EmailAlertUpdate,
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    ok = await set_user_email_alert(db, user_id, data.enabled)
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User không tồn tại")
+    return {"ok": True, "email_alert_enabled": data.enabled}
+
+
+@router.post("/alerts/email-test")
+async def email_test(
+    data: EmailTestRequest,
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Send a sample job-alert email to an arbitrary address (admin smoke test)."""
+    jobs = await _sample_jobs(db)
+    if not jobs:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Không có job active nào để gửi mẫu",
+        )
+
+    result = await send_job_alert_email(to=str(data.to), user_name="Test", jobs=jobs)
+    if not result.success:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Gửi email thất bại: {result.error or 'unknown error'}",
+        )
+    return {"ok": True, "message_id": result.message_id, "to": str(data.to)}
+
+
+async def _sample_jobs(db: AsyncSession, limit: int = 3) -> list[MatchedJob]:
+    """Grab a few recent active jobs to populate a sample alert email."""
+    result = await db.execute(text("""
+        SELECT
+            f.source, f.source_job_id, f.title, f.company_name,
+            f.city_canonical, f.job_level, f.job_category,
+            round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_m,
+            f.posted_at,
+            sd.source_url, sd.primary_address, sd.city_raw_vi
+        FROM dbt_dev_gold.fct_jobs_daily f
+        LEFT JOIN dbt_dev_silver.silver_job_detail sd
+            ON sd.source = f.source AND sd.source_job_id = f.source_job_id
+        WHERE f.is_active
+        ORDER BY f.posted_at DESC NULLS LAST
+        LIMIT :limit
+    """), {"limit": limit})
+    jobs: list[MatchedJob] = []
+    for row in result.mappings():
+        jobs.append(MatchedJob(
+            source=row["source"],
+            source_job_id=row["source_job_id"],
+            title=row["title"],
+            company_name=row["company_name"],
+            city_canonical=row["city_canonical"],
+            job_level=row["job_level"],
+            job_category=row["job_category"],
+            salary_m=row["salary_m"],
+            source_url=row.get("source_url"),
+            posted_at=row.get("posted_at"),
+            address=row.get("primary_address"),
+            city_raw_vi=row.get("city_raw_vi"),
+        ))
+    return jobs
