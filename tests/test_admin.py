@@ -142,7 +142,7 @@ async def test_users_list_paginated():
                 is_active=True, is_admin=False, subscription_tier="free",
                 skills=[], desired_titles=[], preferred_cities=[],
                 telegram_status=None, telegram_username=None,
-                alert_enabled=False, alerts_sent=0,
+                alert_enabled=False, email_alert_enabled=False, alerts_sent=0,
                 created_at=datetime(2026, 4, 1),
             )
         ],

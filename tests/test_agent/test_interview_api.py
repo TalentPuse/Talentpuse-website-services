@@ -332,6 +332,7 @@ class TestMessageEndpoints:
         mock_session.mode = "behavioral"
         mock_session.status = "in_progress"
         mock_session.question_count = 0
+        mock_session.total_questions = 10
         mock_session.created_at = "2024-01-01T00:00:00"
         mock_session.updated_at = "2024-01-01T00:00:00"
 
