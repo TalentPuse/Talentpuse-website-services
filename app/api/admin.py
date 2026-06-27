@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from datetime import date
+import uuid
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import text
+from sqlalchemy import and_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import config as cfg
 from app.core.database import get_db
 from app.core.security import require_admin
+from app.models.alert_log import AlertLog
 from app.models.user import User
 from app.schemas.admin import (
     AdminJobList,
@@ -127,10 +129,21 @@ async def alert_logs(
     user_id: str | None = Query(None),
     date_from: date | None = Query(None),
     date_to: date | None = Query(None),
+    channel: str | None = Query(None),
+    search: str | None = Query(None),
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> AlertLogList:
-    return await list_alert_logs(db, page=page, per_page=per_page, user_id=user_id, date_from=date_from, date_to=date_to)
+    return await list_alert_logs(
+        db,
+        page=page,
+        per_page=per_page,
+        user_id=user_id,
+        date_from=date_from,
+        date_to=date_to,
+        channel=channel,
+        search=search,
+    )
 
 
 @router.get("/config", response_model=SystemConfig)
@@ -156,7 +169,7 @@ async def manual_dispatch(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    count = await dispatch_alerts(db)
+    count = await dispatch_alerts(db, source="admin_manual")
     return {"dispatched": count}
 
 
@@ -168,7 +181,8 @@ async def internal_dispatch(
     secret = request.headers.get("X-Webhook-Secret", "")
     if not secret or secret != cfg.TELEGRAM_WEBHOOK_SECRET:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret")
-    count = await dispatch_alerts(db)
+    source = request.headers.get("X-Dispatch-Source", "cron_webhook")
+    count = await dispatch_alerts(db, source=source)
     return {"dispatched": count}
 
 
@@ -206,6 +220,219 @@ async def email_test(
             detail=f"Gửi email thất bại: {result.error or 'unknown error'}",
         )
     return {"ok": True, "message_id": result.message_id, "to": str(data.to)}
+
+
+@router.post("/alerts/retry")
+async def retry_failed_alerts(
+    request: Request,
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
+    user_id: str | None = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Retry failed email alerts within date range and user filter."""
+    # Build query for failed email alerts
+    where_clause = [
+        AlertLog.channel == "email",
+        AlertLog.status == "failed",
+    ]
+    if date_from:
+        where_clause.append(AlertLog.sent_at >= datetime.fromisoformat(date_from))
+    if date_to:
+        where_clause.append(AlertLog.sent_at <= datetime.fromisoformat(date_to))
+    if user_id:
+        where_clause.append(AlertLog.user_id == uuid.UUID(user_id))
+
+    result = await db.execute(
+        select(AlertLog).where(and_(*where_clause)).order_by(AlertLog.sent_at).limit(limit)
+    )
+    failed_logs = result.scalars().all()
+
+    if not failed_logs:
+        return {"retried": 0, "total": 0, "message": "Không có failed alerts nào để retry"}
+
+    retried = 0
+    for log in failed_logs:
+        # Get user email
+        user_result = await db.execute(select(User).where(User.id == log.user_id))
+        user = user_result.scalar_one_or_none()
+        if not user or not user.email:
+            continue
+
+        # Re-fetch job details
+        job = await _get_matched_job_details(db, log.source_job_id)
+        if not job:
+            continue
+
+        # Retry sending
+        email_result = await send_job_alert_email(
+            to=user.email,
+            user_name=user.full_name,
+            jobs=[job],
+        )
+        if email_result.success:
+            log.status = "sent"
+            log.retry_count += 1
+            log.last_retry_at = datetime.utcnow()
+            log.error_message = None
+            retried += 1
+        else:
+            log.status = "failed"
+            log.error_message = (email_result.error or "Unknown error")[:500]
+            log.retry_count += 1
+
+    await db.commit()
+    return {"retried": retried, "total": len(failed_logs)}
+
+
+@router.get("/alerts/dispatch-stats")
+async def get_dispatch_stats(
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Get dispatch statistics for monitoring."""
+    where_clause = []
+    if date_from:
+        where_clause.append(f"sent_at >= '{datetime.fromisoformat(date_from).isoformat()}'")
+    if date_to:
+        where_clause.append(f"sent_at <= '{datetime.fromisoformat(date_to).isoformat()}'")
+
+    where_sql = " AND ".join(where_clause) if where_clause else "1=1"
+
+    # Total dispatched by channel
+    channel_result = await db.execute(text(f"""
+        SELECT channel, COUNT(*) as count
+        FROM app.alert_logs
+        WHERE {where_sql}
+        GROUP BY channel
+    """))
+    channel_stats = {r["channel"]: r["count"] for r in channel_result.mappings()}
+
+    # Failed email alerts
+    failed_result = await db.execute(text(f"""
+        SELECT COUNT(*) as count
+        FROM app.alert_logs
+        WHERE channel='email' AND status='failed' AND {where_sql}
+    """))
+    failed_count = failed_result.scalar()
+
+    # Dispatch by source
+    source_result = await db.execute(text(f"""
+        SELECT source, COUNT(DISTINCT source_job_id) as count
+        FROM app.alert_logs
+        WHERE {where_sql}
+        GROUP BY source
+    """))
+    source_stats = {r["source"]: r["count"] for r in source_result.mappings()}
+
+    return {
+        "channel_breakdown": channel_stats,
+        "failed_emails": failed_count,
+        "source_breakdown": source_stats,
+    }
+
+
+@router.get("/alerts/dispatch-history")
+async def get_dispatch_history(
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Get dispatch history aggregated by sent_at and source."""
+    offset = (page - 1) * per_page
+
+    where_clause = []
+    if date_from:
+        where_clause.append(f"DATE(sent_at) >= '{datetime.fromisoformat(date_from).date()}'")
+    if date_to:
+        where_clause.append(f"DATE(sent_at) <= '{datetime.fromisoformat(date_to).date()}'")
+
+    where_sql = " AND ".join(where_clause) if where_clause else "1=1"
+
+    # Get total count for pagination
+    count_result = await db.execute(text(f"""
+        SELECT COUNT(DISTINCT DATE(sent_at), source) as total
+        FROM app.alert_logs
+        WHERE {where_sql}
+    """))
+    total = count_result.scalar() or 0
+
+    # Get paginated history
+    history_result = await db.execute(text(f"""
+        SELECT
+            DATE(sent_at) as dispatch_date,
+            source,
+            COUNT(DISTINCT source_job_id) as jobs_sent,
+            COUNT(*) as total_logs,
+            COUNT(DISTINCT CASE WHEN channel='telegram' THEN source_job_id END) as telegram_sent,
+            COUNT(DISTINCT CASE WHEN channel='email' THEN source_job_id END) as email_sent
+        FROM app.alert_logs
+        WHERE {where_sql}
+        GROUP BY DATE(sent_at), source
+        ORDER BY dispatch_date DESC, source DESC
+        LIMIT {per_page} OFFSET {offset}
+    """))
+
+    entries = []
+    for row in history_result.mappings():
+        entries.append({
+            "date": row["dispatch_date"].isoformat() if row["dispatch_date"] else None,
+            "source": row["source"] or "unknown",
+            "jobs_sent": row["jobs_sent"],
+            "total_logs": row["total_logs"],
+            "telegram_sent": row["telegram_sent"],
+            "email_sent": row["email_sent"],
+        })
+
+    return {
+        "entries": entries,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+    }
+
+
+async def _get_matched_job_details(db: AsyncSession, source_job_id: str) -> MatchedJob | None:
+    """Re-fetch job details for retry by source_job_id."""
+    result = await db.execute(text("""
+        SELECT
+            f.source, f.source_job_id, f.title, f.company_name,
+            f.city_canonical, f.job_level, f.job_category,
+            round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_m,
+            f.posted_at,
+            sd.source_url, sd.primary_address, sd.city_raw_vi
+        FROM dbt_dev_gold.fct_jobs_daily f
+        LEFT JOIN dbt_dev_silver.silver_job_detail sd
+            ON sd.source = f.source AND sd.source_job_id = f.source_job_id
+        WHERE f.source_job_id = :source_job_id
+        LIMIT 1
+    """), {"source_job_id": source_job_id})
+
+    row = result.mappings().first()
+    if not row:
+        return None
+
+    return MatchedJob(
+        source=row["source"],
+        source_job_id=row["source_job_id"],
+        title=row["title"],
+        company_name=row["company_name"],
+        city_canonical=row["city_canonical"],
+        job_level=row["job_level"],
+        job_category=row["job_category"],
+        salary_m=row["salary_m"],
+        source_url=row.get("source_url"),
+        posted_at=row.get("posted_at"),
+        address=row.get("primary_address"),
+        city_raw_vi=row.get("city_raw_vi"),
+    )
 
 
 async def _sample_jobs(db: AsyncSession, limit: int = 3) -> list[MatchedJob]:

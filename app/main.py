@@ -56,7 +56,7 @@ async def _alert_loop() -> None:
         try:
             if alert_loop_active and db_module.async_session_factory is not None:
                 async with db_module.async_session_factory() as db:
-                    count = await dispatch_alerts(db)
+                    count = await dispatch_alerts(db, source="background_loop")
                     logger.info("Alert dispatch completed: %d alerts sent", count)
         except Exception:
             logger.exception("Alert dispatch failed")

@@ -319,6 +319,8 @@ async def list_alert_logs(
     user_id: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    channel: str | None = None,
+    search: str | None = None,
 ) -> AlertLogList:
     conditions = []
     params: dict = {}
@@ -332,6 +334,12 @@ async def list_alert_logs(
     if date_to:
         conditions.append("al.sent_at < :date_to")
         params["date_to"] = datetime.combine(date_to + timedelta(days=1), datetime.min.time())
+    if channel:
+        conditions.append("al.channel = :channel")
+        params["channel"] = channel
+    if search:
+        conditions.append("(f.title ILIKE :search OR f.company_name ILIKE :search)")
+        params["search"] = f"%{search}%"
 
     where = (" AND " + " AND ".join(conditions)) if conditions else ""
 
