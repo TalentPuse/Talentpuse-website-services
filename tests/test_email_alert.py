@@ -558,10 +558,17 @@ class TestDispatchWithEmail:
         async def mock_execute(*args, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
+                # advisory lock acquire (pg_try_advisory_lock) -> truthy
+                r = MagicMock()
+                r.scalar.return_value = True
+                return r
+            if call_count[0] == 2:
+                # user query
                 r = MagicMock()
                 r.all.return_value = [(user, None)]
                 return r
             else:
+                # email subscription check (+ lock release in finally)
                 r = MagicMock()
                 r.scalar_one_or_none.return_value = MagicMock()  # subscribed
                 return r
