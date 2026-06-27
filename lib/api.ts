@@ -339,6 +339,34 @@ export type AlertLogList = {
   per_page: number;
 };
 
+export type AlertDispatchStats = {
+  channel_breakdown: Record<string, number>;
+  failed_emails: number;
+  source_breakdown: Record<string, number>;
+};
+
+export type RetryAlertsResponse = {
+  retried: number;
+  total: number;
+  message?: string;
+};
+
+export type DispatchHistoryEntry = {
+  date: string;
+  source: string;
+  jobs_sent: number;
+  total_logs: number;
+  telegram_sent: number;
+  email_sent: number;
+};
+
+export type DispatchHistoryResponse = {
+  entries: DispatchHistoryEntry[];
+  total: number;
+  page: number;
+  per_page: number;
+};
+
 export type SystemConfig = {
   alert_interval_seconds: number;
   alert_loop_active: boolean;
@@ -533,7 +561,15 @@ export const adminApi = {
 
   alertLogs: (
     token: string,
-    params: { page?: number; per_page?: number; user_id?: string; date_from?: string; date_to?: string },
+    params: {
+      page?: number;
+      per_page?: number;
+      user_id?: string;
+      date_from?: string;
+      date_to?: string;
+      channel?: string;
+      search?: string;
+    },
   ) => {
     const q = new URLSearchParams();
     if (params.page) q.set("page", String(params.page));
@@ -541,6 +577,8 @@ export const adminApi = {
     if (params.user_id) q.set("user_id", params.user_id);
     if (params.date_from) q.set("date_from", params.date_from);
     if (params.date_to) q.set("date_to", params.date_to);
+    if (params.channel) q.set("channel", params.channel);
+    if (params.search) q.set("search", params.search);
     return clientFetch<AlertLogList>(`/api/admin/alert-logs?${q.toString()}`, {
       headers: adminHeaders(token),
     });
@@ -569,6 +607,38 @@ export const adminApi = {
       "/api/admin/alerts/email-test",
       { method: "POST", headers: adminHeaders(token), body: JSON.stringify({ to }) },
     ),
+
+  alertDispatchStats: (token: string, params: { date_from?: string; date_to?: string }) => {
+    const q = new URLSearchParams();
+    if (params.date_from) q.set("date_from", params.date_from);
+    if (params.date_to) q.set("date_to", params.date_to);
+    return clientFetch<AlertDispatchStats>(`/api/admin/alerts/dispatch-stats?${q.toString()}`, {
+      headers: adminHeaders(token),
+    });
+  },
+
+  retryFailedAlerts: (token: string, params: { date_from?: string; date_to?: string; user_id?: string; limit?: number }) => {
+    const q = new URLSearchParams();
+    if (params.date_from) q.set("date_from", params.date_from);
+    if (params.date_to) q.set("date_to", params.date_to);
+    if (params.user_id) q.set("user_id", params.user_id);
+    if (params.limit) q.set("limit", String(params.limit));
+    return clientFetch<RetryAlertsResponse>(`/api/admin/alerts/retry?${q.toString()}`, {
+      method: "POST",
+      headers: adminHeaders(token),
+    });
+  },
+
+  dispatchHistory: (token: string, params: { date_from?: string; date_to?: string; page?: number; per_page?: number }) => {
+    const q = new URLSearchParams();
+    if (params.date_from) q.set("date_from", params.date_from);
+    if (params.date_to) q.set("date_to", params.date_to);
+    if (params.page) q.set("page", String(params.page));
+    if (params.per_page) q.set("per_page", String(params.per_page));
+    return clientFetch<DispatchHistoryResponse>(`/api/admin/alerts/dispatch-history?${q.toString()}`, {
+      headers: adminHeaders(token),
+    });
+  },
 
   jobs: (
     token: string,
