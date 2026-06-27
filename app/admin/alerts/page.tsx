@@ -37,7 +37,7 @@ function StatCard({ label, value, icon, color = "blue" }: { label: string; value
 export default function AdminAlertsPage() {
   const { token } = useAuth();
   const [data, setData] = useState<AlertLogList | null>(null);
-  const [stats, setStats] = useState<AlertDispatchStats | null>(null);
+  const [stats, setStats] = useState<(AlertDispatchStats & { todayTotal: number; weekTotal: number }) | null>(null);
   const [dispatchHistory, setDispatchHistory] = useState<DispatchHistoryResponse | null>(null);
   const [page, setPage] = useState(1);
   const [dateFrom, setDateFrom] = useState("");
@@ -73,17 +73,16 @@ export default function AdminAlertsPage() {
         adminApi.alertDispatchStats(token, { date_from: weekAgo }),
       ]);
 
+      const todayTotal = Object.values(todayStats.channel_breakdown || {}).reduce((sum, val) => sum + val, 0);
+      const weekTotal = Object.values(weekStats.channel_breakdown || {}).reduce((sum, val) => sum + val, 0);
+
       setStats({
         channel_breakdown: todayStats.channel_breakdown,
         failed_emails: todayStats.failed_emails,
         source_breakdown: todayStats.source_breakdown,
+        todayTotal,
+        weekTotal,
       });
-
-      // Calculate today's total and week's total
-      const todayTotal = Object.values(todayStats.channel_breakdown || {}).reduce((sum, val) => sum + val, 0);
-      const weekTotal = Object.values(weekStats.channel_breakdown || {}).reduce((sum, val) => sum + val, 0);
-
-      setStats(prev => ({ ...prev, todayTotal, weekTotal } as any));
     } catch (err) {
       console.error("Failed to load stats:", err);
     }
@@ -204,8 +203,8 @@ export default function AdminAlertsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"
       >
-        <StatCard label="Alerts hôm nay" value={(stats as any)?.todayTotal || 0} icon="🔔" />
-        <StatCard label="Tuần này" value={(stats as any)?.weekTotal || 0} icon="📊" />
+        <StatCard label="Alerts hôm nay" value={stats?.todayTotal || 0} icon="🔔" />
+        <StatCard label="Tuần này" value={stats?.weekTotal || 0} icon="📊" />
         <StatCard label="Email failed" value={stats?.failed_emails || 0} icon="❌" color="red" />
         <StatCard label="Success rate" value={`${successRate}%`} icon="✅" color="green" />
       </motion.div>
