@@ -295,13 +295,15 @@ async def get_dispatch_stats(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Get dispatch statistics for monitoring."""
-    where_clause = []
+    where_clause = ["1=1"]
+    params: dict = {}
     if date_from:
-        where_clause.append(f"sent_at >= '{datetime.fromisoformat(date_from).isoformat()}'")
+        where_clause.append("sent_at >= :date_from")
+        params["date_from"] = datetime.fromisoformat(date_from)
     if date_to:
-        where_clause.append(f"sent_at <= '{datetime.fromisoformat(date_to).isoformat()}'")
-
-    where_sql = " AND ".join(where_clause) if where_clause else "1=1"
+        where_clause.append("sent_at <= :date_to")
+        params["date_to"] = datetime.fromisoformat(date_to)
+    where_sql = " AND ".join(where_clause)
 
     # Total dispatched by channel
     channel_result = await db.execute(text(f"""
@@ -309,7 +311,7 @@ async def get_dispatch_stats(
         FROM app.alert_logs
         WHERE {where_sql}
         GROUP BY channel
-    """))
+    """), params)
     channel_stats = {r["channel"]: r["count"] for r in channel_result.mappings()}
 
     # Failed email alerts
@@ -317,7 +319,7 @@ async def get_dispatch_stats(
         SELECT COUNT(*) as count
         FROM app.alert_logs
         WHERE channel='email' AND status='failed' AND {where_sql}
-    """))
+    """), params)
     failed_count = failed_result.scalar()
 
     # Dispatch by source
@@ -326,7 +328,7 @@ async def get_dispatch_stats(
         FROM app.alert_logs
         WHERE {where_sql}
         GROUP BY source
-    """))
+    """), params)
     source_stats = {r["source"]: r["count"] for r in source_result.mappings()}
 
     return {
@@ -348,20 +350,25 @@ async def get_dispatch_history(
     """Get dispatch history aggregated by sent_at and source."""
     offset = (page - 1) * per_page
 
-    where_clause = []
+    where_clause = ["1=1"]
+    params: dict = {"limit": per_page, "offset": offset}
     if date_from:
-        where_clause.append(f"DATE(sent_at) >= '{datetime.fromisoformat(date_from).date()}'")
+        where_clause.append("DATE(sent_at) >= :date_from")
+        params["date_from"] = datetime.fromisoformat(date_from).date()
     if date_to:
-        where_clause.append(f"DATE(sent_at) <= '{datetime.fromisoformat(date_to).date()}'")
+        where_clause.append("DATE(sent_at) <= :date_to")
+        params["date_to"] = datetime.fromisoformat(date_to).date()
+    where_sql = " AND ".join(where_clause)
 
-    where_sql = " AND ".join(where_clause) if where_clause else "1=1"
-
-    # Get total count for pagination
+    # Total distinct (date, source) groups for pagination.
+    # NOTE: COUNT(DISTINCT a, b) is invalid in Postgres (single-arg only) — use a subquery.
     count_result = await db.execute(text(f"""
-        SELECT COUNT(DISTINCT DATE(sent_at), source) as total
-        FROM app.alert_logs
-        WHERE {where_sql}
-    """))
+        SELECT COUNT(*) as total FROM (
+            SELECT DISTINCT DATE(sent_at), source
+            FROM app.alert_logs
+            WHERE {where_sql}
+        ) g
+    """), params)
     total = count_result.scalar() or 0
 
     # Get paginated history
@@ -377,8 +384,8 @@ async def get_dispatch_history(
         WHERE {where_sql}
         GROUP BY DATE(sent_at), source
         ORDER BY dispatch_date DESC, source DESC
-        LIMIT {per_page} OFFSET {offset}
-    """))
+        LIMIT :limit OFFSET :offset
+    """), params)
 
     entries = []
     for row in history_result.mappings():
