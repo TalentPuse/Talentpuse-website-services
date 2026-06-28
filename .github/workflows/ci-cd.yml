@@ -103,6 +103,8 @@ jobs:
           TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_BOT_USERNAME=${{ secrets.TELEGRAM_BOT_USERNAME }}
           TELEGRAM_WEBHOOK_SECRET=${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL=${{ secrets.OPENAI_MODEL }}
