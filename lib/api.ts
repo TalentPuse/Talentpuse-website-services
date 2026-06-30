@@ -602,10 +602,10 @@ export const adminApi = {
       headers: adminHeaders(token),
     }),
 
-  emailTest: (token: string, to: string) =>
-    clientFetch<{ ok: boolean; message_id: string; to: string }>(
-      "/api/admin/alerts/email-test",
-      { method: "POST", headers: adminHeaders(token), body: JSON.stringify({ to }) },
+  emailAllUsers: (token: string) =>
+    clientFetch<{ emailed: number; skipped_no_jobs: number; failed: number; total_users: number }>(
+      "/api/admin/alerts/email-all",
+      { method: "POST", headers: adminHeaders(token) },
     ),
 
   alertDispatchStats: (token: string, params: { date_from?: string; date_to?: string }) => {

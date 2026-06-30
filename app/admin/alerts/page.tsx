@@ -49,8 +49,7 @@ export default function AdminAlertsPage() {
   const [userSearch, setUserSearch] = useState("");
   const [dispatching, setDispatching] = useState(false);
   const [retrying, setRetrying] = useState(false);
-  const [testEmail, setTestEmail] = useState("");
-  const [sendingTest, setSendingTest] = useState(false);
+  const [emailingAll, setEmailingAll] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Load users for filter dropdown
@@ -160,22 +159,21 @@ export default function AdminAlertsPage() {
     }
   }
 
-  async function onEmailTest() {
+  async function onEmailAll() {
     if (!token) return;
-    const email = testEmail.trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast.error("Email không hợp lệ");
-      return;
-    }
-    setSendingTest(true);
+    if (!confirm("Gửi email alert cho TẤT CẢ user (role user)? Việc này sẽ gửi email đến toàn bộ user active.")) return;
+    setEmailingAll(true);
     try {
-      const res = await adminApi.emailTest(token, email);
-      toast.success(`Đã gửi email test đến ${res.to} (id: ${res.message_id?.slice(0, 8)}…)`);
-    } catch (err) {
-      const msg = (err as { message?: string })?.message || "Gửi email test thất bại";
-      toast.error(msg);
+      const res = await adminApi.emailAllUsers(token);
+      toast.success(
+        `Đã gửi ${res.emailed}/${res.total_users} user · bỏ qua ${res.skipped_no_jobs} (không có job) · fail ${res.failed}`,
+      );
+      load();
+      loadStats();
+    } catch {
+      toast.error("Gửi email thất bại");
     } finally {
-      setSendingTest(false);
+      setEmailingAll(false);
     }
   }
 
@@ -217,29 +215,16 @@ export default function AdminAlertsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          {/* Email test */}
-          <div>
-            <label className="block text-xs text-slate-500 mb-1">Gửi email test</label>
-            <div className="flex gap-2">
-              <input
-                type="email"
-                value={testEmail}
-                onChange={(e) => setTestEmail(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") onEmailTest(); }}
-                placeholder="email@example.com"
-                className="w-56 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-              />
-              <motion.button
-                onClick={onEmailTest}
-                disabled={sendingTest}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-900 disabled:opacity-60 transition-colors"
-              >
-                {sendingTest ? "Đang gửi..." : "Gửi test"}
-              </motion.button>
-            </div>
-          </div>
+          {/* Email ALL user-role users */}
+          <motion.button
+            onClick={onEmailAll}
+            disabled={emailingAll}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+          >
+            {emailingAll ? "Đang gửi..." : "📧 Gửi email tất cả user"}
+          </motion.button>
           {/* Retry failed */}
           <motion.button
             onClick={onRetry}
