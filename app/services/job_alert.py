@@ -135,3 +135,101 @@ async def dispatch_alerts(db: AsyncSession, source: str = "unknown") -> int:
     finally:
         # Release advisory lock
         await db.execute(text(f"SELECT pg_advisory_unlock({ALERT_DISPATCH_LOCK_ID})"))
+
+
+async def _upsert_email_log(
+    db: AsyncSession,
+    user_id,
+    source_job_id: str,
+    status: str,
+    error_message: str | None,
+    source: str,
+) -> None:
+    """Insert an email-channel alert log, or update it on conflict.
+
+    alert_logs has a unique (user_id, source_job_id, channel) constraint, so a
+    re-broadcast for the same job upserts instead of raising IntegrityError.
+    """
+    await db.execute(text("""
+        INSERT INTO app.alert_logs (id, user_id, source_job_id, channel, status, error_message, source)
+        VALUES (gen_random_uuid(), :uid, :jid, 'email', :status, :err, :src)
+        ON CONFLICT (user_id, source_job_id, channel) DO UPDATE
+        SET status = EXCLUDED.status,
+            error_message = EXCLUDED.error_message,
+            source = EXCLUDED.source,
+            sent_at = now()
+    """), {"uid": user_id, "jid": source_job_id, "status": status, "err": error_message, "src": source})
+
+
+async def email_all_users(db: AsyncSession, source: str = "admin_manual") -> dict:
+    """Force-send an email job alert to EVERY active user-role (non-admin) user.
+
+    Unlike dispatch_alerts, this ignores per-user subscription and the
+    "already alerted" dedup (include_alerted=True) so a manual blast reliably
+    reaches all users who have any matching jobs. Users with no matches are
+    skipped (no empty emails).
+
+    Returns {"emailed", "skipped_no_jobs", "failed", "total_users"}.
+    """
+    lock_result = await db.execute(text(f"SELECT pg_try_advisory_lock({ALERT_DISPATCH_LOCK_ID})"))
+    if not lock_result.scalar():
+        logger.warning("email_all_users: dispatch lock busy, skipping (source=%s)", source)
+        return {"emailed": 0, "skipped_no_jobs": 0, "failed": 0, "total_users": 0, "locked": True}
+
+    try:
+        result = await db.execute(
+            select(User).where(
+                User.is_active == True,  # noqa: E712
+                User.is_admin == False,  # noqa: E712
+            )
+        )
+        users: list[User] = result.scalars().all()
+
+        emailed = 0
+        skipped = 0
+        failed = 0
+        matcher = JobMatcher(db)
+
+        for user in users:
+            if not user.email:
+                continue
+            try:
+                # include_alerted=True so the blast always finds current top matches
+                jobs = await matcher.find_jobs(user, include_alerted=True)
+                if not jobs:
+                    skipped += 1
+                    continue
+
+                email_result = await send_job_alert_email(
+                    to=user.email,
+                    user_name=user.full_name,
+                    jobs=jobs,
+                )
+                status = "sent" if email_result.success else "failed"
+                err = (email_result.error or "Unknown error")[:500] if not email_result.success else None
+                for j in jobs:
+                    await _upsert_email_log(db, user.id, j.source_job_id, status, err, source)
+                await db.commit()
+
+                if email_result.success:
+                    emailed += 1
+                else:
+                    failed += 1
+                    logger.error("email_all_users: send failed for user %s: %s", user.id, email_result.error)
+            except Exception:
+                logger.exception("email_all_users: error for user %s", user.id)
+                await db.rollback()
+                failed += 1
+
+        logger.info(
+            "email_all_users done (source=%s): emailed=%d skipped=%d failed=%d total=%d",
+            source, emailed, skipped, failed, len(users),
+        )
+        return {
+            "emailed": emailed,
+            "skipped_no_jobs": skipped,
+            "failed": failed,
+            "total_users": len(users),
+        }
+    finally:
+        await db.execute(text(f"SELECT pg_advisory_unlock({ALERT_DISPATCH_LOCK_ID})"))

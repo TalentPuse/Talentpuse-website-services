@@ -133,14 +133,14 @@ class JobMatcher:
         )
         return {r[0] for r in result.all()}
 
-    async def find_jobs(self, user: User) -> list[MatchedJob]:
+    async def find_jobs(self, user: User, include_alerted: bool = False) -> list[MatchedJob]:
         if getattr(user, "experience_level", None) == "student":
-            return await self._find_student_jobs(user)
-        return await self._find_scored_jobs(user)
+            return await self._find_student_jobs(user, include_alerted)
+        return await self._find_scored_jobs(user, include_alerted)
 
     # ── Student: hard title filter, Intern/Fresher only ────────────
 
-    async def _find_student_jobs(self, user: User) -> list[MatchedJob]:
+    async def _find_student_jobs(self, user: User, include_alerted: bool = False) -> list[MatchedJob]:
         titles = [t.strip() for t in (user.desired_titles or []) if t.strip()]
         if not titles:
             return []
@@ -148,19 +148,19 @@ class JobMatcher:
         title_patterns = [f"%{t}%" for t in titles]
         levels = LEVEL_MAP["student"]
 
-        alerted = _alerted_subquery(user.id)
+        conditions = [
+            fct_jobs_daily.c.is_active == True,  # noqa: E712
+            fct_jobs_daily.c.job_level == any_(levels),
+            (fct_jobs_daily.c.title.ilike(any_(title_patterns)))
+            | (fct_jobs_daily.c.job_category.ilike(any_(title_patterns))),
+        ]
+        if not include_alerted:
+            conditions.append(not_(fct_jobs_daily.c.source_job_id.in_(_alerted_subquery(user.id))))
+
         query = (
             select(*_base_columns())
             .select_from(_jobs_join())
-            .where(
-                and_(
-                    fct_jobs_daily.c.is_active == True,  # noqa: E712
-                    not_(fct_jobs_daily.c.source_job_id.in_(alerted)),
-                    fct_jobs_daily.c.job_level == any_(levels),
-                    (fct_jobs_daily.c.title.ilike(any_(title_patterns)))
-                    | (fct_jobs_daily.c.job_category.ilike(any_(title_patterns))),
-                )
-            )
+            .where(and_(*conditions))
             .order_by(fct_jobs_daily.c.posted_at.desc().nullslast())
             .limit(STUDENT_ALERT_LIMIT)
         )
@@ -170,7 +170,7 @@ class JobMatcher:
 
     # ── Non-student: scoring with title/city/salary/skills ──────────
 
-    async def _find_scored_jobs(self, user: User) -> list[MatchedJob]:
+    async def _find_scored_jobs(self, user: User, include_alerted: bool = False) -> list[MatchedJob]:
         titles = [t.strip() for t in (user.desired_titles or []) if t.strip()]
         cities = [c.strip() for c in (user.preferred_cities or []) if c.strip()]
         skills = [s.strip().lower() for s in (user.skills or []) if s.strip()]
@@ -187,8 +187,6 @@ class JobMatcher:
 
         total_score = (title_score + city_score + salary_score + skill_score).label("score")
 
-        alerted = _alerted_subquery(user.id)
-
         # Build FROM with optional skill join
         from_clause = _jobs_join()
         if skill_subq is not None:
@@ -203,9 +201,13 @@ class JobMatcher:
             )
 
         # Level filter
-        level_filters = []
+        level_filters = [
+            fct_jobs_daily.c.is_active == True,  # noqa: E712
+        ]
         if allowed_levels:
             level_filters.append(fct_jobs_daily.c.job_level == any_(allowed_levels))
+        if not include_alerted:
+            level_filters.append(not_(fct_jobs_daily.c.source_job_id.in_(_alerted_subquery(user.id))))
 
         # Scored CTE
         scored_cols = [
@@ -215,13 +217,7 @@ class JobMatcher:
         scored_query = (
             select(*scored_cols)
             .select_from(from_clause)
-            .where(
-                and_(
-                    fct_jobs_daily.c.is_active == True,  # noqa: E712
-                    not_(fct_jobs_daily.c.source_job_id.in_(alerted)),
-                    *level_filters,
-                )
-            )
+            .where(and_(*level_filters))
             .distinct(fct_jobs_daily.c.source, fct_jobs_daily.c.source_job_id)
         )
 
