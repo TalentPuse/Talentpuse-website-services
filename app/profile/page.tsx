@@ -57,6 +57,32 @@ const EXPERIENCE_LABELS: Record<string, string> = {
   manager: "Manager (> 5 năm)",
 };
 
+// Backend chỉ chấp nhận 4 giá trị này (Literal). Map các biến thể LLM hay trả về
+// để tránh PUT /me trả 422 làm hỏng nút Lưu.
+const VALID_EXPERIENCE = new Set(["student", "fresher", "experienced", "manager"]);
+const EXPERIENCE_ALIASES: Record<string, string> = {
+  intern: "student", student: "student",
+  fresher: "fresher", junior: "fresher", entry: "fresher", "entry-level": "fresher", "entry level": "fresher",
+  mid: "experienced", "mid-level": "experienced", experienced: "experienced", senior: "experienced",
+  lead: "manager", manager: "manager", director: "manager",
+};
+
+function normalizeExperience(v: unknown): string {
+  if (typeof v !== "string") return "";
+  const key = v.trim().toLowerCase();
+  return EXPERIENCE_ALIASES[key] ?? (VALID_EXPERIENCE.has(key) ? key : "");
+}
+
+// LLM nên trả lương theo triệu VND/tháng. Nếu nó trả VND tuyệt đối (vd 20000000),
+// quy về triệu; loại giá trị vô lý.
+function normalizeSalaryM(v: unknown): string {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  const m = n >= 1000 ? n / 1_000_000 : n;
+  if (m <= 0 || m > 1000) return "";
+  return String(Math.round(m * 10) / 10);
+}
+
 export default function ProfilePage() {
   return (
     <DashboardLayout>
@@ -124,9 +150,12 @@ function ProfileContent() {
       if (d.skills?.length) setSkills(d.skills);
       if (d.desired_titles?.length) setDesiredTitles(d.desired_titles);
       if (d.preferred_cities?.length) setCities(d.preferred_cities);
-      if (d.experience_level) setExperienceLevel(d.experience_level);
-      if (d.salary_min_m) setSalaryMin(String(d.salary_min_m));
-      if (d.salary_max_m) setSalaryMax(String(d.salary_max_m));
+      const exp = normalizeExperience(d.experience_level);
+      if (exp) setExperienceLevel(exp);
+      const smin = normalizeSalaryM(d.salary_min_m);
+      if (smin) setSalaryMin(smin);
+      const smax = normalizeSalaryM(d.salary_max_m);
+      if (smax) setSalaryMax(smax);
       if (d.education?.[0]?.university) setUniversity(d.education[0].university);
       if (d.education?.[0]?.graduation_year) setGraduationYear(String(d.education[0].graduation_year));
       const parts: string[] = [];

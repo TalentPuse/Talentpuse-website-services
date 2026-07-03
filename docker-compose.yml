@@ -7,6 +7,9 @@ services:
       - "127.0.0.1:8002:8002"
     environment:
       PORT: "8002"
+      # Next.js standalone binds to $HOSTNAME; Docker defaults it to the container id,
+      # which is unresolvable (EAI_AGAIN) and crash-loops the server. Force 0.0.0.0.
+      HOSTNAME: "0.0.0.0"
       API_BASE_INTERNAL: ${API_BASE_INTERNAL:-http://tp-backend:8001}
       NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8001}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
