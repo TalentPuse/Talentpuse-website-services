@@ -54,7 +54,7 @@ async def upload_cv(
     s3_url = upload_to_s3(pdf_bytes, object_name)
     if s3_url:
         user.cv_file_url = s3_url
-        await db.flush()
+        await db.commit()
 
     # Extract text from PDF
     try:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class TimeSeriesPoint(BaseModel):
@@ -62,7 +62,6 @@ class AdminUserRow(BaseModel):
     telegram_status: str | None
     telegram_username: str | None
     alert_enabled: bool
-    email_alert_enabled: bool
     alerts_sent: int
     created_at: datetime
 
@@ -113,10 +112,6 @@ class EmailAlertUpdate(BaseModel):
     enabled: bool
 
 
-class EmailTestRequest(BaseModel):
-    to: EmailStr
-
-
 class AdminUserProfile(BaseModel):
     id: str
     email: str
@@ -138,7 +133,6 @@ class AdminUserProfile(BaseModel):
     telegram_status: str | None = None
     telegram_username: str | None = None
     alert_enabled: bool = False
-    email_alert_enabled: bool = False
     alerts_sent: int = 0
     created_at: datetime
     updated_at: datetime | None = None

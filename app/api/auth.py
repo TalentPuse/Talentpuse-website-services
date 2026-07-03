@@ -57,6 +57,7 @@ async def get_me(current_user: User = Depends(get_current_user)) -> UserResponse
         graduation_year=current_user.graduation_year,
         open_to_internship=current_user.open_to_internship,
         part_time_ok=current_user.part_time_ok,
+        cv_file_url=current_user.cv_file_url,
         created_at=current_user.created_at,
     )
 
@@ -107,5 +108,6 @@ async def update_me(
         graduation_year=current_user.graduation_year,
         open_to_internship=current_user.open_to_internship,
         part_time_ok=current_user.part_time_ok,
+        cv_file_url=current_user.cv_file_url,
         created_at=current_user.created_at,
     )

@@ -83,14 +83,14 @@ async def list_jobs(
             sd.source_url,
             f.posted_at,
             COALESCE(
-                array_agg(DISTINCT sk.skill_name)
-                    FILTER (WHERE sk.skill_name IS NOT NULL),
+                array_agg(DISTINCT sk.skill_name_norm)
+                    FILTER (WHERE sk.skill_name_norm IS NOT NULL),
                 ARRAY[]::text[]
             ) AS skills
         FROM dbt_dev_gold.fct_jobs_daily f
         LEFT JOIN dbt_dev_silver.silver_job_detail sd
             ON sd.source = f.source AND sd.source_job_id = f.source_job_id
-        LEFT JOIN dbt_dev_silver.silver_skill_enriched sk
+        LEFT JOIN dbt_dev_silver.silver_skill_long sk
             ON sk.source = f.source AND sk.source_job_id = f.source_job_id
         WHERE f.is_active {where_extra}
         GROUP BY f.source, f.source_job_id, f.title, f.company_name,

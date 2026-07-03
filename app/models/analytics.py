@@ -56,14 +56,14 @@ silver_job_detail = Table(
     schema="dbt_dev_silver",
 )
 
-silver_skill_enriched = Table(
-    "silver_skill_enriched",
+# Per-job skills live in the dbt view silver_skill_long (normalized, lowercase).
+# The older name silver_skill_enriched was never materialized — see docs/07.
+silver_skill_long = Table(
+    "silver_skill_long",
     analytics_meta,
     Column("source", String),
     Column("source_job_id", String),
-    Column("skill_name", String),
-    Column("skill_category", String),
-    Column("importance", String),
-    Column("confidence", String),
+    Column("skill_name_norm", String),
+    Column("skill_weight", Integer),
     schema="dbt_dev_silver",
 )
