@@ -12,32 +12,31 @@ export default function CvPreview({ refreshSignal = 0 }: { refreshSignal?: numbe
 
   useEffect(() => {
     if (!token) return;
-    let off = false;
+    const controller = new AbortController();
     let objectUrl: string | null = null;
 
     (async () => {
       try {
         // 1) Ensure the document exists (builds from cv_text on first call).
-        const doc = await cvDocumentApi.get(token);
+        const doc = await cvDocumentApi.get(token, controller.signal);
         if (!doc.pdf_url) {
-          if (!off) setState("empty");
+          setState("empty");
           return;
         }
         // 2) Fetch the rendered PDF same-origin (authed) → blob URL for the iframe.
-        const blob = await cvDocumentApi.getPdfBlob(token);
-        if (off) return;
+        const blob = await cvDocumentApi.getPdfBlob(token, controller.signal);
         objectUrl = URL.createObjectURL(blob);
         setPdfUrl(objectUrl);
         setState("ready");
       } catch (e: unknown) {
-        if (off) return;
+        if (controller.signal.aborted) return; // unmounted / re-run — ignore
         const status = (e as { status?: number })?.status;
         setState(status === 409 ? "empty" : "error");
       }
     })();
 
     return () => {
-      off = true;
+      controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [token, refreshSignal]);

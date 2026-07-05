@@ -760,11 +760,12 @@ export type CvDocument = {
 };
 
 export const cvDocumentApi = {
-  get: (token: string) =>
-    clientFetch<CvDocument>("/api/cv/document", { headers: authHeaders(token) }),
-  getPdfBlob: async (token: string): Promise<Blob> => {
+  get: (token: string, signal?: AbortSignal) =>
+    clientFetch<CvDocument>("/api/cv/document", { headers: authHeaders(token), signal }),
+  getPdfBlob: async (token: string, signal?: AbortSignal): Promise<Blob> => {
     const res = await fetch(`${CLIENT_BASE}/api/cv/document/pdf`, {
       headers: authHeaders(token),
+      signal,
     });
     if (!res.ok) {
       throw { message: "Không tải được PDF", status: res.status } as ApiError;
