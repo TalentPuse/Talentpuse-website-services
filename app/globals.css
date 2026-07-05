@@ -5,6 +5,15 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+
+  /* CopilotKit brand theme (item 3) — !important to beat the lib's own :root defaults */
+  --copilot-kit-primary-color: #2563eb !important;
+  --copilot-kit-contrast-color: #ffffff !important;
+  --copilot-kit-background-color: #ffffff !important;
+  --copilot-kit-secondary-color: #f1f5f9 !important;
+  --copilot-kit-secondary-contrast-color: #0f172a !important;
+  --copilot-kit-separator-color: #e2e8f0 !important;
+  --copilot-kit-muted-color: #64748b !important;
 }
 
 html,
@@ -52,4 +61,34 @@ body {
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 0.75rem;
+}
+
+/* Item 4 — hide CopilotKit dev/announcement web inspector (was overlapping the panel tabs) */
+cpk-web-inspector {
+  display: none !important;
+}
+
+/* Streaming caret for assistant messages */
+@keyframes tp-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.tp-caret {
+  display: inline-block;
+  width: 7px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: #2563eb;
+  border-radius: 1px;
+  animation: tp-blink 1s step-end infinite;
+}
+
+/* Message fade-in */
+@keyframes tp-msg-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.tp-msg-in {
+  animation: tp-msg-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }

@@ -463,6 +463,32 @@ function authHeaders(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
 
+export type CareerRecommendations = {
+  generated_at: string;
+  has_enough_data: boolean;
+  profile_used: {
+    skills: string[];
+    desired_titles: string[];
+    experience_level: string | null;
+    preferred_cities: string[];
+  };
+  target_roles: string[];
+  market_fit: { matching_jobs: number; matching_jobs_in_city: number; cities: string[] };
+  your_strengths: { skill: string; n_jobs: number }[];
+  skill_gaps: { skill: string; n_jobs: number; avg_salary_million: number | null }[];
+  salary_insight?: unknown;
+  top_companies?: { company_name?: string; n_jobs?: number }[] | null;
+  narrative: string;
+  data_note?: string | null;
+};
+
+export const recommendationsApi = {
+  get: (token: string) =>
+    clientFetch<CareerRecommendations>("/api/recommendations", {
+      headers: authHeaders(token),
+    }),
+};
+
 export const jobsApi = {
   list: (
     token: string,
@@ -723,6 +749,19 @@ export const cvApi = {
     }
     return res.json();
   },
+};
+
+/* ───── CV Document (rendered PDF) ───── */
+
+export type CvDocument = {
+  model: Record<string, unknown>;
+  pdf_url: string | null;
+  page_count: number | null;
+};
+
+export const cvDocumentApi = {
+  get: (token: string) =>
+    clientFetch<CvDocument>("/api/cv/document", { headers: authHeaders(token) }),
 };
 
 /* ───── Chat types & API ───── */
