@@ -5,7 +5,7 @@ import { cvDocumentApi } from "@/lib/api";
 
 type State = "loading" | "ready" | "empty" | "error";
 
-export default function CvPreview() {
+export default function CvPreview({ refreshSignal = 0 }: { refreshSignal?: number }) {
   const { token } = useAuth();
   const [state, setState] = useState<State>("loading");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export default function CvPreview() {
       off = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [token]);
+  }, [token, refreshSignal]);
 
   return (
     <div className="flex h-full flex-col border-l border-slate-200 bg-slate-50">

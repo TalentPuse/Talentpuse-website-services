@@ -799,6 +799,7 @@ export type SSEEvent =
   | { type: "user_message"; id: string; role: "user"; content: string; created_at: string }
   | { type: "token"; content: string }
   | { type: "done"; assistant_message: ChatMessageResponse }
+  | { type: "cv_updated" }
   | { type: "error"; message: string };
 
 export const chatApi = {

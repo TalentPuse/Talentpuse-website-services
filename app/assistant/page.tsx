@@ -36,6 +36,8 @@ function AssistantContent() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Bumped whenever the agent's edit_cv tool changes the CV, to refresh the pane.
+  const [cvRefresh, setCvRefresh] = useState(0);
   // When a room is created by sending the first message, skip the reload the
   // activeRoomId change would trigger — it would clobber the in-flight stream.
   const justSentRef = useRef(false);
@@ -136,6 +138,8 @@ function AssistantContent() {
                 : m,
             ),
           );
+        } else if (event.type === "cv_updated") {
+          setCvRefresh((n) => n + 1);
         } else if (event.type === "error") {
           toast.error(event.message || "Lỗi khi tạo phản hồi");
           setMessages((prev) => prev.filter((m) => m.id !== tempBotId));
@@ -286,7 +290,7 @@ function AssistantContent() {
       )}
       </div>
       <div className="hidden w-[45%] max-w-[620px] lg:block">
-        <CvPreview />
+        <CvPreview refreshSignal={cvRefresh} />
       </div>
     </div>
   );
