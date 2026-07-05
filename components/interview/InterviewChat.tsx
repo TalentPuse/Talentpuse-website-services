@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import type { ChatMessage } from "@/lib/chat-types";
 import type { InterviewAgentSession, InterviewAgentSummary } from "@/lib/api";
 import { interviewAgentApi } from "@/lib/api";
@@ -99,20 +99,6 @@ export default function InterviewChat({
                 : m,
             ),
           );
-        } else if (event.type === "session_completed") {
-          // Auto-completed by backend after question limit reached
-          const summary: InterviewAgentSummary = {
-            session_id: event.session_id,
-            mode: event.mode,
-            overall_score: event.overall_score,
-            overall_feedback: event.overall_feedback,
-            strengths: event.strengths,
-            improvements: event.improvements,
-            improvement_plan: event.improvement_plan,
-            question_count: event.question_count,
-          };
-          toast.success("Phiên phỏng vấn đã hoàn thành!");
-          onComplete(summary);
         } else if (event.type === "error") {
           toast.error(event.message || "Lỗi khi tạo phản hồi");
           setMessages((prev) => prev.filter((m) => m.id !== tempBotId));
@@ -177,11 +163,7 @@ export default function InterviewChat({
                 {session.target_role ? ` — ${session.target_role}` : ""}
               </h2>
               <p className="text-xs text-slate-400">
-                {(() => {
-                  const answered = messages.filter((m) => m.role === "user").length;
-                  const total = session.total_questions || 5;
-                  return answered > 0 ? `${answered}/${total} câu trả lời` : "Bắt đầu cuộc trò chuyện";
-                })()}
+                {session.question_count > 0 ? `${session.question_count} câu trả lời` : "Bắt đầu cuộc trò chuyện"}
               </p>
             </div>
           </div>
