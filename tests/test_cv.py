@@ -37,6 +37,7 @@ def _make_fake_user(**overrides):
         open_to_internship=False,
         part_time_ok=False,
         cv_file_url=None,
+        cv_text=None,
     )
     defaults.update(overrides)
     return User(**defaults)
@@ -385,3 +386,21 @@ async def test_upload_saves_s3_url(mock_extract, mock_parse, mock_s3):
         )
     assert r.status_code == 200
     mock_s3.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("app.api.cv.upload_to_s3", return_value=None)
+@patch("app.api.cv.parse_cv", return_value=CvExtractResult(data=MOCK_EXTRACTED, raw_text_length=500))
+@patch("app.api.cv.extract_text", return_value="extracted cv plain text")
+async def test_upload_persists_cv_text(mock_extract, mock_parse, mock_s3):
+    user = _make_fake_user()
+    _auth_override(user)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.post(
+            "/api/cv/upload",
+            files={"file": ("cv.pdf", b"%PDF fake", "application/pdf")},
+        )
+    assert r.status_code == 200
+    # The endpoint must persist the extracted text on the user so AI features can read it.
+    assert user.cv_text == "extracted cv plain text"

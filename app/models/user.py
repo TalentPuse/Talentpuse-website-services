@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ARRAY, Boolean, Integer, SmallInteger, String, func
+from sqlalchemy import ARRAY, Boolean, Integer, SmallInteger, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,6 +34,7 @@ class User(Base):
     open_to_internship: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     part_time_ok: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     cv_file_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cv_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
