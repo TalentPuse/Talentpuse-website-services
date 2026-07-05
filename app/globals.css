@@ -48,15 +48,6 @@
   --ring: var(--brand);
   --radius-sm: 8px; --radius-md: 12px; --radius-lg: 20px;
   --ease-out-expo: cubic-bezier(0.16,1,0.3,1); --dur-fast: 150ms; --dur-normal: 300ms; --dur-slow: 500ms;
-
-  /* CopilotKit brand theme (item 3) — !important to beat the lib's own :root defaults */
-  --copilot-kit-primary-color: #2563eb !important;
-  --copilot-kit-contrast-color: #ffffff !important;
-  --copilot-kit-background-color: #ffffff !important;
-  --copilot-kit-secondary-color: #f1f5f9 !important;
-  --copilot-kit-secondary-contrast-color: #0f172a !important;
-  --copilot-kit-separator-color: #e2e8f0 !important;
-  --copilot-kit-muted-color: #64748b !important;
 }
 .dark {
   --bg: oklch(0.145 0.01 265); --surface: oklch(1 0 0 / 4%); --surface-2: oklch(1 0 0 / 6%);
@@ -114,11 +105,6 @@
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 0.75rem;
-}
-
-/* Item 4 — hide CopilotKit dev/announcement web inspector (was overlapping the panel tabs) */
-cpk-web-inspector {
-  display: none !important;
 }
 
 /* Streaming caret for assistant messages */
