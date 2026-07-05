@@ -77,7 +77,7 @@ export default function DashboardClient({
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-50/30">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-brand-50/30">
         <main className="max-w-7xl mx-auto px-6 py-8">
           <header className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
@@ -90,7 +90,7 @@ export default function DashboardClient({
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               disabled={loading}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 disabled:opacity-50"
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 disabled:opacity-50"
             >
               <option value="">Tất cả ngành nghề</option>
               {categories.map((c) => (

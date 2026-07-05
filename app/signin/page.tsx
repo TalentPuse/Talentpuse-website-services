@@ -55,7 +55,7 @@ function SignInForm() {
         subtext="Dashboard data realtime, AI match job theo profile của bạn, alert qua Telegram/Zalo ngay khi có việc phù hợp."
       />
 
-      <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-slate-50 to-white">
+      <div className="flex-1 flex items-center justify-center p-8 bg-linear-to-br from-slate-50 to-white">
         <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
@@ -111,7 +111,7 @@ function SignInForm() {
               whileHover={{ scale: 1.01, y: -1 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">

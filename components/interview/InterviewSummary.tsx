@@ -81,7 +81,7 @@ export default function InterviewSummary({
         <motion.div
           {...fadeUp}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm"
+          className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs"
         >
           <h3 className="text-sm font-semibold text-slate-700 mb-2">Nhận xét tổng quan</h3>
           <p className="text-sm text-slate-600 leading-relaxed">{summary.overall_feedback}</p>
@@ -92,7 +92,7 @@ export default function InterviewSummary({
           <motion.div
             {...fadeUp}
             transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm"
+            className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs"
           >
             <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
@@ -118,7 +118,7 @@ export default function InterviewSummary({
           <motion.div
             {...fadeUp}
             transition={{ delay: 0.4 }}
-            className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm"
+            className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs"
           >
             <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">

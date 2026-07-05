@@ -23,7 +23,7 @@ function MiniBar({ name, pct, delay }: { name: string; pct: number; delay: numbe
       <span className="w-16 text-slate-500 text-right">{name}</span>
       <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
         <motion.div
-          className="h-full bg-gradient-to-r from-brand-500 to-brand-400 rounded-full"
+          className="h-full bg-linear-to-r from-brand-500 to-brand-400 rounded-full"
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ delay: 1.2 + delay * 0.1, duration: 0.8, ease: "easeOut" }}
@@ -51,7 +51,7 @@ export default function FloatingDashboard() {
       transition={{ delay: 0.8, duration: 0.8, ease: "easeOut" }}
       className="relative mx-auto max-w-4xl"
     >
-      <div className="absolute -inset-4 bg-gradient-to-b from-brand-400/20 to-transparent rounded-3xl blur-2xl" />
+      <div className="absolute -inset-4 bg-linear-to-b from-brand-400/20 to-transparent rounded-3xl blur-2xl" />
       <motion.div
         className="relative bg-white rounded-2xl shadow-2xl border border-slate-200/80 overflow-hidden"
         style={{ perspective: 1000 }}
@@ -78,7 +78,7 @@ export default function FloatingDashboard() {
           {/* KPI cards row */}
           <div className="grid grid-cols-3 gap-3 mb-5">
             <motion.div
-              className="bg-gradient-to-br from-brand-50 to-white rounded-lg border border-brand-100 p-3"
+              className="bg-linear-to-br from-brand-50 to-white rounded-lg border border-brand-100 p-3"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, duration: 0.4 }}
@@ -90,7 +90,7 @@ export default function FloatingDashboard() {
               <div className="text-[10px] text-emerald-600 mt-0.5">+12% ↑</div>
             </motion.div>
             <motion.div
-              className="bg-gradient-to-br from-emerald-50 to-white rounded-lg border border-emerald-100 p-3"
+              className="bg-linear-to-br from-emerald-50 to-white rounded-lg border border-emerald-100 p-3"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.7, duration: 0.4 }}
@@ -102,7 +102,7 @@ export default function FloatingDashboard() {
               <div className="text-[10px] text-emerald-600 mt-0.5">VND/tháng</div>
             </motion.div>
             <motion.div
-              className="bg-gradient-to-br from-amber-50 to-white rounded-lg border border-amber-100 p-3"
+              className="bg-linear-to-br from-amber-50 to-white rounded-lg border border-amber-100 p-3"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.8, duration: 0.4 }}
@@ -129,7 +129,7 @@ export default function FloatingDashboard() {
         </div>
       </motion.div>
       {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-20 bg-linear-to-t from-white to-transparent pointer-events-none" />
     </motion.div>
   );
 }

@@ -88,7 +88,7 @@ export default function TelegramLinkCard({ token }: { token: string }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1 }}
-      className="bg-white rounded-xl shadow-sm hover:shadow-md border border-slate-200 p-6 transition-shadow duration-300"
+      className="bg-white rounded-xl shadow-xs hover:shadow-md border border-slate-200 p-6 transition-shadow duration-300"
     >
       <div className="flex items-center gap-3 mb-4">
         <div className="w-10 h-10 rounded-lg bg-sky-50 text-sky-500 flex items-center justify-center">
@@ -155,7 +155,7 @@ export default function TelegramLinkCard({ token }: { token: string }) {
             disabled={linking || polling}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="w-full rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {polling ? (
               <>

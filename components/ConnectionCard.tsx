@@ -106,7 +106,7 @@ function TelegramCard({ token, icon, name, description, color, bgColor }: { toke
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="bg-white rounded-2xl shadow-sm hover:shadow-md border border-slate-200 p-5 transition-shadow duration-300 flex flex-col"
+      className="bg-white rounded-2xl shadow-xs hover:shadow-md border border-slate-200 p-5 transition-shadow duration-300 flex flex-col"
     >
       <div className="flex items-center gap-3 mb-4">
         <div className={`w-11 h-11 rounded-xl bg-${bgColor}-50 text-${color}-500 flex items-center justify-center`}>
@@ -157,7 +157,7 @@ function TelegramCard({ token, icon, name, description, color, bgColor }: { toke
             disabled={linking || polling}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className={`w-full rounded-xl bg-${color}-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-${color}-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2`}
+            className={`w-full rounded-xl bg-${color}-500 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-${color}-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2`}
           >
             {polling ? (
               <>
@@ -190,7 +190,7 @@ function ComingSoonCard({ icon, name, description, color, bgColor }: Omit<Connec
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1 }}
-      className="relative bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col overflow-hidden"
+      className="relative bg-white rounded-2xl shadow-xs border border-slate-200 p-5 flex flex-col overflow-hidden"
     >
       {/* Coming soon overlay */}
       <div className="absolute top-3 right-3">

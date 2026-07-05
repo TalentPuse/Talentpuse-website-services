@@ -28,7 +28,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <a href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
+          <span className="text-xl font-bold bg-linear-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
             TalentPuse
           </span>
         </a>
@@ -55,7 +55,7 @@ export default function Navbar() {
             onClick={() => setOpen((o) => !o)}
             className="flex items-center gap-2.5 rounded-full pl-1 pr-3 py-1 hover:bg-slate-100 transition"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-linear-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-xs font-bold shadow-xs">
               {initials}
             </div>
             <span className="text-sm font-medium text-slate-700 hidden sm:block max-w-[140px] truncate">

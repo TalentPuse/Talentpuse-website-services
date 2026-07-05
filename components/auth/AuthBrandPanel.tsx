@@ -9,9 +9,9 @@ type Props = {
 
 export default function AuthBrandPanel({ headline, subtext }: Props) {
   return (
-    <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-brand-700 via-brand-800 to-brand-900 p-12 flex-col justify-between">
+    <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-linear-to-br from-brand-700 via-brand-800 to-brand-900 p-12 flex-col justify-between">
       {/* Animated blobs */}
-      <div className="absolute inset-0 -z-0 overflow-hidden">
+      <div className="absolute inset-0 z-0 overflow-hidden">
         <div className="absolute w-[500px] h-[500px] rounded-full bg-brand-500/20 blur-3xl -top-40 -left-40 animate-blob-1" />
         <div className="absolute w-[400px] h-[400px] rounded-full bg-brand-400/15 blur-3xl bottom-20 right-0 animate-blob-2" />
         <div className="absolute w-[350px] h-[350px] rounded-full bg-emerald-500/10 blur-3xl top-1/2 left-1/3 animate-blob-3" />
@@ -24,11 +24,11 @@ export default function AuthBrandPanel({ headline, subtext }: Props) {
           transition={{ duration: 0.6 }}
         >
           <h1 className="text-3xl font-bold text-white mb-2">
-            <span className="bg-gradient-to-r from-white to-brand-200 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-white to-brand-200 bg-clip-text text-transparent">
               TalentPuse
             </span>
           </h1>
-          <div className="w-12 h-1 bg-gradient-to-r from-emerald-400 to-brand-400 rounded-full mb-8" />
+          <div className="w-12 h-1 bg-linear-to-r from-emerald-400 to-brand-400 rounded-full mb-8" />
         </motion.div>
 
         <motion.h2
@@ -63,7 +63,7 @@ export default function AuthBrandPanel({ headline, subtext }: Props) {
         ].map((item) => (
           <div
             key={item.text}
-            className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/10"
+            className="flex items-center gap-3 bg-white/10 backdrop-blur-xs rounded-lg px-4 py-3 border border-white/10"
           >
             <span className="text-xl font-bold text-emerald-400 min-w-[60px]">
               {item.num}

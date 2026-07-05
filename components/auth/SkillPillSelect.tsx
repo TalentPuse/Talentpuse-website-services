@@ -63,7 +63,7 @@ export default function SkillPillSelect({
               onClick={() => toggle(skill)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 border ${
                 active
-                  ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+                  ? "bg-brand-600 text-white border-brand-600 shadow-xs"
                   : "bg-white text-slate-600 border-slate-200 hover:border-brand-300"
               }`}
             >
@@ -101,7 +101,7 @@ export default function SkillPillSelect({
             e.key === "Enter" && (e.preventDefault(), addCustom())
           }
           placeholder="Thêm kỹ năng khác..."
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
+          className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
         />
         <button
           type="button"

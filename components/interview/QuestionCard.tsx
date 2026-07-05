@@ -30,7 +30,7 @@ export default function QuestionCard({
   return (
     <div className="space-y-4">
       {/* Question card */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
         <div className="flex items-center gap-2 mb-3">
           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[question.difficulty] || "bg-slate-100 text-slate-600"}`}>
             {DIFFICULTY_LABELS[question.difficulty] || question.difficulty}

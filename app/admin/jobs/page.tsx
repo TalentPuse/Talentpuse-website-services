@@ -168,7 +168,7 @@ export default function AdminJobsPage() {
     switch (col) {
       case "source":
         return (
-          <span className="inline-block rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+          <span className="inline-block rounded-sm bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
             {SOURCE_LABEL[job.source] || job.source}
           </span>
         );
@@ -259,14 +259,14 @@ export default function AdminJobsPage() {
             {job.skills.slice(0, 3).map((sk) => (
               <span
                 key={sk}
-                className="inline-block rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
+                className="inline-block rounded-sm bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
               >
                 {sk}
               </span>
             ))}
             {job.skills.length > 3 && (
               <span
-                className="inline-block rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 cursor-default"
+                className="inline-block rounded-sm bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 cursor-default"
                 title={job.skills.join(", ")}
               >
                 +{job.skills.length - 3}
@@ -305,7 +305,7 @@ export default function AdminJobsPage() {
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Tìm theo tiêu đề hoặc công ty..."
-          className="flex-1 min-w-[200px] rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
+          className="flex-1 min-w-[200px] rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
         />
         <select
           value={cityFilter}
@@ -313,7 +313,7 @@ export default function AdminJobsPage() {
             setCityFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
+          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30"
         >
           <option value="all">Tất cả thành phố</option>
           {cities.map((c) => (
@@ -328,7 +328,7 @@ export default function AdminJobsPage() {
             setLevelFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
+          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30"
         >
           <option value="all">Tất cả level</option>
           {levels.map((l) => (
@@ -343,7 +343,7 @@ export default function AdminJobsPage() {
             setSalaryFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
+          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30"
         >
           <option value="all">Lương: tất cả</option>
           <option value="yes">Có lương</option>
@@ -372,13 +372,13 @@ export default function AdminJobsPage() {
                 {cols.map((c) => (
                   <label
                     key={c.key}
-                    className="flex items-center gap-2 py-1 px-1 rounded hover:bg-slate-50 cursor-pointer text-sm text-slate-700"
+                    className="flex items-center gap-2 py-1 px-1 rounded-sm hover:bg-slate-50 cursor-pointer text-sm text-slate-700"
                   >
                     <input
                       type="checkbox"
                       checked={c.visible}
                       onChange={() => toggleCol(c.key)}
-                      className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                      className="rounded-sm border-slate-300 text-brand-600 focus:ring-brand-500"
                     />
                     {c.label}
                   </label>
@@ -393,7 +393,7 @@ export default function AdminJobsPage() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+        className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden"
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

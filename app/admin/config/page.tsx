@@ -72,7 +72,7 @@ export default function AdminConfigPage() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 p-6"
+            className="bg-white rounded-xl shadow-xs border border-slate-200 p-6"
           >
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Alert Loop</h2>
 
@@ -86,7 +86,7 @@ export default function AdminConfigPage() {
                   value={interval}
                   onChange={(e) => { setInterval_(e.target.value); setDirty(true); }}
                   min={60}
-                  className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
+                  className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
                 />
                 {interval && Number(interval) >= 60 && (
                   <p className="text-xs text-slate-400">= {formatDuration(Number(interval))}</p>
@@ -125,7 +125,7 @@ export default function AdminConfigPage() {
                     disabled={saving}
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-60 transition-colors"
+                    className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-brand-700 disabled:opacity-60 transition-colors"
                   >
                     {saving ? "Đang lưu..." : "Lưu thay đổi"}
                   </motion.button>
@@ -142,7 +142,7 @@ export default function AdminConfigPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 p-6"
+            className="bg-white rounded-xl shadow-xs border border-slate-200 p-6"
           >
             <h2 className="text-lg font-semibold text-slate-900 mb-4">Telegram Bot</h2>
             <div className="space-y-3">
@@ -168,7 +168,7 @@ export default function AdminConfigPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 p-6"
+            className="bg-white rounded-xl shadow-xs border border-slate-200 p-6"
           >
             <h2 className="text-lg font-semibold text-slate-900 mb-4">CORS Origins</h2>
             <div className="space-y-2">

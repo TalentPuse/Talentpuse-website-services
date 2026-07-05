@@ -22,7 +22,7 @@ export default function EvaluationCard({ evaluation }: { evaluation: Evaluation 
   const [showSuggested, setShowSuggested] = useState(false);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
       {/* Score header */}
       <div className="flex items-center gap-4 p-5 border-b border-slate-100">
         <ScoreCircle score={evaluation.score} />

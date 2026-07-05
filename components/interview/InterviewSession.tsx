@@ -188,7 +188,7 @@ export default function InterviewSession({
                   placeholder="Nhập câu trả lời của bạn... Cố gắng sử dụng cấu trúc STAR (Situation → Task → Action → Result)"
                   rows={6}
                   disabled={submitting}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 resize-y disabled:bg-slate-50 disabled:text-slate-400"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 resize-y disabled:bg-slate-50 disabled:text-slate-400"
                 />
 
                 <div className="flex gap-3">

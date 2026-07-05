@@ -36,7 +36,7 @@ export default function ModeSelect({
         <button
           onClick={() => setMockTab("practice")}
           className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-            mockTab === "practice" ? "bg-white shadow-sm text-brand-700" : "text-slate-500 hover:text-slate-700"
+            mockTab === "practice" ? "bg-white shadow-xs text-brand-700" : "text-slate-500 hover:text-slate-700"
           }`}
         >
           Luyện tập
@@ -44,7 +44,7 @@ export default function ModeSelect({
         <button
           onClick={() => setMockTab("mock_test")}
           className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-            mockTab === "mock_test" ? "bg-white shadow-sm text-brand-700" : "text-slate-500 hover:text-slate-700"
+            mockTab === "mock_test" ? "bg-white shadow-xs text-brand-700" : "text-slate-500 hover:text-slate-700"
           }`}
         >
           Mock Test
@@ -103,7 +103,7 @@ export default function ModeSelect({
                 onChange={(e) => setTargetRole(e.target.value)}
                 placeholder="VD: Backend Developer"
                 list="roles"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
               <datalist id="roles">
                 {ROLE_OPTIONS.map((r) => <option key={r} value={r} />)}
@@ -115,7 +115,7 @@ export default function ModeSelect({
               <select
                 value={numQuestions}
                 onChange={(e) => setNumQuestions(Number(e.target.value))}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30"
               >
                 <option value={3}>3 câu</option>
                 <option value={5}>5 câu</option>

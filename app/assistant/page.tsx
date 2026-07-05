@@ -274,7 +274,7 @@ function AssistantContent() {
                     <span className="flex-1 truncate text-sm">{room.title || "Cuộc trò chuyện mới"}</span>
                     <button
                       onClick={(e) => handleDeleteRoom(room.id, e)}
-                      className="rounded p-1 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                      className="rounded-sm p-1 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
                       title="Xóa"
                     >
                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

@@ -47,7 +47,7 @@ export default function AlertHistoryPage() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+        className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden"
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

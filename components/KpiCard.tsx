@@ -15,7 +15,7 @@ const styles = {
 export default function KpiCard({ label, value, hint, accent = "blue" }: Props) {
   return (
     <div
-      className={`relative overflow-hidden bg-gradient-to-br rounded-xl shadow-sm border p-5 before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-gradient-to-r before:rounded-t-xl ${styles[accent]}`}
+      className={`relative overflow-hidden bg-linear-to-br rounded-xl shadow-xs border p-5 before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-linear-to-r before:rounded-t-xl ${styles[accent]}`}
     >
       <div className="text-xs uppercase tracking-wide text-slate-500 font-medium">
         {label}

@@ -21,7 +21,7 @@ function StatCard({ label, value, icon, color = "blue" }: { label: string; value
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-sm border border-slate-200 p-4"
+      className="bg-white rounded-xl shadow-xs border border-slate-200 p-4"
     >
       <div className="flex items-center justify-between">
         <div>
@@ -221,7 +221,7 @@ export default function AdminAlertsPage() {
             disabled={emailingAll}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+            className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-60 transition-colors"
           >
             {emailingAll ? "Đang gửi..." : "📧 Gửi email tất cả user"}
           </motion.button>
@@ -231,7 +231,7 @@ export default function AdminAlertsPage() {
             disabled={retrying}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 disabled:opacity-60 transition-colors"
+            className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-orange-600 disabled:opacity-60 transition-colors"
           >
             {retrying ? "Đang retry..." : `Retry Failed (${stats?.failed_emails || 0})`}
           </motion.button>
@@ -241,7 +241,7 @@ export default function AdminAlertsPage() {
             disabled={dispatching}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-60 transition-colors"
+            className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-brand-700 disabled:opacity-60 transition-colors"
           >
             {dispatching ? "Đang gửi..." : "Gửi alert ngay"}
           </motion.button>
@@ -258,7 +258,7 @@ export default function AdminAlertsPage() {
             placeholder="Job title, company..."
             value={search}
             onChange={onSearchChange}
-            className="w-64 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
+            className="w-64 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30"
           />
         </div>
 
@@ -268,7 +268,7 @@ export default function AdminAlertsPage() {
           <select
             value={selectedUserId}
             onChange={(e) => { setSelectedUserId(e.target.value); setPage(1); }}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30"
           >
             <option value="">Tất cả users</option>
             {users.map((u) => (
@@ -285,7 +285,7 @@ export default function AdminAlertsPage() {
           <select
             value={channelFilter}
             onChange={(e) => { setChannelFilter(e.target.value); setPage(1); }}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30"
           >
             <option value="all">Tất cả kênh</option>
             <option value="telegram">Telegram</option>
@@ -300,7 +300,7 @@ export default function AdminAlertsPage() {
             type="date"
             value={dateFrom}
             onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30"
           />
         </div>
         <div>
@@ -309,7 +309,7 @@ export default function AdminAlertsPage() {
             type="date"
             value={dateTo}
             onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30"
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30"
           />
         </div>
         {hasFilters && (
@@ -333,7 +333,7 @@ export default function AdminAlertsPage() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+        className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden"
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -425,7 +425,7 @@ export default function AdminAlertsPage() {
           className="mt-8"
         >
           <h3 className="text-lg font-bold text-slate-900 mb-4">Dispatch History</h3>
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>

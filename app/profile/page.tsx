@@ -223,19 +223,19 @@ function ProfileContent() {
     : "";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-50/30">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-brand-50/30">
       <main className="max-w-4xl mx-auto px-6 py-8">
         <motion.div variants={stagger} initial="initial" animate="animate" className="space-y-8">
 
           {/* ── Hero Banner ── */}
           <motion.section variants={fadeUp}>
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-brand-700 to-brand-800 p-8 text-white shadow-lg">
+            <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-brand-600 via-brand-700 to-brand-800 p-8 text-white shadow-lg">
               {/* Decorative circles */}
               <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/5" />
               <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5" />
 
               <div className="relative flex items-center gap-6">
-                <div className="w-20 h-20 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center text-2xl font-bold shadow-inner border border-white/20">
+                <div className="w-20 h-20 rounded-2xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-2xl font-bold shadow-inner border border-white/20">
                   {initials}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -253,7 +253,7 @@ function ProfileContent() {
                 {!editing && (
                   <button
                     onClick={() => setEditing(true)}
-                    className="shrink-0 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 px-5 py-2.5 text-sm font-semibold transition-colors"
+                    className="shrink-0 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-xs border border-white/20 px-5 py-2.5 text-sm font-semibold transition-colors"
                   >
                     Chỉnh sửa hồ sơ
                   </button>
@@ -303,7 +303,7 @@ function ProfileContent() {
               subtitle="Thông tin giúp AI matching tìm việc phù hợp hơn"
               action={!editing ? undefined : undefined}
             />
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-4">
+            <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 mt-4">
               {editing ? (
                 <form onSubmit={onSave} className="space-y-5">
                   <div className="space-y-1">
@@ -311,7 +311,7 @@ function ProfileContent() {
                     <input
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
                     />
                   </div>
 
@@ -327,7 +327,7 @@ function ProfileContent() {
                         value={salaryMin}
                         onChange={(e) => setSalaryMin(e.target.value)}
                         placeholder="VD: 15"
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
                       />
                     </div>
                     <div className="space-y-1">
@@ -337,7 +337,7 @@ function ProfileContent() {
                         value={salaryMax}
                         onChange={(e) => setSalaryMax(e.target.value)}
                         placeholder="VD: 30"
-                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
+                        className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
                       />
                     </div>
                   </div>
@@ -347,7 +347,7 @@ function ProfileContent() {
                     <select
                       value={experienceLevel}
                       onChange={(e) => setExperienceLevel(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all bg-white"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all bg-white"
                     >
                       {EXPERIENCE_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -364,7 +364,7 @@ function ProfileContent() {
                           value={university}
                           onChange={(e) => setUniversity(e.target.value)}
                           placeholder="VD: Đại học Bách Khoa TP.HCM"
-                          className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
+                          className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
                         />
                       </div>
                       <div className="space-y-1">
@@ -372,7 +372,7 @@ function ProfileContent() {
                         <select
                           value={graduationYear}
                           onChange={(e) => setGraduationYear(e.target.value)}
-                          className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all bg-white"
+                          className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all bg-white"
                         >
                           <option value="">Chưa chọn</option>
                           {Array.from({ length: 9 }, (_, i) => 2024 + i).map((y) => (
@@ -382,11 +382,11 @@ function ProfileContent() {
                       </div>
                       <div className="flex items-center gap-6">
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input type="checkbox" checked={openToInternship} onChange={(e) => setOpenToInternship(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+                          <input type="checkbox" checked={openToInternship} onChange={(e) => setOpenToInternship(e.target.checked)} className="w-4 h-4 rounded-sm border-slate-300 text-brand-600 focus:ring-brand-500" />
                           <span className="text-sm text-slate-700">Sẵn sàng thực tập</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input type="checkbox" checked={partTimeOk} onChange={(e) => setPartTimeOk(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+                          <input type="checkbox" checked={partTimeOk} onChange={(e) => setPartTimeOk(e.target.checked)} className="w-4 h-4 rounded-sm border-slate-300 text-brand-600 focus:ring-brand-500" />
                           <span className="text-sm text-slate-700">Có thể part-time</span>
                         </label>
                       </div>
@@ -406,7 +406,7 @@ function ProfileContent() {
                       disabled={saving}
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.98 }}
-                      className="flex-1 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-60 transition-colors"
+                      className="flex-1 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-brand-700 disabled:opacity-60 transition-colors"
                     >
                       {saving ? "Đang lưu..." : "Lưu thay đổi"}
                     </motion.button>
@@ -499,7 +499,7 @@ function ProfileContent() {
               title="CV & Hồ sơ ứng tuyển"
               subtitle="Upload CV để AI tự động trích xuất thông tin"
             />
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-4">
+            <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-6 mt-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
@@ -639,7 +639,7 @@ function ProcessStep({ label, doneLabel, active, done, showProgress }: {
         </p>
         {showProgress && (
           <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full" style={{ animation: "cvProgress 45s linear forwards" }} />
+            <div className="h-full bg-linear-to-r from-brand-400 to-brand-600 rounded-full" style={{ animation: "cvProgress 45s linear forwards" }} />
             <style>{`@keyframes cvProgress { 0% { width: 5%; } 100% { width: 85%; } }`}</style>
           </div>
         )}

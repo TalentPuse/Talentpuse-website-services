@@ -82,7 +82,7 @@ export default function ChatWindow({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Hỏi mình về skill, việc làm, lương, hay nhờ review CV…"
-          className="max-h-[200px] flex-1 resize-none bg-transparent py-2.5 text-[15px] leading-relaxed text-slate-800 outline-none placeholder:text-slate-400"
+          className="max-h-[200px] flex-1 resize-none bg-transparent py-2.5 text-[15px] leading-relaxed text-slate-800 outline-hidden placeholder:text-slate-400"
         />
         <button
           type="submit"
@@ -102,7 +102,7 @@ export default function ChatWindow({
   if (isEmpty) {
     return (
       <div className="relative flex h-full flex-col items-center justify-center overflow-hidden px-4">
-        <div className="pointer-events-none absolute left-1/2 top-1/3 h-72 w-[28rem] -translate-x-1/2 rounded-full bg-brand-300/20 blur-[100px]" />
+        <div className="pointer-events-none absolute left-1/2 top-1/3 h-72 w-md -translate-x-1/2 rounded-full bg-brand-300/20 blur-[100px]" />
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -110,7 +110,7 @@ export default function ChatWindow({
           className="w-full max-w-2xl"
         >
           <div className="mb-6 flex flex-col items-center text-center">
-            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-500/25">
+            <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-linear-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-500/25">
               <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
               </svg>
@@ -136,7 +136,7 @@ export default function ChatWindow({
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 + i * 0.05 }}
-                  className="group flex items-start gap-2.5 rounded-2xl border border-slate-200 bg-white/70 px-4 py-3.5 text-left text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:bg-brand-50/50 hover:text-slate-900 hover:shadow-md"
+                  className="group flex items-start gap-2.5 rounded-2xl border border-slate-200 bg-white/70 px-4 py-3.5 text-left text-sm text-slate-600 shadow-xs transition hover:-translate-y-0.5 hover:border-brand-300 hover:bg-brand-50/50 hover:text-slate-900 hover:shadow-md"
                 >
                   <span className="text-base leading-none">{["🎯", "📊", "📝", "💰"][i % 4]}</span>
                   <span>{s}</span>
@@ -175,7 +175,7 @@ export default function ChatWindow({
                 ))}
               {showTyping && (
                 <div className="flex gap-3.5">
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-brand-500 to-brand-700 text-white shadow-xs">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
                     </svg>
@@ -193,7 +193,7 @@ export default function ChatWindow({
         </div>
       </div>
 
-      <div className="bg-gradient-to-t from-white via-white to-transparent px-4 pb-4 pt-3">
+      <div className="bg-linear-to-t from-white via-white to-transparent px-4 pb-4 pt-3">
         <div className="mx-auto max-w-4xl">
           {inputBar}
           <p className="mt-2 text-center text-[11px] text-slate-400">

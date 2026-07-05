@@ -18,7 +18,7 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-2xl border-b border-slate-200/50">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="text-xl font-bold bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
+          <span className="text-xl font-bold bg-linear-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">
             TalentPulse
           </span>
           <div className="flex items-center gap-4">
@@ -27,7 +27,7 @@ export default function LandingPage() {
                 onClick={() => setLang("vi")}
                 className={`px-2.5 py-1 rounded-md transition-all ${
                   lang === "vi"
-                    ? "bg-white text-brand-700 shadow-sm"
+                    ? "bg-white text-brand-700 shadow-xs"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
@@ -37,7 +37,7 @@ export default function LandingPage() {
                 onClick={() => setLang("en")}
                 className={`px-2.5 py-1 rounded-md transition-all ${
                   lang === "en"
-                    ? "bg-white text-brand-700 shadow-sm"
+                    ? "bg-white text-brand-700 shadow-xs"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
@@ -93,7 +93,7 @@ export default function LandingPage() {
           className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-center leading-[1.1] max-w-4xl mx-auto px-6"
         >
           <span className="text-slate-900">{t.hero.heading1}</span>
-          <span className="bg-gradient-to-r from-brand-600 via-brand-500 to-brand-400 bg-clip-text text-transparent">
+          <span className="bg-linear-to-r from-brand-600 via-brand-500 to-brand-400 bg-clip-text text-transparent">
             {t.hero.heading2}
           </span>
         </motion.h1>
@@ -173,7 +173,7 @@ export default function LandingPage() {
 
       {/* AI Job Alert Showcase */}
       <section id="ai-alert" className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+        <div className="absolute inset-0 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900" />
         <div className="absolute inset-0">
           <div className="absolute top-1/4 left-0 w-[500px] h-[500px] rounded-full bg-brand-500/10 blur-3xl" />
           <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-brand-400/5 blur-3xl" />
@@ -203,7 +203,7 @@ export default function LandingPage() {
                     { title: t.aiAlert.bullet3Title, desc: t.aiAlert.bullet3 },
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
-                      <span className="mt-0.5 w-5 h-5 rounded-md bg-brand-500/20 text-brand-300 flex items-center justify-center flex-shrink-0">
+                      <span className="mt-0.5 w-5 h-5 rounded-md bg-brand-500/20 text-brand-300 flex items-center justify-center shrink-0">
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                       </span>
                       <span className="text-slate-300">
@@ -253,7 +253,7 @@ export default function LandingPage() {
                     className={`bg-white rounded-2xl p-5 shadow-2xl border border-slate-100 ${i === 1 ? "lg:ml-6" : i === 2 ? "lg:ml-2" : ""}`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-xl bg-${n.color}-100 text-${n.color}-600 flex items-center justify-center flex-shrink-0`}>
+                      <div className={`w-10 h-10 rounded-xl bg-${n.color}-100 text-${n.color}-600 flex items-center justify-center shrink-0`}>
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
                         </svg>
@@ -266,7 +266,7 @@ export default function LandingPage() {
                         <h4 className="mt-1.5 font-semibold text-slate-900 text-sm">{n.title}</h4>
                         <p className="text-xs text-slate-500 mt-0.5">{n.company} &middot; {n.location}</p>
                         <div className="mt-2 flex items-center gap-2">
-                          <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-0.5 rounded">{n.salary}</span>
+                          <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-0.5 rounded-sm">{n.salary}</span>
                           <span className="text-xs text-slate-400 truncate">{n.skills}</span>
                         </div>
                       </div>
@@ -318,7 +318,7 @@ export default function LandingPage() {
                 <div className="absolute -top-4 left-8">
                   <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-900 text-white text-sm font-bold shadow-lg">{step.num}</span>
                 </div>
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${step.gradient} text-white flex items-center justify-center mb-5 mt-2 shadow-md group-hover:shadow-lg transition-shadow`}>
+                <div className={`w-12 h-12 rounded-xl bg-linear-to-br ${step.gradient} text-white flex items-center justify-center mb-5 mt-2 shadow-md group-hover:shadow-lg transition-shadow`}>
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d={step.icon} />
                   </svg>
@@ -376,8 +376,8 @@ export default function LandingPage() {
               },
             ].map((feature, i) => (
               <ScrollReveal key={i}>
-                <div className="group relative bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg hover:border-slate-300 hover:-translate-y-1 transition-all duration-300 h-full">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} text-white flex items-center justify-center mb-4 shadow-md group-hover:shadow-lg transition-shadow`}>
+                <div className="group relative bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-lg hover:border-slate-300 hover:-translate-y-1 transition-all duration-300 h-full">
+                  <div className={`w-12 h-12 rounded-xl bg-linear-to-br ${feature.gradient} text-white flex items-center justify-center mb-4 shadow-md group-hover:shadow-lg transition-shadow`}>
                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d={feature.icon} />
                     </svg>
@@ -407,7 +407,7 @@ export default function LandingPage() {
 
       {/* CTA */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+        <div className="absolute inset-0 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900" />
         <div className="absolute inset-0">
           <div className="absolute top-1/4 right-0 w-[500px] h-[500px] rounded-full bg-brand-500/10 blur-3xl" />
           <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-brand-400/5 blur-3xl" />
@@ -443,7 +443,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 py-12">
           <div className="flex flex-col sm:flex-row items-start justify-between gap-10">
             <div className="flex flex-col gap-3">
-              <span className="text-xl font-bold bg-gradient-to-r from-brand-400 to-brand-300 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-linear-to-r from-brand-400 to-brand-300 bg-clip-text text-transparent">
                 TalentPulse
               </span>
               <p className="text-sm max-w-xs leading-relaxed">

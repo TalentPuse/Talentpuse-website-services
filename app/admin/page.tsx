@@ -180,7 +180,7 @@ function BarChart({ data, color }: { data: { date: string; value: number }[]; co
               style={{ height: h, backgroundColor: color, minHeight: 2 }}
             />
             {/* Tooltip */}
-            <div className="absolute bottom-full mb-1 hidden group-hover:block bg-slate-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10">
+            <div className="absolute bottom-full mb-1 hidden group-hover:block bg-slate-800 text-white text-[10px] px-2 py-1 rounded-sm whitespace-nowrap z-10">
               {d.date}: {d.value}
             </div>
           </div>
@@ -236,7 +236,7 @@ function DonutChart({ data, colors }: { data: { label: string; value: number }[]
       <div className="space-y-1.5">
         {segments.map((s, i) => (
           <div key={i} className="flex items-center gap-2 text-sm">
-            <span className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
+            <span className="w-3 h-3 rounded-xs shrink-0" style={{ backgroundColor: s.color }} />
             <span className="text-slate-600 capitalize">{s.label}</span>
             <span className="text-slate-400 text-xs ml-auto">{s.value} ({(s.pct * 100).toFixed(0)}%)</span>
           </div>

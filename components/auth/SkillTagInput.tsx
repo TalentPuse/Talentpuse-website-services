@@ -59,7 +59,7 @@ export default function SkillTagInput({ value, onChange, label = "Kỹ năng" }:
           onKeyDown={onKey}
           onBlur={add}
           placeholder={value.length === 0 ? "VD: Python, React, Docker..." : ""}
-          className="flex-1 min-w-[120px] text-sm outline-none bg-transparent"
+          className="flex-1 min-w-[120px] text-sm outline-hidden bg-transparent"
         />
       </div>
       <p className="text-xs text-slate-400">Nhấn Enter hoặc dấu phẩy để thêm</p>

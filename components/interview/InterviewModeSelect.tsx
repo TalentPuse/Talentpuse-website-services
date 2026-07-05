@@ -84,7 +84,7 @@ export default function InterviewModeSelect({
               onClick={() => setSelectedMode(selectedMode === mode.id ? null : mode.id)}
               className={`p-6 rounded-2xl border-2 text-left transition-all ${
                 selectedMode === mode.id
-                  ? `${mode.borderColor} ${mode.bgColor} shadow-sm`
+                  ? `${mode.borderColor} ${mode.bgColor} shadow-xs`
                   : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
               }`}
             >
@@ -114,7 +114,7 @@ export default function InterviewModeSelect({
                 onChange={(e) => setTargetRole(e.target.value)}
                 placeholder="VD: Backend Developer, AI Engineer..."
                 list="interview-roles"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
               <datalist id="interview-roles">
                 {ROLE_OPTIONS.map((r) => (

@@ -98,10 +98,10 @@ function JobBoardContent() {
     search || cityFilter !== "all" || levelFilter !== "all" || sourceFilter !== "all" || categoryFilter !== "all" || salaryFilter !== "all";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-50/30">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-brand-50/30">
 
       {/* Hero search */}
-      <div className="bg-gradient-to-r from-brand-600 to-brand-700 text-white">
+      <div className="bg-linear-to-r from-brand-600 to-brand-700 text-white">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -136,7 +136,7 @@ function JobBoardContent() {
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Tìm theo tiêu đề, công ty..."
-                className="w-full rounded-xl bg-white text-slate-900 pl-12 pr-4 py-3.5 text-sm outline-none shadow-lg placeholder:text-slate-400 focus:ring-2 focus:ring-white/50"
+                className="w-full rounded-xl bg-white text-slate-900 pl-12 pr-4 py-3.5 text-sm outline-hidden shadow-lg placeholder:text-slate-400 focus:ring-2 focus:ring-white/50"
               />
             </div>
           </motion.div>
@@ -149,7 +149,7 @@ function JobBoardContent() {
           <select
             value={cityFilter}
             onChange={(e) => { setCityFilter(e.target.value); setPage(1); }}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
           >
             <option value="all">Tất cả thành phố</option>
             {filters?.cities.map((c) => (
@@ -160,7 +160,7 @@ function JobBoardContent() {
           <select
             value={levelFilter}
             onChange={(e) => { setLevelFilter(e.target.value); setPage(1); }}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
           >
             <option value="all">Tất cả level</option>
             {filters?.levels.map((l) => (
@@ -171,7 +171,7 @@ function JobBoardContent() {
           <select
             value={sourceFilter}
             onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
           >
             <option value="all">Tất cả nguồn</option>
             {filters?.sources.map((s) => (
@@ -182,7 +182,7 @@ function JobBoardContent() {
           <select
             value={categoryFilter}
             onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
           >
             <option value="all">Tất cả ngành nghề</option>
             {filters?.categories.map((c) => (
@@ -193,7 +193,7 @@ function JobBoardContent() {
           <select
             value={salaryFilter}
             onChange={(e) => { setSalaryFilter(e.target.value); setPage(1); }}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
           >
             <option value="all">Lương: tất cả</option>
             <option value="yes">Có hiển thị lương</option>

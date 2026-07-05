@@ -200,7 +200,7 @@ export default function SignUpPage() {
         subtext="Thiết lập profile skills, mức lương mong muốn — AI sẽ alert ngay khi có việc phù hợp qua Telegram, Zalo, Discord."
       />
 
-      <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-slate-50 to-white">
+      <div className="flex-1 flex items-center justify-center p-8 bg-linear-to-br from-slate-50 to-white">
         <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
@@ -233,7 +233,7 @@ export default function SignUpPage() {
             </div>
             <div className="h-1 rounded-full bg-slate-100 overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-brand-500 to-brand-600 rounded-full"
+                className="h-full bg-linear-to-r from-brand-500 to-brand-600 rounded-full"
                 initial={{ width: "50%" }}
                 animate={{ width: step === 1 ? "50%" : "100%" }}
                 transition={{ duration: 0.4, ease: "easeInOut" }}
@@ -306,7 +306,7 @@ export default function SignUpPage() {
                   whileHover={{ scale: 1.01, y: -1 }}
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition-colors"
+                  className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-brand-700 transition-colors"
                 >
                   Tiếp tục
                 </motion.button>
@@ -530,7 +530,7 @@ export default function SignUpPage() {
                               }
                               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 border ${
                                 active
-                                  ? "bg-brand-600 text-white border-brand-600 shadow-sm"
+                                  ? "bg-brand-600 text-white border-brand-600 shadow-xs"
                                   : "bg-white text-slate-600 border-slate-200 hover:border-brand-300"
                               }`}
                             >
@@ -550,7 +550,7 @@ export default function SignUpPage() {
                             value={university}
                             onChange={(e) => setUniversity(e.target.value)}
                             placeholder="VD: Đại học Bách Khoa TP.HCM"
-                            className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
+                            className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
                           />
                         </div>
                         <div className="space-y-1">
@@ -558,7 +558,7 @@ export default function SignUpPage() {
                           <select
                             value={graduationYear}
                             onChange={(e) => setGraduationYear(e.target.value)}
-                            className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200 bg-white"
+                            className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200 bg-white"
                           >
                             <option value="">Chưa chọn</option>
                             {Array.from({ length: 9 }, (_, i) => 2024 + i).map((y) => (
@@ -572,7 +572,7 @@ export default function SignUpPage() {
                               type="checkbox"
                               checked={openToInternship}
                               onChange={(e) => setOpenToInternship(e.target.checked)}
-                              className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                              className="w-4 h-4 rounded-sm border-slate-300 text-brand-600 focus:ring-brand-500"
                             />
                             <span className="text-sm text-slate-700">Sẵn sàng thực tập</span>
                           </label>
@@ -581,7 +581,7 @@ export default function SignUpPage() {
                               type="checkbox"
                               checked={partTimeOk}
                               onChange={(e) => setPartTimeOk(e.target.checked)}
-                              className="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                              className="w-4 h-4 rounded-sm border-slate-300 text-brand-600 focus:ring-brand-500"
                             />
                             <span className="text-sm text-slate-700">Có thể part-time</span>
                           </label>
@@ -602,14 +602,14 @@ export default function SignUpPage() {
                           value={salaryMin}
                           onChange={(e) => setSalaryMin(e.target.value)}
                           placeholder="Từ (VD: 20)"
-                          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
+                          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
                         />
                         <input
                           type="number"
                           value={salaryMax}
                           onChange={(e) => setSalaryMax(e.target.value)}
                           placeholder="Đến (VD: 40)"
-                          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
+                          className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
                         />
                       </div>
                     </div>
@@ -630,7 +630,7 @@ export default function SignUpPage() {
                         whileHover={{ scale: 1.01, y: -1 }}
                         whileTap={{ scale: 0.98 }}
                         transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                        className="flex-1 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-60 transition-colors"
+                        className="flex-1 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-brand-700 disabled:opacity-60 transition-colors"
                       >
                         {loading ? "Đang tạo tài khoản..." : "Hoàn tất đăng ký"}
                       </motion.button>
@@ -695,7 +695,7 @@ function ProcessStep({
         {showProgress && (
           <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full"
+              className="h-full bg-linear-to-r from-brand-400 to-brand-600 rounded-full"
               style={{
                 animation: "cvProgress 40s linear forwards",
               }}
