@@ -762,6 +762,15 @@ export type CvDocument = {
 export const cvDocumentApi = {
   get: (token: string) =>
     clientFetch<CvDocument>("/api/cv/document", { headers: authHeaders(token) }),
+  getPdfBlob: async (token: string): Promise<Blob> => {
+    const res = await fetch(`${CLIENT_BASE}/api/cv/document/pdf`, {
+      headers: authHeaders(token),
+    });
+    if (!res.ok) {
+      throw { message: "Không tải được PDF", status: res.status } as ApiError;
+    }
+    return res.blob();
+  },
 };
 
 /* ───── Chat types & API ───── */
