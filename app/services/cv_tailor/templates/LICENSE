@@ -1,0 +1,11 @@
+This LaTeX resume template is adapted from the "base rover" template in
+subidit/rover-resume (https://github.com/subidit/rover-resume).
+
+Licensed under the Creative Commons Attribution 4.0 International License
+(CC BY 4.0): https://creativecommons.org/licenses/by/4.0/
+
+You are free to share and adapt the material for any purpose, even
+commercially, provided appropriate attribution is given. The LaTeX preamble
+in base_rover.tex.j2 is derived from that template.
+
+Attribution: "Adapted from subidit/rover-resume (CC BY 4.0)."

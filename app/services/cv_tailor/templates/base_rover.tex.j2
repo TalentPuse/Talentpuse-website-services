@@ -1,0 +1,51 @@
+%% Adapted from subidit/rover-resume "base rover" (CC BY 4.0). Preamble frozen.
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in,a4paper]{geometry}
+\usepackage{enumitem}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, urlcolor=RoyalBlue}
+\setcounter{secnumdepth}{0}
+\pagestyle{empty}
+\pdfgentounicode=1 % make ATS friendly
+\titleformat{\section}{\large\bfseries\uppercase}{}{0em}{}[\titlerule]
+\titlespacing{\section}{0pt}{10pt}{4pt}
+\setlist[itemize]{leftmargin=1.2em, itemsep=1pt, topsep=2pt}
+\begin{document}
+\begin{center}
+{\Huge\bfseries << model.header.full_name|e >>}\\ \smallskip
+<< model.header.email|e >><% if model.header.phone %> $|$ << model.header.phone|e >><% endif %><% if model.header.linkedin %> $|$ \href{<< model.header.linkedin|url >>}{LinkedIn}<% endif %><% if model.header.github %> $|$ \href{<< model.header.github|url >>}{GitHub}<% endif %>
+\end{center}
+<% if model.summary %>
+\section{Summary}
+<< model.summary|e >>
+<% endif %>
+<% if model.experience %>
+\section{Experience}
+<% for x in model.experience %>
+\subsection{<< x.company|e >> \hfill << x.start|e >> -- << x.end|e >>}
+\subsubsection{<< x.title|e >><% if x.location %> \hfill << x.location|e >><% endif %>}
+\begin{itemize}<% for b in x.bullets %>
+\item << b|e >><% endfor %>
+\end{itemize}
+<% endfor %><% endif %>
+<% if model.projects %>
+\section{Projects}
+<% for p in model.projects %>
+\subsection{<< p.name|e >><% if p.date %> \hfill << p.date|e >><% endif %>}
+\begin{itemize}<% for b in p.bullets %>
+\item << b|e >><% endfor %>
+\end{itemize}
+<% endfor %><% endif %>
+<% if model.education %>
+\section{Education}
+<% for ed in model.education %>
+\subsection{<< ed.institution|e >> \hfill << (ed.end or '')|e >>}
+<< ed.degree|e >><% if ed.field %>, << ed.field|e >><% endif %><% if ed.gpa %> \hfill GPA: << ed.gpa|e >><% endif %>
+<% endfor %><% endif %>
+\section{Skills}
+\textbf{Technical:} << model.skills.technical|join(', ')|e >> \\
+\textbf{Languages:} << model.skills.languages|join(', ')|e >>
+\end{document}
