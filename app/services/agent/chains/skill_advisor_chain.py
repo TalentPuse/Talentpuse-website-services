@@ -11,13 +11,23 @@ from app.services.agent.tools.skill_tools import query_skill_gap
 
 _BASE_TOOLS = [query_skill_gap, get_cv_writing_guide, search_jobs_realtime]
 _agent = None
+_llm = None
+
+
+def _get_llm():
+    # Reuse one ChatOpenAI client across requests — request-scoped agents
+    # (built per chat message to bind the edit_cv tool) shouldn't re-create it.
+    global _llm
+    if _llm is None:
+        _llm = create_llm()
+    return _llm
 
 
 def build_agent(extra_tools=()):
     """Construct a fresh agent. Pass extra_tools (e.g. a per-user edit_cv tool)
     for request-scoped agents; the no-arg cached singleton uses base tools only."""
     return create_agent(
-        model=create_llm(),
+        model=_get_llm(),
         tools=[*_BASE_TOOLS, *extra_tools],
         system_prompt=SYSTEM_PROMPT,
         middleware=[inject_user_profile],

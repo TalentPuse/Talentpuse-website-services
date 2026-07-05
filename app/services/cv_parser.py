@@ -166,3 +166,32 @@ def upload_to_s3(pdf_bytes: bytes, object_name: str) -> str | None:
     except Exception:
         logger.exception("S3 upload failed")
         return None
+
+
+def download_from_s3(object_name: str) -> bytes | None:
+    """Fetch an object's bytes from S3/MinIO. None if unconfigured/missing."""
+    from app.core.config import S3_ENDPOINT_URL, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET_NAME
+
+    if not S3_SECRET_KEY:
+        return None
+
+    resp = None
+    try:
+        from minio import Minio
+        from urllib.parse import urlparse
+
+        parsed = urlparse(S3_ENDPOINT_URL)
+        client = Minio(
+            parsed.netloc or parsed.path,
+            access_key=S3_ACCESS_KEY,
+            secret_key=S3_SECRET_KEY,
+            secure=parsed.scheme == "https",
+        )
+        resp = client.get_object(S3_BUCKET_NAME, object_name)
+        return resp.read()
+    except Exception:
+        return None
+    finally:
+        if resp is not None:
+            resp.close()
+            resp.release_conn()

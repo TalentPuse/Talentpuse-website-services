@@ -16,6 +16,7 @@ from app.schemas.cv import CvDocumentResponse, CvExtractResponse
 from app.services.cv_tailor.build import ensure_document, render_pdf_bytes
 from app.services.cv_parser import (
     MAX_FILE_SIZE,
+    download_from_s3,
     extract_text,
     parse_cv,
     upload_to_s3,
@@ -121,14 +122,16 @@ async def get_cv_document_pdf(
     user: User = Depends(get_current_user),
 ) -> Response:
     """Serve the rendered CV PDF same-origin (authed), so the browser never has
-    to reach the internal MinIO URL. Re-renders deterministically from the
-    stored model. Call GET /api/cv/document first to ensure the document exists."""
-    try:
-        pdf = await render_pdf_bytes(db, user)
-    except ValueError:
-        raise HTTPException(status_code=409, detail="Chưa có CV đã render.")
-    except RuntimeError:
-        raise HTTPException(status_code=502, detail="Không render được CV, thử lại sau.")
+    to reach the internal MinIO URL. Serves the pre-rendered PDF from storage
+    (fast); only recompiles as a fallback. Call GET /api/cv/document first."""
+    pdf = await asyncio.to_thread(download_from_s3, f"cv-pdf/{user.id}.pdf")
+    if pdf is None:
+        try:
+            pdf = await render_pdf_bytes(db, user)
+        except ValueError:
+            raise HTTPException(status_code=409, detail="Chưa có CV đã render.")
+        except RuntimeError:
+            raise HTTPException(status_code=502, detail="Không render được CV, thử lại sau.")
     return Response(
         content=pdf,
         media_type="application/pdf",
