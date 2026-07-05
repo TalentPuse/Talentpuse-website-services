@@ -9,22 +9,26 @@ from app.services.agent.tools.cv_coach_tool import get_cv_writing_guide
 from app.services.agent.tools.job_search_tools import search_jobs_realtime
 from app.services.agent.tools.skill_tools import query_skill_gap
 
+_BASE_TOOLS = [query_skill_gap, get_cv_writing_guide, search_jobs_realtime]
 _agent = None
 
 
-def get_agent():
-    global _agent
-    if _agent is not None:
-        return _agent
-
-    llm = create_llm()
-    _agent = create_agent(
-        model=llm,
-        tools=[query_skill_gap, get_cv_writing_guide, search_jobs_realtime],
+def build_agent(extra_tools=()):
+    """Construct a fresh agent. Pass extra_tools (e.g. a per-user edit_cv tool)
+    for request-scoped agents; the no-arg cached singleton uses base tools only."""
+    return create_agent(
+        model=create_llm(),
+        tools=[*_BASE_TOOLS, *extra_tools],
         system_prompt=SYSTEM_PROMPT,
         middleware=[inject_user_profile],
         context_schema=AgentContext,
     )
+
+
+def get_agent():
+    global _agent
+    if _agent is None:
+        _agent = build_agent()
     return _agent
 
 

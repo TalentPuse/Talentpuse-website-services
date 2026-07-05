@@ -5,10 +5,12 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, status
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.models.cv_document import CvDocument
 from app.models.user import User
 from app.schemas.cv import CvDocumentResponse, CvExtractResponse
 from app.services.cv_tailor.build import ensure_document, render_pdf_bytes
@@ -72,6 +74,9 @@ async def upload_cv(
         user.cv_file_url = s3_url
     if text:
         user.cv_text = text
+        # A new CV invalidates any previously rendered document so the /assistant
+        # preview rebuilds from the fresh text on next open.
+        await db.execute(delete(CvDocument).where(CvDocument.user_id == user.id))
     if s3_url or text:
         await db.commit()
 

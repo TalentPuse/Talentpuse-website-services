@@ -24,6 +24,8 @@ from app.schemas.chat import (
     ChatRoomResponse,
 )
 from app.services.agent import AgentContext, get_agent
+from app.services.agent.chains.skill_advisor_chain import build_agent
+from app.services.agent.tools.cv_edit_tool import make_edit_cv_tool
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -277,7 +279,15 @@ async def send_message_stream(
     uid = uuid.UUID(room_id)
 
     async def _token_generator():
-        agent = get_agent()
+        cv_state = {"updated": False}
+
+        def _on_cv_update(_summary: str) -> None:
+            cv_state["updated"] = True
+
+        edit_tool = make_edit_cv_tool(
+            current_user.id, db_module.async_session_factory, _on_cv_update
+        )
+        agent = build_agent(extra_tools=[edit_tool])
         full_response = ""
 
         user_msg_data = {
@@ -299,6 +309,9 @@ async def send_message_stream(
                 if isinstance(msg, AIMessageChunk) and msg.content:
                     full_response += msg.content
                     yield f"data: {json.dumps({'type': 'token', 'content': msg.content}, ensure_ascii=False)}\n\n"
+
+            if cv_state["updated"]:
+                yield f"data: {json.dumps({'type': 'cv_updated'}, ensure_ascii=False)}\n\n"
 
             # Save assistant message using a fresh DB session
             async with db_module.async_session_factory() as db_sess:
