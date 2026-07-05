@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 import { adminApi, AlertLogList, AdminUserList, AlertDispatchStats, DispatchHistoryResponse } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";

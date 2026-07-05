@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { useCallback, useEffect, useState } from "react";
 
 import { telegramApi, TelegramStatus } from "@/lib/api";

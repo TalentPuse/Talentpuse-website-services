@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 import { authApi, cvApi, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
