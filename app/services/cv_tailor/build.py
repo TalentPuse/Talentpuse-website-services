@@ -14,10 +14,21 @@ from app.services.cv_tailor.validator import page_count
 
 logger = logging.getLogger(__name__)
 
-_SYS = ("Extract this CV into JSON with keys: header{full_name,email,phone,location,linkedin,github}, "
-        "summary, education[], experience[{company,title,location,start,end,bullets[]}], "
-        "projects[{name,url,date,tech[],bullets[]}], skills{technical[],languages[],tools[]}. "
-        "Only use facts present in the CV. Return JSON only.")
+_SYS = (
+    "Extract this CV into JSON with keys: "
+    "header{full_name,email,phone,location,linkedin,github}, "
+    "summary, "
+    "education[{institution,degree,field,start,end,gpa,highlights[]}], "
+    "experience[{company,title,location,start,end,bullets[]}] "
+    "(location = work type/city e.g. Remote/Full-time/HCMC), "
+    "projects[{name,role,date,description,bullets[],achievement,links[{label,url}]}], "
+    "skills[{category,items[]}] "
+    "(group into categories such as Programming, AI & Agents, Databases, Core ML, "
+    "Software Development, Cloud & Tools — keep the CV's own grouping if it has one), "
+    "honors[] (award/achievement strings), "
+    "certifications[{title,issuer,date,bullets[]}]. "
+    "Only use facts present in the CV. Do not invent anything. Return JSON only."
+)
 
 
 def _llm_to_model(cv_text: str) -> ResumeModel:

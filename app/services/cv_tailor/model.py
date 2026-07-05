@@ -2,6 +2,11 @@ from __future__ import annotations
 from pydantic import BaseModel, EmailStr, Field
 
 
+class Link(BaseModel):
+    label: str | None = None
+    url: str | None = None
+
+
 class Header(BaseModel):
     full_name: str
     email: EmailStr
@@ -14,7 +19,7 @@ class Header(BaseModel):
 
 class EducationItem(BaseModel):
     institution: str
-    degree: str
+    degree: str | None = None
     field: str | None = None
     start: str | None = None
     end: str | None = None
@@ -25,24 +30,34 @@ class EducationItem(BaseModel):
 class ExperienceItem(BaseModel):
     company: str
     title: str
-    location: str | None = None
-    start: str
-    end: str
+    location: str | None = None  # right-aligned tag: Remote / Full-time / city
+    start: str | None = None
+    end: str | None = None
     bullets: list[str] = Field(default_factory=list)
 
 
 class ProjectItem(BaseModel):
     name: str
-    url: str | None = None
+    role: str | None = None
     date: str | None = None
+    description: str | None = None
     tech: list[str] = Field(default_factory=list)
     bullets: list[str] = Field(default_factory=list)
+    achievement: str | None = None
+    links: list[Link] = Field(default_factory=list)
+    url: str | None = None
 
 
-class Skills(BaseModel):
-    technical: list[str] = Field(default_factory=list)
-    languages: list[str] = Field(default_factory=list)
-    tools: list[str] = Field(default_factory=list)
+class SkillGroup(BaseModel):
+    category: str
+    items: list[str] = Field(default_factory=list)
+
+
+class CertItem(BaseModel):
+    title: str
+    issuer: str | None = None
+    date: str | None = None
+    bullets: list[str] = Field(default_factory=list)
 
 
 class ResumeModel(BaseModel):
@@ -51,4 +66,6 @@ class ResumeModel(BaseModel):
     education: list[EducationItem] = Field(default_factory=list)
     experience: list[ExperienceItem] = Field(default_factory=list)
     projects: list[ProjectItem] = Field(default_factory=list)
-    skills: Skills = Field(default_factory=Skills)
+    skills: list[SkillGroup] = Field(default_factory=list)
+    honors: list[str] = Field(default_factory=list)
+    certifications: list[CertItem] = Field(default_factory=list)

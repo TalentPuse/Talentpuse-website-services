@@ -1,51 +1,179 @@
-%% Adapted from subidit/rover-resume "base rover" (CC BY 4.0). Preamble frozen.
-\documentclass[11pt]{article}
-\usepackage[T1]{fontenc}
-\usepackage[margin=1in,a4paper]{geometry}
-\usepackage{enumitem}
-\usepackage[dvipsnames]{xcolor}
+%-------------------------
+%% Adapted from a Jake-style resume template. Preamble frozen; body rendered from ResumeModel.
+%-------------------------
+\documentclass[letterpaper,10.5pt]{article}
+
+\usepackage[empty]{fullpage}
 \usepackage{titlesec}
-\usepackage{hyperref}
-\hypersetup{colorlinks=true, urlcolor=RoyalBlue}
-\setcounter{secnumdepth}{0}
-\pagestyle{empty}
-\pdfgentounicode=1 % make ATS friendly
-\titleformat{\section}{\large\bfseries\uppercase}{}{0em}{}[\titlerule]
-\titlespacing{\section}{0pt}{10pt}{4pt}
-\setlist[itemize]{leftmargin=1.2em, itemsep=1pt, topsep=2pt}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage[T1]{fontenc}
+\usepackage{helvet}
+\renewcommand*\familydefault{\sfdefault}
+
+\definecolor{light-grey}{gray}{0.83}
+\definecolor{dark-grey}{gray}{0.3}
+\definecolor{text-grey}{gray}{.08}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{0in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.55in}
+\addtolength{\textheight}{1.1in}
+
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+\color{text-grey}
+
+\titleformat{\section}
+  {\bfseries \vspace{2pt} \raggedright \large}
+  {}{0em}{}
+
+\newcommand{\resumeItem}[1]{\item\small{#1 \vspace{-1pt}}}
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-1pt}\item
+  \begin{tabular*}{\textwidth}[t]{l@{\extracolsep{\fill}}r}
+    \textbf{#1} & {\color{dark-grey}\small #2} \vspace{1pt}\\
+    \textit{#3} & {\color{dark-grey}\small #4}\\
+  \end{tabular*}\vspace{-4pt}
+}
+\newcommand{\resumeProjectHeading}[2]{
+  \item
+  \begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}
+    \textbf{#1} & {\color{dark-grey}\small #2}\\
+  \end{tabular*}\vspace{-4pt}
+}
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.18in]}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{0pt}}
+\newcommand{\resumeExpHeader}[4]{%
+  \vspace{-1pt}\item
+  \begin{tabular*}{\textwidth}[t]{l@{\extracolsep{\fill}}r}
+    \textbf{#1 - #2 (#3)} & {\color{dark-grey}\small #4}\\
+  \end{tabular*}\vspace{-4pt}
+}
+\newcommand{\resumeProjectTitleOnly}[1]{%
+  \vspace{2pt}\item[] {\small \textbf{#1}} \vspace{-2pt}
+}
+\newcommand{\resumeField}[2]{%
+  \resumeItem{\textbf{#1} #2}
+}
+
 \begin{document}
+
 \begin{center}
-{\Huge\bfseries << model.header.full_name|e >>}\\ \smallskip
-<< model.header.email|e >><% if model.header.phone %> $|$ << model.header.phone|e >><% endif %><% if model.header.linkedin %> $|$ \href{<< model.header.linkedin|url >>}{LinkedIn}<% endif %><% if model.header.github %> $|$ \href{<< model.header.github|url >>}{GitHub}<% endif %>
+  {\Huge \textbf{<< model.header.full_name|e >>}}\\ \vspace{6pt}
+  \small
+<% if model.header.email %>  \href{mailto:<< model.header.email|url >>}{<< model.header.email|e >>}<% endif %>
+<% if model.header.phone %> \hspace{6pt}$|$\hspace{6pt} << model.header.phone|e >><% endif %>
+<% if model.header.location %> \hspace{6pt}$|$\hspace{6pt} << model.header.location|e >><% endif %>
+<% if model.header.github %> \hspace{6pt}$|$\hspace{6pt} \href{<< model.header.github|url >>}{GitHub}<% endif %>
+<% if model.header.linkedin %> \hspace{6pt}$|$\hspace{6pt} \href{<< model.header.linkedin|url >>}{LinkedIn}<% endif %>
+  \vspace{-2pt}
 \end{center}
+
 <% if model.summary %>
-\section{Summary}
-<< model.summary|e >>
+\section{SUMMARY}
+\small{<< model.summary|e >>}
+\vspace{2pt}
+<% endif %>
+<% if model.education %>
+\section{EDUCATION}
+\resumeSubHeadingListStart
+<% for ed in model.education %>
+  \resumeSubheading{<< ed.institution|e >>}{<< (ed.start or '')|e >><% if ed.end %> -- << ed.end|e >><% endif %>}{<< (ed.degree or '')|e >><% if ed.field %><% if ed.degree %>, <% endif %><< ed.field|e >><% endif %><% if ed.gpa %>; GPA: << ed.gpa|e >><% endif %>}{}
+<% if ed.highlights %>
+    \resumeItemListStart
+<% for h in ed.highlights %>
+      \resumeItem{<< h|e >>}
+<% endfor %>
+    \resumeItemListEnd
+<% endif %>
+<% endfor %>
+\resumeSubHeadingListEnd
 <% endif %>
 <% if model.experience %>
-\section{Experience}
+\section{EXPERIENCE}
+\resumeSubHeadingListStart
 <% for x in model.experience %>
-\subsection{<< x.company|e >> \hfill << x.start|e >> -- << x.end|e >>}
-\subsubsection{<< x.title|e >><% if x.location %> \hfill << x.location|e >><% endif %>}
-\begin{itemize}<% for b in x.bullets %>
-\item << b|e >><% endfor %>
-\end{itemize}
-<% endfor %><% endif %>
+  \resumeExpHeader{<< x.company|e >>}{<< x.title|e >>}{<< (x.start or '')|e >> - << (x.end or '')|e >>}{<< (x.location or '')|e >>}
+<% if x.bullets %>
+  \resumeItemListStart
+<% for b in x.bullets %>
+    \resumeItem{<< b|e >>}
+<% endfor %>
+  \resumeItemListEnd
+<% endif %>
+<% endfor %>
+\resumeSubHeadingListEnd
+<% endif %>
 <% if model.projects %>
-\section{Projects}
+\section{PROJECTS}
+\resumeSubHeadingListStart
 <% for p in model.projects %>
-\subsection{<< p.name|e >><% if p.date %> \hfill << p.date|e >><% endif %>}
-\begin{itemize}<% for b in p.bullets %>
-\item << b|e >><% endfor %>
+  \resumeProjectTitleOnly{<< p.name|e >><% if p.date %> (<< p.date|e >>)<% endif %>}
+  \resumeItemListStart
+<% if p.role %>    \resumeField{Role:}{<< p.role|e >>}
+<% endif %>
+<% if p.description %>    \resumeField{Description:}{<< p.description|e >>}
+<% endif %>
+<% for b in p.bullets %>    \resumeItem{<< b|e >>}
+<% endfor %>
+<% if p.achievement %>    \resumeField{Achievement:}{<< p.achievement|e >>}
+<% endif %>
+<% set _links = p.links|selectattr('url')|list %>
+<% if _links %>    \resumeItem{\textbf{Links:} <% for l in _links %>\href{<< l.url|url >>}{<< (l.label or 'Link')|e >>}<% if not loop.last %> $|$ <% endif %><% endfor %>}
+<% endif %>
+  \resumeItemListEnd
+<% endfor %>
+\resumeSubHeadingListEnd
+<% endif %>
+<% if model.skills %>
+\section{TECHNICAL SKILLS}
+\begin{itemize}[leftmargin=0in, label={}]
+\small{\item{
+<% for g in model.skills %>
+\textbf{<< g.category|e >>:} << g.items|join(', ')|e >> <% if not loop.last %>\\<% endif %>
+<% endfor %>
+}}
 \end{itemize}
-<% endfor %><% endif %>
-<% if model.education %>
-\section{Education}
-<% for ed in model.education %>
-\subsection{<< ed.institution|e >> \hfill << (ed.end or '')|e >>}
-<< ed.degree|e >><% if ed.field %>, << ed.field|e >><% endif %><% if ed.gpa %> \hfill GPA: << ed.gpa|e >><% endif %>
-<% endfor %><% endif %>
-\section{Skills}
-\textbf{Technical:} << model.skills.technical|join(', ')|e >> \\
-\textbf{Languages:} << model.skills.languages|join(', ')|e >>
+<% endif %>
+<% if model.honors %>
+\section{HONORS \& AWARDS}
+\resumeSubHeadingListStart
+  \resumeItemListStart
+<% for h in model.honors %>
+    \resumeItem{<< h|e >>}
+<% endfor %>
+  \resumeItemListEnd
+\resumeSubHeadingListEnd
+<% endif %>
+<% if model.certifications %>
+\section{CERTIFICATIONS}
+\resumeSubHeadingListStart
+<% for c in model.certifications %>
+  \resumeProjectHeading{\textbf{<< c.title|e >>}<% if c.issuer %> $|$ \emph{<< c.issuer|e >>}<% endif %>}{<< (c.date or '')|e >>}
+<% if c.bullets %>
+  \resumeItemListStart
+<% for b in c.bullets %>
+    \resumeItem{<< b|e >>}
+<% endfor %>
+  \resumeItemListEnd
+<% endif %>
+<% endfor %>
+\resumeSubHeadingListEnd
+<% endif %>
 \end{document}
