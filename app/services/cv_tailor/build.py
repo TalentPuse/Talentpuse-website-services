@@ -45,3 +45,18 @@ async def ensure_document(db: AsyncSession, user) -> dict:
         db.add(row)
         await db.commit()
     return {"model": row.model_json, "pdf_url": row.pdf_url, "page_count": row.page_count}
+
+
+async def render_pdf_bytes(db: AsyncSession, user) -> bytes:
+    """Deterministically re-render the stored model to PDF bytes for browser
+    delivery. Serves same-origin/authed instead of exposing the internal MinIO
+    URL. Requires the document row to exist (call ensure_document first)."""
+    row = (await db.execute(
+        select(CvDocument).where(CvDocument.user_id == user.id))).scalar_one_or_none()
+    if row is None:
+        raise ValueError("no_document")
+    model = ResumeModel.model_validate(row.model_json)
+    res = await compile_tex(render_tex(model))
+    if not res.ok or res.pdf is None:
+        raise RuntimeError("compile_failed")
+    return res.pdf

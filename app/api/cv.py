@@ -4,14 +4,14 @@ import asyncio
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.cv import CvDocumentResponse, CvExtractResponse
-from app.services.cv_tailor.build import ensure_document
+from app.services.cv_tailor.build import ensure_document, render_pdf_bytes
 from app.services.cv_parser import (
     MAX_FILE_SIZE,
     extract_text,
@@ -108,3 +108,24 @@ async def get_cv_document(
             status_code=502,
             detail="Không render được CV, thử lại sau.",
         )
+
+
+@router.get("/document/pdf")
+async def get_cv_document_pdf(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Response:
+    """Serve the rendered CV PDF same-origin (authed), so the browser never has
+    to reach the internal MinIO URL. Re-renders deterministically from the
+    stored model. Call GET /api/cv/document first to ensure the document exists."""
+    try:
+        pdf = await render_pdf_bytes(db, user)
+    except ValueError:
+        raise HTTPException(status_code=409, detail="Chưa có CV đã render.")
+    except RuntimeError:
+        raise HTTPException(status_code=502, detail="Không render được CV, thử lại sau.")
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'inline; filename="cv.pdf"'},
+    )
