@@ -25,6 +25,10 @@ from app.schemas.chat import (
 )
 from app.services.agent import AgentContext, get_agent
 from app.services.agent.chains.skill_advisor_chain import build_agent
+from app.services.agent.tools.application_tools import (
+    make_application_stats_tool,
+    make_list_applications_tool,
+)
 from app.services.agent.tools.cv_edit_tool import make_edit_cv_tool
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -287,7 +291,13 @@ async def send_message_stream(
         edit_tool = make_edit_cv_tool(
             current_user.id, db_module.async_session_factory, _on_cv_update
         )
-        agent = build_agent(extra_tools=[edit_tool])
+        list_apps_tool = make_list_applications_tool(
+            current_user.id, db_module.async_session_factory
+        )
+        stats_tool = make_application_stats_tool(
+            current_user.id, db_module.async_session_factory
+        )
+        agent = build_agent(extra_tools=[edit_tool, list_apps_tool, stats_tool])
         full_response = ""
 
         user_msg_data = {

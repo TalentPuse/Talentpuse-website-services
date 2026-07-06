@@ -67,6 +67,20 @@ async def db_session():
         yield session
 
 
+@pytest.fixture
+def session_factory():
+    """The app's `async_sessionmaker`, for tools/services that open their own
+    session independent of `db_session` (e.g. chat agent tools).
+
+    `initialize_database` (autouse) has already called `init_db()` by the time
+    this fixture is requested, so `db_module.async_session_factory` is bound
+    to the current test's DB engine.
+    """
+    if db_module.async_session_factory is None:
+        pytest.fail("Database not initialized. Call init_db() first.")
+    return db_module.async_session_factory
+
+
 @pytest_asyncio.fixture
 async def seed_user(db_session):
     """Persisted `app.users` row for tests that need a real FK target.
