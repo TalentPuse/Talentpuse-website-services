@@ -52,7 +52,10 @@ async def keys(user: User = Depends(get_current_user), db: AsyncSession = Depend
 
 @router.post("/ai-summary", response_model=SummaryOut)
 async def ai_summary(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    return await build_summary(db, user.id)
+    try:
+        return await build_summary(db, user.id)
+    except Exception:
+        raise HTTPException(status_code=503, detail="Không tạo được tóm tắt, thử lại sau")
 
 
 @router.patch("/{app_id}", response_model=ApplicationOut)

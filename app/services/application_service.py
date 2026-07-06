@@ -2,6 +2,7 @@ import datetime
 import uuid
 
 from sqlalchemy import func, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.job_application import APPLICATION_STATUSES, JobApplication
@@ -61,7 +62,14 @@ async def create_application(
         salary_million=salary_million, status=status, applied_at=applied_at, notes=notes,
     )
     db.add(app)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        existing = await _find_internal(db, user_id, source, source_job_id)
+        if existing is not None:
+            return existing
+        raise
     await db.refresh(app)
     return app
 

@@ -33,4 +33,6 @@ async def build_summary(db, user_id) -> dict:
     }
     llm = _get_llm()
     resp = await llm.ainvoke([SystemMessage(content=_SYSTEM), HumanMessage(content=json.dumps(payload, ensure_ascii=False))])
-    return {"summary_md": resp.content, "generated_at": now}
+    content = resp.content
+    summary = content if isinstance(content, str) else str(content)
+    return {"summary_md": summary, "generated_at": now}

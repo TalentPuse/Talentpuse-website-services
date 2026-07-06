@@ -27,3 +27,16 @@ async def test_summary_calls_llm_when_data(db_session, seed_user, monkeypatch):
     monkeypatch.setattr(sm, "_get_llm", lambda: FakeLLM())
     out = await sm.build_summary(db_session, seed_user.id)
     assert out["summary_md"] == "Bạn đã apply 1 job." and out["generated_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_summary_llm_error_propagates(db_session, seed_user, monkeypatch):
+    await svc.create_application(db_session, seed_user.id, source="manual", title="X")
+
+    class BoomLLM:
+        async def ainvoke(self, messages):
+            raise RuntimeError("llm down")
+
+    monkeypatch.setattr(sm, "_get_llm", lambda: BoomLLM())
+    with pytest.raises(Exception):
+        await sm.build_summary(db_session, seed_user.id)
