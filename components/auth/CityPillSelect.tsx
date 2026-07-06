@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { X } from "lucide-react";
+
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Plus, ICON } from "@/lib/icons";
+import { cn } from "@/lib/utils";
 
 const PRESET_CITIES = ["Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Remote"];
 
@@ -31,9 +37,11 @@ export default function CityPillSelect({
     setCustom("");
   }
 
+  const customCities = value.filter((c) => !PRESET_CITIES.includes(c));
+
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-slate-700">{label}</label>
+      <p className="text-sm font-medium text-text-muted">{label}</p>
       <div className="flex flex-wrap gap-2">
         {PRESET_CITIES.map((city) => {
           const active = value.includes(city);
@@ -42,54 +50,53 @@ export default function CityPillSelect({
               key={city}
               type="button"
               whileTap={{ scale: 0.95 }}
+              aria-pressed={active}
               onClick={() => toggle(city)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 border ${
+              className={cn(
+                "rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-200",
                 active
-                  ? "bg-brand-600 text-white border-brand-600 shadow-xs"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-brand-300"
-              }`}
+                  ? "border-brand-600 bg-brand-600 text-white shadow-xs"
+                  : "border-border bg-surface-2 text-text-muted hover:border-brand-400 hover:text-text"
+              )}
             >
               {city}
             </motion.button>
           );
         })}
       </div>
-      {value.filter((c) => !PRESET_CITIES.includes(c)).length > 0 && (
+      {customCities.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {value
-            .filter((c) => !PRESET_CITIES.includes(c))
-            .map((c) => (
-              <span
-                key={c}
-                className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700"
+          {customCities.map((c) => (
+            <span
+              key={c}
+              className="inline-flex items-center gap-1 rounded-full bg-success/15 px-3 py-1 text-xs font-medium text-success"
+            >
+              {c}
+              <button
+                type="button"
+                aria-label={`Xóa ${c}`}
+                onClick={() => onChange(value.filter((x) => x !== c))}
+                className="rounded-full p-0.5 hover:bg-success/20"
               >
-                {c}
-                <button
-                  type="button"
-                  onClick={() => onChange(value.filter((x) => x !== c))}
-                  className="hover:text-emerald-900"
-                >
-                  &times;
-                </button>
-              </span>
-            ))}
+                <X size={12} strokeWidth={2} />
+              </button>
+            </span>
+          ))}
         </div>
       )}
       <div className="flex gap-2">
-        <input
+        <Input
           value={custom}
           onChange={(e) => setCustom(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustom())}
           placeholder="Thêm thành phố khác..."
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
+          aria-label="Thêm thành phố khác"
+          className="h-9 flex-1 border-border bg-surface-2 text-sm text-text placeholder:text-text-muted/50 focus-visible:border-brand-400 focus-visible:ring-brand-500/30"
         />
-        <button
-          type="button"
-          onClick={addCustom}
-          className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-200 transition"
-        >
+        <Button type="button" onClick={addCustom} variant="secondary" size="sm">
+          <Plus {...ICON} size={16} />
           Thêm
-        </button>
+        </Button>
       </div>
     </div>
   );

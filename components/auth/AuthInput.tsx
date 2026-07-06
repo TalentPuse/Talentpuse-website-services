@@ -1,7 +1,13 @@
 "use client";
 
-import { InputHTMLAttributes, useState } from "react";
+import { InputHTMLAttributes, useId, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Eye, EyeOff } from "lucide-react";
+
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { AlertCircle } from "@/lib/icons";
+import { cn } from "@/lib/utils";
 
 type Props = {
   label: string;
@@ -9,42 +15,68 @@ type Props = {
   password?: boolean;
 } & Omit<InputHTMLAttributes<HTMLInputElement>, "className">;
 
-export default function AuthInput({ label, error, password, type, ...rest }: Props) {
+/**
+ * AuthInput — shadcn Input + Label wrapper shared by /signin and /signup.
+ * Adds a password show/hide toggle and an inline, animated error message.
+ * Styled for the dark-glass auth surface but relies entirely on semantic
+ * tokens, so it stays correct if the page is ever rendered light.
+ */
+export default function AuthInput({
+  label,
+  error,
+  password,
+  type,
+  id,
+  ...rest
+}: Props) {
+  const autoId = useId();
+  const inputId = id ?? autoId;
+  const errorId = `${inputId}-error`;
   const [show, setShow] = useState(false);
   const inputType = password ? (show ? "text" : "password") : type;
 
   return (
-    <div className="space-y-1">
-      <label className="block text-sm font-medium text-slate-700">{label}</label>
+    <div className="space-y-1.5">
+      <Label htmlFor={inputId} className="text-text-muted">
+        {label}
+      </Label>
       <div className="relative">
-        <input
+        <Input
+          id={inputId}
           type={inputType}
-          className={`w-full rounded-lg border px-4 py-2.5 text-sm outline-hidden transition-all duration-200 ${
-            error
-              ? "border-red-400 focus:ring-2 focus:ring-red-400/30 focus:border-red-400"
-              : "border-slate-200 focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-          }`}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
+          className={cn(
+            "h-11 border-white/15 bg-white/[0.04] text-text placeholder:text-text-muted/50",
+            "focus-visible:border-brand-400 focus-visible:ring-brand-500/40",
+            password && "pr-11",
+            error && "border-danger/60 focus-visible:border-danger focus-visible:ring-danger/30"
+          )}
           {...rest}
         />
         {password && (
           <button
             type="button"
             onClick={() => setShow((s) => !s)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs select-none"
+            aria-label={show ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+            className="absolute top-1/2 right-3 -translate-y-1/2 text-text-muted transition-colors hover:text-text"
           >
-            {show ? "Ẩn" : "Hiện"}
+            {show ? <EyeOff size={17} strokeWidth={1.75} /> : <Eye size={17} strokeWidth={1.75} />}
           </button>
         )}
       </div>
       <AnimatePresence>
         {error && (
           <motion.p
+            id={errorId}
+            role="alert"
             initial={{ opacity: 0, height: 0, y: -4 }}
             animate={{ opacity: 1, height: "auto", y: 0 }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="text-red-500 text-xs"
+            className="flex items-center gap-1 text-xs text-danger"
           >
+            <AlertCircle size={13} strokeWidth={1.75} className="shrink-0" />
             {error}
           </motion.p>
         )}

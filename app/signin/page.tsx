@@ -3,19 +3,32 @@
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { authApi, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { ForceTheme } from "@/components/theme/ForceTheme";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthBrandPanel from "@/components/auth/AuthBrandPanel";
+import Aurora from "@/components/brand/Aurora";
+import GlowCard from "@/components/brand/GlowCard";
+import { Button } from "@/components/ui/button";
+import { Sparkles, AlertCircle, ICON } from "@/lib/icons";
 
 export default function SignInPage() {
   return (
-    <Suspense>
-      <SignInForm />
-    </Suspense>
+    <>
+      <ForceTheme theme="dark" />
+      <Suspense>
+        <SignInForm />
+      </Suspense>
+    </>
   );
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function SignInForm() {
@@ -26,12 +39,23 @@ function SignInForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function validate(): boolean {
+    const errs: Record<string, string> = {};
+    if (!email.trim()) errs.email = "Vui lòng nhập email";
+    else if (!isValidEmail(email)) errs.email = "Email không hợp lệ";
+    if (!password) errs.password = "Vui lòng nhập mật khẩu";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    if (!validate()) return;
     setLoading(true);
 
     try {
@@ -49,101 +73,94 @@ function SignInForm() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="flex min-h-screen bg-bg">
       <AuthBrandPanel
         headline="Đăng nhập để xem insight thị trường tuyển dụng IT/AI"
         subtext="Dashboard data realtime, AI match job theo profile của bạn, alert qua Telegram/Zalo ngay khi có việc phù hợp."
       />
 
-      <div className="flex-1 flex items-center justify-center p-8 bg-linear-to-br from-slate-50 to-white">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden px-6 py-12 sm:px-10">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 opacity-50 lg:opacity-25">
+          <Aurora />
+        </div>
+
         <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="w-full max-w-md"
+          className="relative z-10 w-full max-w-md"
         >
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-slate-900">Đăng nhập</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Chưa có tài khoản?{" "}
-              <a
-                href="/signup"
-                className="text-brand-600 hover:text-brand-700 font-medium"
-              >
-                Đăng ký miễn phí
-              </a>
-            </p>
+          {/* Mobile-only brand mark — brand panel is hidden below lg */}
+          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
+            <div className="ai-gradient flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+              <Sparkles {...ICON} size={16} className="text-white" />
+            </div>
+            <span className="font-display text-lg font-semibold tracking-tight text-text">
+              Talent<span className="ai-text">Puse</span>
+            </span>
           </div>
 
-          <form onSubmit={onSubmit} className="space-y-5">
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600"
-              >
-                {error}
-              </motion.div>
-            )}
+          <GlowCard glow className="p-7 sm:p-9">
+            <div className="mb-7">
+              <h1 className="font-display text-2xl font-semibold text-text">Đăng nhập</h1>
+              <p className="mt-1.5 text-sm text-text-muted">
+                Chưa có tài khoản?{" "}
+                <a href="/signup" className="font-medium text-brand-400 hover:text-brand-300">
+                  Đăng ký miễn phí
+                </a>
+              </p>
+            </div>
 
-            <AuthInput
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              autoFocus
-            />
-
-            <AuthInput
-              label="Mật khẩu"
-              password
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Nhập mật khẩu"
-              required
-            />
-
-            <motion.button
-              type="submit"
-              disabled={loading}
-              whileHover={{ scale: 1.01, y: -1 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg
-                    className="animate-spin h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  Đang đăng nhập...
-                </span>
-              ) : (
-                "Đăng nhập"
+            <form onSubmit={onSubmit} noValidate className="space-y-5">
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+                >
+                  <AlertCircle {...ICON} size={16} className="mt-0.5 shrink-0" />
+                  {error}
+                </motion.div>
               )}
-            </motion.button>
-          </form>
+
+              <AuthInput
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => email && setFieldErrors((f) => ({ ...f, email: isValidEmail(email) ? "" : "Email không hợp lệ" }))}
+                error={fieldErrors.email}
+                placeholder="you@example.com"
+                required
+                autoFocus
+              />
+
+              <AuthInput
+                label="Mật khẩu"
+                password
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                error={fieldErrors.password}
+                placeholder="Nhập mật khẩu"
+                required
+              />
+
+              <Button type="submit" disabled={loading} size="lg" className="w-full">
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 size={16} strokeWidth={2} className="animate-spin" />
+                    Đang đăng nhập...
+                  </span>
+                ) : (
+                  "Đăng nhập"
+                )}
+              </Button>
+            </form>
+          </GlowCard>
 
           <div className="mt-8 text-center">
-            <a href="/" className="text-xs text-slate-400 hover:text-slate-600">
+            <a href="/" className="text-xs text-text-muted hover:text-text">
               &larr; Về trang chủ
             </a>
           </div>

@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { X } from "lucide-react";
+
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Plus, ICON } from "@/lib/icons";
+import { cn } from "@/lib/utils";
 
 const PRESET_TITLES = [
   "Data Engineer",
@@ -44,9 +50,11 @@ export default function TitlePillSelect({
     setCustom("");
   }
 
+  const customTitles = value.filter((t) => !PRESET_TITLES.includes(t));
+
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-slate-700">{label}</label>
+      <p className="text-sm font-medium text-text-muted">{label}</p>
       <div className="flex flex-wrap gap-2">
         {PRESET_TITLES.map((title) => {
           const active = value.includes(title);
@@ -55,56 +63,55 @@ export default function TitlePillSelect({
               key={title}
               type="button"
               whileTap={{ scale: 0.95 }}
+              aria-pressed={active}
               onClick={() => toggle(title)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 border ${
+              className={cn(
+                "rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-200",
                 active
-                  ? "bg-brand-600 text-white border-brand-600 shadow-xs"
-                  : "bg-white text-slate-600 border-slate-200 hover:border-brand-300"
-              }`}
+                  ? "border-brand-600 bg-brand-600 text-white shadow-xs"
+                  : "border-border bg-surface-2 text-text-muted hover:border-brand-400 hover:text-text"
+              )}
             >
               {title}
             </motion.button>
           );
         })}
       </div>
-      {value.filter((t) => !PRESET_TITLES.includes(t)).length > 0 && (
+      {customTitles.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {value
-            .filter((t) => !PRESET_TITLES.includes(t))
-            .map((t) => (
-              <span
-                key={t}
-                className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700"
+          {customTitles.map((t) => (
+            <span
+              key={t}
+              className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-3 py-1 text-xs font-medium text-warning"
+            >
+              {t}
+              <button
+                type="button"
+                aria-label={`Xóa ${t}`}
+                onClick={() => onChange(value.filter((x) => x !== t))}
+                className="rounded-full p-0.5 hover:bg-warning/20"
               >
-                {t}
-                <button
-                  type="button"
-                  onClick={() => onChange(value.filter((x) => x !== t))}
-                  className="hover:text-violet-900"
-                >
-                  &times;
-                </button>
-              </span>
-            ))}
+                <X size={12} strokeWidth={2} />
+              </button>
+            </span>
+          ))}
         </div>
       )}
       <div className="flex gap-2">
-        <input
+        <Input
           value={custom}
           onChange={(e) => setCustom(e.target.value)}
           onKeyDown={(e) =>
             e.key === "Enter" && (e.preventDefault(), addCustom())
           }
           placeholder="Thêm vị trí khác..."
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all duration-200"
+          aria-label="Thêm vị trí khác"
+          className="h-9 flex-1 border-border bg-surface-2 text-sm text-text placeholder:text-text-muted/50 focus-visible:border-brand-400 focus-visible:ring-brand-500/30"
         />
-        <button
-          type="button"
-          onClick={addCustom}
-          className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-200 transition"
-        >
+        <Button type="button" onClick={addCustom} variant="secondary" size="sm">
+          <Plus {...ICON} size={16} />
           Thêm
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 
 type Props = {
@@ -22,7 +22,10 @@ export default function ScrollReveal({
   direction = "up",
   className,
 }: Props) {
-  const offset = offsets[direction];
+  const reduce = useReducedMotion();
+  // With reduced motion, keep a gentle opacity fade but drop all translation.
+  const offset = reduce ? { x: 0, y: 0 } : offsets[direction];
+
   return (
     <motion.div
       initial={{ opacity: 0, x: offset.x, y: offset.y }}

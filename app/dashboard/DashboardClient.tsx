@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { ForceTheme } from "@/components/theme/ForceTheme";
 import KpiCard from "@/components/KpiCard";
 import SkillsBar from "@/components/SkillsBar";
 import HighestPayingSkills from "@/components/HighestPayingSkills";
@@ -9,6 +10,14 @@ import SalaryByLevel from "@/components/SalaryByLevel";
 import CompaniesTable from "@/components/CompaniesTable";
 import Card from "@/components/Card";
 import ScrollReveal from "@/components/landing/ScrollReveal";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { dashboardApi } from "@/lib/api";
 import type {
   Overview,
@@ -26,6 +35,27 @@ type Props = {
   companies: CompanyRow[];
   categories: string[];
 };
+
+/** Sentinel used by the shadcn `Select` — Radix disallows an empty-string item value. */
+const ALL_CATEGORIES = "all";
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-8">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-[132px] rounded-[var(--radius-lg)]" />
+        ))}
+      </section>
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Skeleton className="h-[440px] rounded-[var(--radius-lg)]" />
+        <Skeleton className="h-[440px] rounded-[var(--radius-lg)]" />
+      </section>
+      <Skeleton className="h-[480px] rounded-[var(--radius-lg)]" />
+      <Skeleton className="h-[540px] rounded-[var(--radius-lg)]" />
+    </div>
+  );
+}
 
 export default function DashboardClient({
   overview: initOverview,
@@ -75,44 +105,61 @@ export default function DashboardClient({
     fetchData(category);
   }, [category]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Derived sparkline series for each KPI, drawn from data already fetched
+  // for the charts below — no extra requests, just a shape for context.
+  const demandSeries = useMemo(() => topSkills.map((s) => s.n_jobs), [topSkills]);
+  const payingSeries = useMemo(() => paying.map((p) => p.avg_salary_million), [paying]);
+  const medianSalarySeries = useMemo(() => salary.map((s) => s.p50_million), [salary]);
+
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-brand-50/30">
-        <main className="max-w-7xl mx-auto px-6 py-8">
-          <header className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Thị trường tuyển dụng DE/AI Việt Nam — cập nhật hàng ngày
-              </p>
-            </div>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              disabled={loading}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 disabled:opacity-50"
-            >
-              <option value="">Tất cả ngành nghề</option>
+      <ForceTheme theme="light" />
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-text">Dashboard</h1>
+            <p className="mt-1 text-sm text-text-muted">
+              Thị trường tuyển dụng DE/AI Việt Nam — cập nhật hàng ngày
+            </p>
+          </div>
+          <Select
+            value={category || ALL_CATEGORIES}
+            onValueChange={(v) => setCategory(v === ALL_CATEGORIES ? "" : v)}
+            disabled={loading}
+          >
+            <SelectTrigger className="w-auto min-w-48">
+              <SelectValue placeholder="Tất cả ngành nghề" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_CATEGORIES}>Tất cả ngành nghề</SelectItem>
               {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
               ))}
-            </select>
-          </header>
+            </SelectContent>
+          </Select>
+        </header>
 
-          <div className={loading ? "opacity-50 transition-opacity" : "transition-opacity"}>
+        {loading ? (
+          <DashboardSkeleton />
+        ) : (
+          <>
             <ScrollReveal>
-              <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <section className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
                 <KpiCard
                   label="Việc làm đang tuyển"
                   value={overview.total_jobs.toLocaleString()}
                   hint="Tổng hợp từ 10+ nguồn"
                   accent="blue"
+                  series={demandSeries}
                 />
                 <KpiCard
                   label="Công khai lương"
                   value={`${overview.pct_with_salary}%`}
                   hint="Tỷ lệ minh bạch lương"
                   accent="amber"
+                  series={payingSeries}
                 />
                 <KpiCard
                   label="Lương trung bình"
@@ -123,12 +170,13 @@ export default function DashboardClient({
                   }
                   hint="VND / tháng"
                   accent="green"
+                  series={medianSalarySeries}
                 />
               </section>
             </ScrollReveal>
 
             <ScrollReveal>
-              <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card
                   title="Top 15 kỹ năng được yêu cầu"
                   subtitle="Theo số lượng tin tuyển dụng"
@@ -165,8 +213,8 @@ export default function DashboardClient({
                 </Card>
               </section>
             </ScrollReveal>
-          </div>
-        </main>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { chartAxisProps, useChartTheme } from "@/lib/chart-theme";
 import type { HighestPayingSkillRow } from "@/lib/api";
 
 export default function HighestPayingSkills({
@@ -17,6 +18,8 @@ export default function HighestPayingSkills({
 }: {
   data: HighestPayingSkillRow[];
 }) {
+  const theme = useChartTheme();
+
   return (
     <ResponsiveContainer width="100%" height={360}>
       <BarChart
@@ -24,32 +27,26 @@ export default function HighestPayingSkills({
         layout="vertical"
         margin={{ top: 5, right: 24, left: 80, bottom: 5 }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+        <CartesianGrid strokeDasharray="3 3" stroke={theme.grid} />
         <XAxis
           type="number"
-          stroke="#64748b"
-          fontSize={12}
           tickFormatter={(v) => `${v}M`}
+          {...chartAxisProps(theme.axis)}
         />
         <YAxis
           dataKey="skill"
           type="category"
-          stroke="#64748b"
-          fontSize={12}
           width={75}
+          {...chartAxisProps(theme.axis)}
         />
         <Tooltip
-          contentStyle={{
-            background: "white",
-            border: "1px solid #e2e8f0",
-            borderRadius: 6,
-          }}
+          contentStyle={theme.tooltip}
           formatter={(value: number, _name, props) => {
             const n = props?.payload?.n_jobs;
             return [`${value}M VND/month (${n} jobs)`, "Avg salary"];
           }}
         />
-        <Bar dataKey="avg_salary_million" fill="#10b981" radius={[0, 4, 4, 0]} />
+        <Bar dataKey="avg_salary_million" fill={theme.series[3]} radius={[0, 4, 4, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

@@ -1,43 +1,68 @@
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import Monogram from "@/components/brand/Monogram";
+import { MapPin } from "@/lib/icons";
 import type { CompanyRow } from "@/lib/api";
 
 export default function CompaniesTable({ data }: { data: CompanyRow[] }) {
+  if (data.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-text-muted">
+        Không có dữ liệu công ty phù hợp.
+      </p>
+    );
+  }
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left border-b border-slate-200 text-slate-600 uppercase text-xs">
-            <th className="px-3 py-2 font-medium">#</th>
-            <th className="px-3 py-2 font-medium">Company</th>
-            <th className="px-3 py-2 font-medium text-right">Jobs</th>
-            <th className="px-3 py-2 font-medium">City</th>
-            <th className="px-3 py-2 font-medium text-right">Avg views</th>
-            <th className="px-3 py-2 font-medium text-right">Avg salary</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, idx) => (
-            <tr
-              key={row.company_name}
-              className="border-b border-slate-100 hover:bg-slate-50"
-            >
-              <td className="px-3 py-2 text-slate-400">{idx + 1}</td>
-              <td className="px-3 py-2 font-medium text-slate-800">
-                {row.company_name}
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums">{row.n_jobs}</td>
-              <td className="px-3 py-2 text-slate-600">
-                {row.primary_city || "—"}
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums text-slate-600">
-                {row.avg_views ? Math.round(row.avg_views).toLocaleString() : "—"}
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums">
-                {row.avg_salary_million ? `${row.avg_salary_million}M` : "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-10">#</TableHead>
+          <TableHead>Company</TableHead>
+          <TableHead className="text-right">Jobs</TableHead>
+          <TableHead>City</TableHead>
+          <TableHead className="text-right">Avg views</TableHead>
+          <TableHead className="text-right">Avg salary</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {data.map((row, idx) => (
+          <TableRow key={row.company_name}>
+            <TableCell className="font-mono text-text-muted">{idx + 1}</TableCell>
+            <TableCell>
+              <div className="flex items-center gap-3">
+                <Monogram name={row.company_name} size="sm" />
+                <span className="font-medium text-text">{row.company_name}</span>
+              </div>
+            </TableCell>
+            <TableCell className="text-right font-mono tabular-nums text-text">
+              {row.n_jobs}
+            </TableCell>
+            <TableCell className="text-text-muted">
+              {row.primary_city ? (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin size={14} strokeWidth={1.75} className="shrink-0 text-text-muted" />
+                  {row.primary_city}
+                </span>
+              ) : (
+                "—"
+              )}
+            </TableCell>
+            <TableCell className="text-right font-mono tabular-nums text-text-muted">
+              {row.avg_views ? Math.round(row.avg_views).toLocaleString() : "—"}
+            </TableCell>
+            <TableCell className="text-right font-mono tabular-nums text-text">
+              {row.avg_salary_million ? `${row.avg_salary_million}M` : "—"}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

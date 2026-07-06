@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { Loader2, Trash2, X } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { ForceTheme } from "@/components/theme/ForceTheme";
 import ChatWindow from "@/components/chat/ChatWindow";
 import CvPreview from "@/components/cv/CvPreview";
+import { Plus, History, MessageSquare } from "@/lib/icons";
 import type { ChatMessage } from "@/lib/chat-types";
 import { chatApi, type ChatRoom } from "@/lib/api";
 
@@ -19,10 +22,14 @@ const SUGGESTIONS = [
 ];
 
 export default function AssistantPage() {
+  // Dark immersive route: wrap in ProtectedRoute directly (NOT DashboardLayout).
+  // DashboardLayout injects the light AppShell (SideNav + TopBar), which is wrong
+  // for this focus-first dark chat surface — the page renders its own minimal dark chrome.
   return (
-    <DashboardLayout>
+    <ProtectedRoute>
+      <ForceTheme theme="dark" />
       <AssistantContent />
-    </DashboardLayout>
+    </ProtectedRoute>
   );
 }
 
@@ -176,35 +183,31 @@ function AssistantContent() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white">
+    <div className="flex h-screen overflow-hidden bg-bg text-text">
       <div className="relative flex min-w-0 flex-1 flex-col">
-      {/* Minimal top bar */}
-      <header className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
+      {/* Minimal dark top bar */}
+      <header className="flex items-center justify-between border-b border-border px-3 py-2.5">
         <button
           onClick={startNewChat}
-          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-text-muted transition hover:bg-surface-2 hover:text-text"
         >
-          <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
+          <Plus className="h-[18px] w-[18px]" strokeWidth={1.8} />
           <span className="hidden sm:inline">Cuộc trò chuyện mới</span>
         </button>
 
-        <span className="text-sm font-medium text-slate-400">Trợ lý sự nghiệp AI</span>
+        <span className="font-display text-sm font-medium text-text-muted">Trợ lý sự nghiệp AI</span>
 
         <button
           onClick={() => setHistoryOpen(true)}
-          className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100"
+          className="rounded-lg p-2 text-text-muted transition hover:bg-surface-2 hover:text-text"
           aria-label="Lịch sử trò chuyện"
         >
-          <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <History className="h-[18px] w-[18px]" strokeWidth={1.8} />
         </button>
       </header>
 
-      {/* Chat surface */}
-      <div className="min-h-0 flex-1">
+      {/* Chat surface — glass over the dark page */}
+      <div className="min-h-0 flex-1 bg-surface/30 backdrop-blur-sm">
         <ChatWindow
           messages={messages}
           onSend={handleSend}
@@ -215,33 +218,29 @@ function AssistantContent() {
         />
       </div>
 
-      {/* History drawer */}
+      {/* History drawer — dark glass */}
       {historyOpen && (
         <>
-          <div className="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-[1px]" onClick={() => setHistoryOpen(false)} />
+          <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]" onClick={() => setHistoryOpen(false)} />
           <motion.aside
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             transition={{ type: "spring", stiffness: 400, damping: 40 }}
-            className="fixed right-0 top-0 z-50 flex h-full w-80 flex-col border-l border-slate-200 bg-white shadow-2xl"
+            className="fixed right-0 top-0 z-50 flex h-full w-80 flex-col border-l border-border bg-bg/95 shadow-2xl backdrop-blur-xl"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3.5">
-              <h2 className="text-sm font-semibold text-slate-900">Lịch sử trò chuyện</h2>
-              <button onClick={() => setHistoryOpen(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Đóng">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+            <div className="flex items-center justify-between border-b border-border px-4 py-3.5">
+              <h2 className="text-sm font-semibold text-text">Lịch sử trò chuyện</h2>
+              <button onClick={() => setHistoryOpen(false)} className="rounded-lg p-1.5 text-text-muted hover:bg-surface-2 hover:text-text" aria-label="Đóng">
+                <X className="h-5 w-5" strokeWidth={2} />
               </button>
             </div>
 
             <div className="px-3 pt-3">
               <button
                 onClick={startNewChat}
-                className="flex w-full items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+                className="flex w-full items-center gap-2 rounded-xl border border-dashed border-border px-3 py-2.5 text-sm font-medium text-text-muted transition hover:border-brand-500/40 hover:bg-surface-2 hover:text-brand-300"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
+                <Plus className="h-4 w-4" strokeWidth={2} />
                 Cuộc trò chuyện mới
               </button>
             </div>
@@ -249,13 +248,10 @@ function AssistantContent() {
             <div className="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
               {loadingRooms ? (
                 <div className="flex items-center justify-center py-10">
-                  <svg className="h-5 w-5 animate-spin text-slate-300" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
+                  <Loader2 className="h-5 w-5 animate-spin text-text-muted/50" />
                 </div>
               ) : rooms.length === 0 ? (
-                <p className="py-10 text-center text-xs text-slate-400">Chưa có cuộc trò chuyện nào</p>
+                <p className="py-10 text-center text-xs text-text-muted">Chưa có cuộc trò chuyện nào</p>
               ) : (
                 rooms.map((room) => (
                   <div
@@ -265,21 +261,17 @@ function AssistantContent() {
                       setHistoryOpen(false);
                     }}
                     className={`group flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 transition ${
-                      activeRoomId === room.id ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-50"
+                      activeRoomId === room.id ? "bg-surface-2 text-brand-300" : "text-text-muted hover:bg-surface-2 hover:text-text"
                     }`}
                   >
-                    <svg className="h-4 w-4 shrink-0 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-                    </svg>
+                    <MessageSquare className="h-4 w-4 shrink-0 opacity-50" strokeWidth={1.5} />
                     <span className="flex-1 truncate text-sm">{room.title || "Cuộc trò chuyện mới"}</span>
                     <button
                       onClick={(e) => handleDeleteRoom(room.id, e)}
-                      className="rounded-sm p-1 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                      className="rounded-sm p-1 opacity-0 transition-all hover:bg-danger/10 hover:text-danger group-hover:opacity-100"
                       title="Xóa"
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                      </svg>
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
                     </button>
                   </div>
                 ))

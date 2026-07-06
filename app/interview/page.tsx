@@ -1,14 +1,19 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
+// ArrowLeft is not in the curated @/lib/icons set — imported directly per shared contract.
+import { ArrowLeft } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import InterviewModeSelect from "@/components/interview/InterviewModeSelect";
 import InterviewChat from "@/components/interview/InterviewChat";
 import InterviewSummary from "@/components/interview/InterviewSummary";
 import SessionHistory from "@/components/interview/SessionHistory";
+import { ForceTheme } from "@/components/theme/ForceTheme";
+import Aurora from "@/components/brand/Aurora";
 import {
   interviewAgentApi,
   type InterviewAgentMode,
@@ -20,9 +25,10 @@ type Phase = "mode_select" | "chat" | "summary";
 
 export default function InterviewPage() {
   return (
-    <DashboardLayout>
+    <ProtectedRoute>
+      <ForceTheme theme="dark" />
       <InterviewContent />
-    </DashboardLayout>
+    </ProtectedRoute>
   );
 }
 
@@ -98,44 +104,66 @@ function InterviewContent() {
   }, []);
 
   return (
-    <div className="h-screen overflow-hidden">
-      {/* Phase 1: Mode select + session history */}
-      {phase === "mode_select" && (
-        <div className="h-full flex flex-col">
-          {/* Header */}
-          <div className="px-6 py-5 border-b border-slate-200 bg-white shrink-0">
-            <h1 className="text-xl font-bold text-slate-900">Luyện Phỏng Vấn AI</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Thực hành phỏng vấn kỹ thuật & hành vi với AI interviewer — nhận feedback realtime
-            </p>
-          </div>
+    <div className="flex h-screen flex-col overflow-hidden bg-bg text-text">
+      {/* Bespoke minimal dark chrome — this immersive route intentionally skips
+          AppShell/SideNav (see WAVE-C2-SHARED.md); just a slim escape hatch back
+          to the dashboard plus a page label. */}
+      <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2.5">
+        <Link
+          href="/dashboard"
+          aria-label="Quay lại Dashboard"
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
+        >
+          <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden="true" />
+          <span className="hidden sm:inline">Dashboard</span>
+        </Link>
+        <span className="h-4 w-px bg-border" aria-hidden="true" />
+        <span className="font-display text-sm font-medium text-text-muted">Luyện Phỏng Vấn AI</span>
+      </header>
 
-          <div className="flex-1 overflow-y-auto p-6">
-            {/* History */}
-            {token && (
-              <SessionHistory key={historyKey} token={token} onSelect={handleResumeSession} />
-            )}
+      <div className="relative min-h-0 flex-1">
+        {/* Phase 1: Mode select + session history */}
+        {phase === "mode_select" && (
+          <div className="relative h-full flex flex-col overflow-hidden">
+            <Aurora className="opacity-50" />
 
-            {/* Mode selector */}
-            <div className="mt-6">
-              <InterviewModeSelect loading={loading} onStart={handleStartSession} />
+            {/* Phase header */}
+            <div className="relative z-10 px-6 py-5 border-b border-border bg-surface/80 backdrop-blur-sm shrink-0">
+              <h1 className="font-display text-xl font-bold text-text">Luyện Phỏng Vấn AI</h1>
+              <p className="text-sm text-text-muted mt-1">
+                Thực hành phỏng vấn kỹ thuật &amp; hành vi với AI interviewer — nhận feedback realtime
+              </p>
+            </div>
+
+            <div className="relative z-10 flex-1 overflow-y-auto p-6">
+              {/* History */}
+              {token && (
+                <SessionHistory key={historyKey} token={token} onSelect={handleResumeSession} />
+              )}
+
+              {/* Mode selector */}
+              <div className="mt-6">
+                <InterviewModeSelect loading={loading} onStart={handleStartSession} />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Phase 2: Chat */}
-      {phase === "chat" && session && token && (
-        <InterviewChat
-          session={session}
-          token={token}
-          onComplete={handleComplete}
-          onBack={handleNewSession}
-        />
-      )}
+        {/* Phase 2: Chat */}
+        {phase === "chat" && session && token && (
+          <InterviewChat
+            session={session}
+            token={token}
+            onComplete={handleComplete}
+            onBack={handleNewSession}
+          />
+        )}
 
-      {/* Phase 3: Summary */}
-      {phase === "summary" && summary && <InterviewSummary summary={summary} onNewSession={handleNewSession} />}
+        {/* Phase 3: Summary */}
+        {phase === "summary" && summary && (
+          <InterviewSummary summary={summary} onNewSession={handleNewSession} />
+        )}
+      </div>
     </div>
   );
 }
