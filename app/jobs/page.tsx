@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { SearchX } from "lucide-react";
 
-import { jobsApi, PublicJobList, FilterOptions } from "@/lib/api";
+import { jobsApi, applicationsApi, PublicJobList, FilterOptions } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { ForceTheme } from "@/components/theme/ForceTheme";
@@ -38,12 +38,21 @@ function JobBoardContent() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [salaryFilter, setSalaryFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [trackedKeys, setTrackedKeys] = useState<Set<string>>(new Set());
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const abortRef = useRef<AbortController>();
 
   useEffect(() => {
     if (!token) return;
     jobsApi.filters(token).then(setFilters).catch(() => {});
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    applicationsApi
+      .keys(token)
+      .then((keys) => setTrackedKeys(new Set(keys.map((k) => `${k.source}:${k.source_job_id}`))))
+      .catch(() => {});
   }, [token]);
 
   const load = useCallback(async () => {
@@ -172,7 +181,10 @@ function JobBoardContent() {
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.25, delay: idx * 0.03 }}
                   >
-                    <JobCard job={job} />
+                    <JobCard
+                      job={job}
+                      tracked={trackedKeys.has(`${job.source}:${job.source_job_id}`)}
+                    />
                   </motion.div>
                 ))}
               </AnimatePresence>

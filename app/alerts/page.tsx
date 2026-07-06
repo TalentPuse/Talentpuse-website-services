@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { jobsApi, MyAlertList } from "@/lib/api";
+import { jobsApi, applicationsApi, MyAlertList } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { ForceTheme } from "@/components/theme/ForceTheme";
@@ -16,6 +16,7 @@ export default function AlertHistoryPage() {
   const [data, setData] = useState<MyAlertList | null>(null);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const [trackedKeys, setTrackedKeys] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -34,6 +35,14 @@ export default function AlertHistoryPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (!token) return;
+    applicationsApi
+      .keys(token)
+      .then((keys) => setTrackedKeys(new Set(keys.map((k) => `${k.source}:${k.source_job_id}`))))
+      .catch(() => {});
+  }, [token]);
+
   const totalPages = data ? Math.ceil(data.total / PER_PAGE) : 0;
 
   return (
@@ -47,7 +56,7 @@ export default function AlertHistoryPage() {
           </p>
         </header>
 
-        <AlertTimeline alerts={data?.alerts ?? []} isLoading={isLoading} />
+        <AlertTimeline alerts={data?.alerts ?? []} isLoading={isLoading} trackedKeys={trackedKeys} />
 
         {totalPages > 1 && (
           <div className="mt-8 flex items-center justify-between border-t border-border pt-4">

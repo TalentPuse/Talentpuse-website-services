@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 import type { MyAlertRow } from "@/lib/api";
 import Monogram from "@/components/brand/Monogram";
+import CaptureButton from "@/components/applications/CaptureButton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Bell, Mail, Send, ICON } from "@/lib/icons";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils";
 type AlertTimelineProps = {
   alerts: MyAlertRow[];
   isLoading: boolean;
+  trackedKeys?: Set<string>;
 };
 
 type DateGroup = {
@@ -79,7 +81,7 @@ function ChannelBadge({ channel }: { channel: string }) {
   );
 }
 
-function AlertTimelineItem({ alert }: { alert: MyAlertRow }) {
+function AlertTimelineItem({ alert, tracked }: { alert: MyAlertRow; tracked?: boolean }) {
   const sentDate = new Date(alert.sent_at);
   const monogramName = alert.company_name || alert.title || "Không rõ";
 
@@ -108,6 +110,13 @@ function AlertTimelineItem({ alert }: { alert: MyAlertRow }) {
             {alert.company_name || "—"}
             {alert.city_canonical ? ` · ${alert.city_canonical}` : ""}
           </p>
+          <div className="mt-2">
+            <CaptureButton
+              source={alert.source ?? ""}
+              sourceJobId={alert.source_job_id}
+              tracked={tracked}
+            />
+          </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           {alert.salary_million ? (
@@ -175,7 +184,7 @@ function TimelineEmptyState() {
  * previous raw `<table>`. Handles its own loading (skeleton) and empty
  * (designed) states so the page only wires data + pagination.
  */
-export default function AlertTimeline({ alerts, isLoading }: AlertTimelineProps) {
+export default function AlertTimeline({ alerts, isLoading, trackedKeys }: AlertTimelineProps) {
   if (isLoading) {
     return <TimelineLoadingSkeleton />;
   }
@@ -205,7 +214,11 @@ export default function AlertTimeline({ alerts, isLoading }: AlertTimelineProps)
             />
             <ul className="space-y-3">
               {group.items.map((alert) => (
-                <AlertTimelineItem key={`${alert.source_job_id}-${alert.sent_at}`} alert={alert} />
+                <AlertTimelineItem
+                  key={`${alert.source_job_id}-${alert.sent_at}`}
+                  alert={alert}
+                  tracked={trackedKeys?.has(`${alert.source ?? ""}:${alert.source_job_id}`)}
+                />
               ))}
             </ul>
           </div>

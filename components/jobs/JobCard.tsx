@@ -2,6 +2,7 @@ import { ExternalLink } from "lucide-react";
 
 import GlowCard from "@/components/brand/GlowCard";
 import Monogram from "@/components/brand/Monogram";
+import CaptureButton from "@/components/applications/CaptureButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Briefcase } from "@/lib/icons";
@@ -13,14 +14,15 @@ const VISIBLE_SKILL_COUNT = 5;
 
 type JobCardProps = {
   job: PublicJobRow;
+  tracked?: boolean;
 };
 
 /**
  * JobCard — a single job listing tile for the /jobs board: company monogram,
  * title/company, source badge, city/level meta row, salary badge, skill
- * chips, and an external "Xem chi tiết" CTA.
+ * chips, and an external "Xem chi tiết" CTA + "Đã apply" capture button.
  */
-export default function JobCard({ job }: JobCardProps) {
+export default function JobCard({ job, tracked }: JobCardProps) {
   const sourceLabel = getSourceLabel(job.source);
   const sourceBadgeClass = getSourceBadgeClass(job.source);
   const postedDate = job.posted_at
@@ -103,16 +105,19 @@ export default function JobCard({ job }: JobCardProps) {
         </div>
       )}
 
-      {job.source_url ? (
-        <Button asChild variant="outline" size="sm" className="gap-1.5">
-          <a href={job.source_url} target="_blank" rel="noopener noreferrer">
-            Xem chi tiết
-            <ExternalLink size={14} strokeWidth={2} />
-          </a>
-        </Button>
-      ) : (
-        <span className="text-xs text-text-muted">Chưa có link</span>
-      )}
+      <div className="flex flex-wrap items-center gap-2">
+        {job.source_url ? (
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <a href={job.source_url} target="_blank" rel="noopener noreferrer">
+              Xem chi tiết
+              <ExternalLink size={14} strokeWidth={2} />
+            </a>
+          </Button>
+        ) : (
+          <span className="text-xs text-text-muted">Chưa có link</span>
+        )}
+        <CaptureButton source={job.source} sourceJobId={job.source_job_id} tracked={tracked} />
+      </div>
     </GlowCard>
   );
 }
