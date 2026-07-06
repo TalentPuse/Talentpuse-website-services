@@ -1163,3 +1163,76 @@ export const interviewAgentApi = {
     }
   },
 };
+
+/* ───── Job application tracker types & API ───── */
+
+export type ApplicationStatus = "saved" | "applied" | "interviewing" | "offer" | "rejected";
+
+export type Application = {
+  id: string; source: string; source_job_id: string | null; title: string;
+  company_name: string | null; city: string | null; source_url: string | null;
+  salary_million: number | null; status: ApplicationStatus; applied_at: string | null;
+  notes: string | null; created_at: string;
+};
+export type ApplicationListResp = { applications: Application[]; total: number; page: number; per_page: number };
+export type ApplicationStats = { total: number; by_status: Record<ApplicationStatus, number>; applied_this_week: number };
+export type TrackedKey = { source: string; source_job_id: string };
+export type CreateApplicationBody =
+  | { source: string; source_job_id: string; status?: ApplicationStatus }
+  | { title: string; company_name?: string; city?: string; source_url?: string; salary_million?: number; status?: ApplicationStatus; applied_at?: string; notes?: string };
+
+export const applicationsApi = {
+  list: (token: string, opts: { status?: string; page?: number } = {}) => {
+    const p = new URLSearchParams();
+    if (opts.status) p.set("status", opts.status);
+    if (opts.page) p.set("page", String(opts.page));
+    return clientFetch<ApplicationListResp>(`/api/applications?${p.toString()}`, {
+      headers: authHeaders(token),
+    });
+  },
+
+  create: (token: string, body: CreateApplicationBody) =>
+    clientFetch<Application>("/api/applications", {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(body),
+    }),
+
+  update: (
+    token: string,
+    id: string,
+    patch: { status?: ApplicationStatus; notes?: string; applied_at?: string },
+  ) =>
+    clientFetch<Application>(`/api/applications/${id}`, {
+      method: "PATCH",
+      headers: authHeaders(token),
+      body: JSON.stringify(patch),
+    }),
+
+  remove: async (token: string, id: string): Promise<void> => {
+    const res = await fetch(`${CLIENT_BASE}/api/applications/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(token),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw { message: body.detail ?? "Không xóa được", status: res.status } as ApiError;
+    }
+  },
+
+  stats: (token: string) =>
+    clientFetch<ApplicationStats>("/api/applications/stats", {
+      headers: authHeaders(token),
+    }),
+
+  keys: (token: string) =>
+    clientFetch<TrackedKey[]>("/api/applications/keys", {
+      headers: authHeaders(token),
+    }),
+
+  aiSummary: (token: string) =>
+    clientFetch<{ summary_md: string; generated_at: string }>(
+      "/api/applications/ai-summary",
+      { method: "POST", headers: authHeaders(token) },
+    ),
+};

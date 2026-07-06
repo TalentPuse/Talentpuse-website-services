@@ -34,6 +34,10 @@ export {
   Building2,
   ChevronRight,
   Mail,
+  ClipboardCheck,
+  Check,
+  Trash2,
+  ExternalLink,
 } from "lucide-react";
 
 export const ICON = { size: 20, strokeWidth: 1.75 } as const;
