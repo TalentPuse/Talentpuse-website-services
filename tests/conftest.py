@@ -9,8 +9,11 @@ import uuid
 
 import pytest
 import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 
 from app.core import database as db_module
+from app.core.security import create_access_token
+from app.main import app
 from app.models.user import User
 
 
@@ -84,3 +87,22 @@ async def seed_user(db_session):
 
     await db_session.delete(user)
     await db_session.commit()
+
+
+@pytest_asyncio.fixture
+async def client():
+    """Async HTTP client against the real app (in-process, real DB).
+
+    No dependency overrides here: requests go through the actual `get_db` /
+    `get_current_user` dependencies, so tests exercise real auth + real
+    Postgres (per `initialize_database` above).
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+
+
+@pytest_asyncio.fixture
+async def auth_headers(seed_user):
+    """Bearer header carrying a real JWT for a real, persisted `seed_user`."""
+    token = create_access_token({"sub": str(seed_user.id)})
+    return {"Authorization": f"Bearer {token}"}
