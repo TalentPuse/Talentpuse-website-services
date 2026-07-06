@@ -111,11 +111,13 @@ function AlertTimelineItem({ alert, tracked }: { alert: MyAlertRow; tracked?: bo
             {alert.city_canonical ? ` · ${alert.city_canonical}` : ""}
           </p>
           <div className="mt-2">
-            <CaptureButton
-              source={alert.source ?? ""}
-              sourceJobId={alert.source_job_id}
-              tracked={tracked}
-            />
+            {alert.source ? (
+              <CaptureButton
+                source={alert.source}
+                sourceJobId={alert.source_job_id}
+                tracked={tracked}
+              />
+            ) : null}
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
