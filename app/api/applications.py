@@ -9,9 +9,10 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.application import (
-    ApplicationCreate, ApplicationList, ApplicationOut, ApplicationUpdate, StatsOut, TrackedKey,
+    ApplicationCreate, ApplicationList, ApplicationOut, ApplicationUpdate, StatsOut, SummaryOut, TrackedKey,
 )
 from app.services import application_service as svc
+from app.services.application_summary import build_summary
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
@@ -47,6 +48,11 @@ async def stats(user: User = Depends(get_current_user), db: AsyncSession = Depen
 @router.get("/keys", response_model=list[TrackedKey])
 async def keys(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     return await svc.tracked_keys(db, user.id)
+
+
+@router.post("/ai-summary", response_model=SummaryOut)
+async def ai_summary(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    return await build_summary(db, user.id)
 
 
 @router.patch("/{app_id}", response_model=ApplicationOut)
