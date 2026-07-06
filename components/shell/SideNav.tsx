@@ -12,6 +12,7 @@ import {
   Bell,
   User,
   Settings,
+  ClipboardCheck,
   ICON,
 } from "@/lib/icons";
 
@@ -27,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/assistant", label: "Trợ lý AI", icon: Sparkles },
   { href: "/interview", label: "Phỏng vấn", icon: MessageSquare },
   { href: "/alerts", label: "Alerts", icon: Bell },
+  { href: "/applications", label: "Ứng tuyển", icon: ClipboardCheck },
   { href: "/profile", label: "Hồ sơ", icon: User },
 ];
 

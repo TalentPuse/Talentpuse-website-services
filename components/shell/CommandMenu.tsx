@@ -18,6 +18,7 @@ import {
   MessageSquare,
   Bell,
   User,
+  ClipboardCheck,
   ICON,
 } from "@/lib/icons";
 
@@ -38,6 +39,7 @@ const NAVIGATION_ENTRIES: CommandEntry[] = [
   { label: "Trợ lý AI", href: "/assistant", icon: Sparkles },
   { label: "Luyện phỏng vấn", href: "/interview", icon: MessageSquare },
   { label: "Lịch sử Alert", href: "/alerts", icon: Bell },
+  { label: "Ứng tuyển", href: "/applications", icon: ClipboardCheck },
   { label: "Hồ sơ", href: "/profile", icon: User },
 ];
 
