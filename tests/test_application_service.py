@@ -42,3 +42,24 @@ async def test_update_and_delete_scoped_to_user(db_session, seed_user):
     assert await svc.update_application(db_session, other, a.id, status="rejected") is None
     assert await svc.delete_application(db_session, other, a.id) is False
     assert await svc.delete_application(db_session, seed_user.id, a.id) is True
+
+
+@pytest.mark.asyncio
+async def test_create_internal_missing_job_raises(db_session, seed_user, monkeypatch):
+    async def none_snapshot(db, source, source_job_id):
+        return None
+    monkeypatch.setattr(svc, "snapshot_job", none_snapshot)
+    with pytest.raises(LookupError):
+        await svc.create_application(db_session, seed_user.id, source="itviec", source_job_id="GONE")
+
+
+@pytest.mark.asyncio
+async def test_create_invalid_status_raises(db_session, seed_user):
+    with pytest.raises(ValueError):
+        await svc.create_application(db_session, seed_user.id, source="manual", title="X", status="bogus")
+
+
+@pytest.mark.asyncio
+async def test_create_missing_title_raises(db_session, seed_user):
+    with pytest.raises(ValueError):
+        await svc.create_application(db_session, seed_user.id, source="manual")
