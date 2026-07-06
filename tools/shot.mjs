@@ -48,6 +48,27 @@ async function loadChromium() {
   }
 }
 
+async function revealByScrolling(page) {
+  await page.evaluate(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const step = Math.round(window.innerHeight * 0.8);
+    let y = 0;
+    const maxY = () => document.body.scrollHeight;
+    // Step down until the bottom, pausing so IntersectionObserver fires.
+    while (y < maxY()) {
+      window.scrollTo(0, y);
+      await sleep(120);
+      y += step;
+    }
+    window.scrollTo(0, maxY());
+    await sleep(250);
+    window.scrollTo(0, 0);
+    await sleep(250);
+  });
+  // Let the last reveal transitions settle before capture.
+  await page.waitForTimeout(500);
+}
+
 async function captureWidth({ chromium, targetUrl, outDir, width }) {
   const browser = await chromium.launch();
   try {
@@ -55,6 +76,21 @@ async function captureWidth({ chromium, targetUrl, outDir, width }) {
       viewport: { width, height: VIEWPORT_HEIGHT },
       deviceScaleFactor: 1,
     });
+
+    // Optional: inject an auth token so ProtectedRoute-gated pages render
+    // logged-in. Set SHOT_TOKEN to a valid JWT; it is written to
+    // localStorage under the app's key before any page script runs.
+    const authToken = process.env.SHOT_TOKEN;
+    if (authToken) {
+      await context.addInitScript((t) => {
+        try {
+          window.localStorage.setItem("tp_token", t);
+        } catch {
+          /* storage unavailable — ignore */
+        }
+      }, authToken);
+    }
+
     const page = await context.newPage();
 
     try {
@@ -66,6 +102,12 @@ async function captureWidth({ chromium, targetUrl, outDir, width }) {
     }
 
     await page.waitForTimeout(SETTLE_DELAY_MS);
+
+    // Trigger scroll-reveal animations (framer-motion `whileInView`,
+    // IntersectionObserver): step-scroll to the bottom so every section
+    // enters the viewport at least once (reveals are `once: true`, so they
+    // stay shown), then return to the top before the full-page capture.
+    await revealByScrolling(page);
 
     const outFile = path.join(outDir, `${width}.png`);
     await page.screenshot({ path: outFile, fullPage: true });
