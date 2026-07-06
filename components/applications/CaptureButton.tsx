@@ -24,11 +24,12 @@ export default function CaptureButton({ source, sourceJobId, tracked = false }: 
   const { token } = useAuth();
   const [done, setDone] = useState(tracked);
   const [saving, setSaving] = useState(false);
+  const isDone = done || tracked;
 
   async function apply(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (!token || done) return;
+    if (!token || isDone) return;
     setSaving(true);
     try {
       await applicationsApi.create(token, { source, source_job_id: sourceJobId });
@@ -44,13 +45,13 @@ export default function CaptureButton({ source, sourceJobId, tracked = false }: 
   return (
     <Button
       type="button"
-      variant={done ? "secondary" : "outline"}
+      variant={isDone ? "secondary" : "outline"}
       size="sm"
       onClick={apply}
-      disabled={done || saving}
-      aria-label="Đánh dấu đã apply"
+      disabled={isDone || saving}
+      aria-label={isDone ? "Đã lưu vào ứng tuyển" : "Đánh dấu đã apply"}
     >
-      {done ? <Check {...ICON} className="h-4 w-4" /> : <ClipboardCheck {...ICON} className="h-4 w-4" />}
+      {isDone ? <Check {...ICON} className="h-4 w-4" /> : <ClipboardCheck {...ICON} className="h-4 w-4" />}
       Đã apply
     </Button>
   );
