@@ -10,9 +10,28 @@ from langchain_core.messages import SystemMessage
 PROFILE_MESSAGE_ID = "__user_profile__"
 
 
-@dataclass
+@dataclass(init=False)
 class AgentContext:
     profile: dict = field(default_factory=dict)
+
+    def __init__(self, profile: dict | None = None, **_ignored):
+        # Legacy per-invoke path builds this as AgentContext(profile=...).
+        # The AG-UI path (ag_ui_langgraph.get_stream_kwargs) merges
+        # config["configurable"] — which always carries thread_id plus
+        # checkpointer keys (checkpoint_ns/checkpoint_id) — into the context
+        # dict LangGraph coerces via AgentContext(**context). So tolerate and
+        # ignore any key other than profile; the AG-UI path supplies the
+        # profile via the current_agent_profile ContextVar instead (see
+        # request_user.inject_request_user).
+        self.profile = profile if profile is not None else {}
+
+    def model_dump(self) -> dict:
+        # CopilotKitMiddleware.before_agent serializes runtime.context to JSON
+        # for its "App Context" prompt note and only handles str/dict/pydantic;
+        # a plain dataclass raises "not JSON serializable". Expose the profile
+        # dict (empty on the AG-UI path, where the profile arrives via the
+        # ContextVar) so the middleware skips the note instead of crashing.
+        return dict(self.profile)
 
 
 def _format_profile(profile: dict) -> str:
