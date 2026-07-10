@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import admin, applications, auth, chat, companies, cv, email, interview, jobs, overview, recommendations, salary, skills, telegram
 from app.services.interview_agent.api import interview_router as interview_agent_router
 from app.core.config import (
+    AGUI_ENABLED,
     ALERT_END_TIME,
     ALERT_START_TIME,
     CORS_ORIGINS,
@@ -68,9 +69,17 @@ async def _alert_loop() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await db_module.init_db()
+    if AGUI_ENABLED:
+        from app.api.agui import init_agui
+
+        await init_agui(app)
     task = asyncio.create_task(_alert_loop())
     yield
     task.cancel()
+    if AGUI_ENABLED:
+        from app.api.agui import close_agui
+
+        await close_agui()
     await db_module.close_db()
 
 
