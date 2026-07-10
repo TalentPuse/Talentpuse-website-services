@@ -3,6 +3,7 @@
 from langchain.agents import create_agent
 
 from app.services.agent.middleware import AgentContext, inject_user_profile
+from app.services.agent.middleware.request_user import inject_request_user
 from app.services.agent.prompts.skill_advisor_prompt import SYSTEM_PROMPT
 from app.services.agent.services.llm import create_llm
 from app.services.agent.tools.cv_coach_tool import get_cv_writing_guide
@@ -23,15 +24,18 @@ def _get_llm():
     return _llm
 
 
-def build_agent(extra_tools=()):
+def build_agent(extra_tools=(), checkpointer=None, extra_middleware=()):
     """Construct a fresh agent. Pass extra_tools (e.g. a per-user edit_cv tool)
-    for request-scoped agents; the no-arg cached singleton uses base tools only."""
+    for request-scoped agents; the no-arg cached singleton uses base tools only.
+    checkpointer bật LangGraph persistence cho đường AG-UI (threadId = room id);
+    extra_middleware cho AG-UI path (CopilotKitMiddleware); legacy giữ mặc định."""
     return create_agent(
         model=_get_llm(),
         tools=[*_BASE_TOOLS, *extra_tools],
         system_prompt=SYSTEM_PROMPT,
-        middleware=[inject_user_profile],
+        middleware=[inject_user_profile, inject_request_user, *extra_middleware],
         context_schema=AgentContext,
+        checkpointer=checkpointer,
     )
 
 
