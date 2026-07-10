@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { authApi, ApiError } from "@/lib/api";
+import { AI_HOME } from "@/lib/flags";
 import { useAuth } from "@/context/AuthContext";
 import { ForceTheme } from "@/components/theme/ForceTheme";
 import AuthInput from "@/components/auth/AuthInput";
@@ -35,7 +36,7 @@ function SignInForm() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  const redirect = searchParams.get("redirect") || (AI_HOME ? "/home" : "/dashboard");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
