@@ -38,7 +38,7 @@
 import "@copilotkit/react-core/v2/styles.css";
 import "@/app/copilotkit-theme.css";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import {
   CopilotKit,
@@ -50,7 +50,7 @@ import {
 
 import { useAuth } from "@/context/AuthContext";
 import { useRoomRegistration } from "@/components/chat/useRoomRegistration";
-import type { ChatRoom } from "@/lib/api";
+import { chatApi, type ChatRoom } from "@/lib/api";
 
 const AGENT_ID = "talentpuse_assistant";
 
@@ -83,6 +83,7 @@ export default function CopilotChatSurface({ roomId, onRoomCreated, userName }: 
       }}
     >
       <AuthTokenSync token={token} />
+      <ThreadHistorySeeder token={token} threadId={roomId} />
       <RoomRegistrar token={token} threadId={roomId} onRoomCreated={onRoomCreated} />
       <CopilotChat
         agentId={AGENT_ID}
@@ -108,6 +109,67 @@ function AuthTokenSync({ token }: { token: string }) {
   useEffect(() => {
     copilotkit.setHeaders({ ...copilotkit.headers, Authorization: `Bearer ${token}` });
   }, [copilotkit, token]);
+  return null;
+}
+
+/**
+ * Rehydrate lịch sử hội thoại sau reload.
+ *
+ * Root cause (xem .superpowers/sdd/rehydration-research.md): `CopilotChat`'s
+ * `connectAgent()` auto-mount call dispatch xuống `InMemoryAgentRunner` — một
+ * `Map` process-local hoàn toàn tách biệt với LangGraph `AsyncPostgresSaver`
+ * checkpointer, nên nó luôn resolve rỗng (không lỗi, không cảnh báo) khi
+ * thread chưa từng chạy trong process hiện tại. Vá bằng cách tự fetch lịch
+ * sử đã checkpoint (route mới `GET /api/agent/threads/{id}/messages`, đọc
+ * qua `app/api/chat.py` conventions trong lib/api.ts) và gọi thẳng
+ * `agent.setMessages(...)` — method public, notify subscriber, KHÔNG mutate
+ * trực tiếp `agent.messages`.
+ *
+ * Seed tối đa 1 lần / threadId (ref guard, cùng pattern useRoomRegistration),
+ * và chỉ khi agent CHƯA có tin nhắn nào — không được ghi đè một cuộc trò
+ * chuyện đang chạy hoặc đã có sẵn tin nhắn. Lỗi fetch: nuốt lặng, chỉ log —
+ * người dùng vẫn chat bình thường, chỉ là không thấy lịch sử cũ.
+ */
+function ThreadHistorySeeder({
+  token,
+  threadId,
+}: {
+  token: string;
+  threadId: string;
+}) {
+  const { agent } = useAgent({
+    agentId: AGENT_ID,
+    updates: [UseAgentUpdate.OnMessagesChanged],
+  });
+  const seededThreadId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (seededThreadId.current === threadId) return;
+    if (agent.messages.length > 0) return;
+    seededThreadId.current = threadId;
+
+    let cancelled = false;
+    chatApi
+      .getThreadMessages(token, threadId)
+      .then((history) => {
+        if (cancelled || history.length === 0) return;
+        // Re-check ngay trước khi seed: một lượt chạy thật có thể đã điền
+        // messages trong lúc request lịch sử đang bay.
+        if (agent.messages.length === 0) {
+          agent.setMessages(history);
+        }
+      })
+      .catch((error) => {
+        console.error("[assistant] Không tải được lịch sử hội thoại", error);
+        // Cho phép thử lại nếu threadId này được mount lại sau.
+        seededThreadId.current = null;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, threadId, agent]);
+
   return null;
 }
 
