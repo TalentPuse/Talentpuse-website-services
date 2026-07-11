@@ -21,22 +21,127 @@
  * cookie fallback) and set it explicitly on a per-request agent. The runtime is
  * built inside the handler to keep the token request-scoped — a module-scoped
  * agent would leak one user's token to other users' requests.
+ *
+ * Rehydration fix (see .superpowers/sdd/rehydration-research.md): a custom
+ * `runner:` is wired into `CopilotRuntime` below because the default
+ * `InMemoryAgentRunner`'s `connect()` reads a process-local `Map` that has no
+ * connection to the LangGraph `AsyncPostgresSaver` checkpointer — opening an
+ * existing thread silently rendered an empty conversation. See
+ * `LangGraphCheckpointRunner` for the fix.
  */
-import { CopilotRuntime, createCopilotRuntimeHandler } from "@copilotkit/runtime/v2";
+import { CopilotRuntime, createCopilotRuntimeHandler, InMemoryAgentRunner } from "@copilotkit/runtime/v2";
+import type { AgentRunnerConnectRequest } from "@copilotkit/runtime/v2";
 import { LangGraphHttpAgent } from "@copilotkit/runtime/langgraph";
+import { EventType } from "@ag-ui/client";
+import type { BaseEvent, Message, MessagesSnapshotEvent } from "@ag-ui/client";
+import { Observable } from "rxjs";
 import type { NextRequest } from "next/server";
 
 import { resolveAgentBaseUrl } from "@/lib/agui";
 
+// No trailing slash: used both to build the LangGraph run URL below (with a
+// trailing slash added) and as the base for the thread-history read route
+// (`${AGENT_BASE}/threads/{threadId}/messages`, see app/api/agui.py).
+const AGENT_BASE = resolveAgentBaseUrl({
+  API_BASE_INTERNAL: process.env.API_BASE_INTERNAL,
+  NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE,
+});
+
 // Trailing slash: FastAPI mounts the AG-UI sub-app at /api/agent with its route
 // at "/", so /api/agent 307-redirects to /api/agent/. Post to the canonical
 // path directly to avoid the extra hop.
-const AGENT_URL = `${resolveAgentBaseUrl({
-  API_BASE_INTERNAL: process.env.API_BASE_INTERNAL,
-  NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE,
-})}/`;
+const AGENT_URL = `${AGENT_BASE}/`;
 
 const AUTH_COOKIE = "tp_token";
+
+/**
+ * Custom `AgentRunner` that fixes the "reopening a chat renders empty" bug.
+ *
+ * Root cause (full trail in .superpowers/sdd/rehydration-research.md):
+ * `CopilotChat` auto-calls `connectAgent()` on every mount when an explicit
+ * `threadId` is passed, which dispatches (for non-Intelligence runtimes) to
+ * `AgentRunner.connect()`. The default `InMemoryAgentRunner.connect()`
+ * (node_modules/@copilotkit/runtime/dist/v2/runtime/runner/in-memory.mjs:153-178)
+ * looks up a module-scope `GLOBAL_STORE` `Map` keyed by threadId — populated
+ * only by `run()` calls THIS runner instance executed in THIS Node process.
+ * For any thread not run in the current process (a fresh server, a reload
+ * after a restart, or simply a different worker), `connect()` completes with
+ * zero events and no error, so `agent.messages` silently stays `[]`.
+ *
+ * Fix: subclass `InMemoryAgentRunner` and override ONLY `connect()` — `run()`
+ * is inherited unchanged, so the live streaming path (already working) is
+ * untouched (in-memory.mjs:22-27 `run()`, unaffected by this subclass).
+ * `connect()` instead fetches the checkpointed history from the backend's
+ * read-only route (`GET {AGENT_BASE}/threads/{threadId}/messages`, added in
+ * app/api/agui.py, which reads `graph.aget_state(...)` — never re-runs the
+ * graph) and replays it as a single `MESSAGES_SNAPSHOT` event.
+ *
+ * `MESSAGES_SNAPSHOT` is safe to emit standalone (no `RUN_STARTED`/
+ * `RUN_FINISHED` bookend needed): `AbstractAgent.connectAgent()` pipes the
+ * connect() Observable through the same `apply()` / `processApplyEvents()`
+ * used by `runAgent()` (node_modules/@ag-ui/client/dist/index.mjs, the
+ * `connectAgent` method), and the `MESSAGES_SNAPSHOT` case in `apply()`'s
+ * event switch operates on the current message list independent of any run
+ * lifecycle — verified by reading that switch-case directly.
+ *
+ * ⚠️ Deliberately does NOT call the run/stream endpoint to "fetch history" —
+ * `ag_ui_langgraph`'s `prepare_stream` has a regenerate heuristic that would
+ * treat an empty/mismatched `messages` input as a real continuation and fire
+ * a genuine, billable LLM turn (see rehydration-research.md §2f/§5).
+ */
+class LangGraphCheckpointRunner extends InMemoryAgentRunner {
+  constructor(private readonly options: { agentBaseUrl: string; authorization?: string }) {
+    super();
+  }
+
+  override connect(request: AgentRunnerConnectRequest): Observable<BaseEvent> {
+    const { agentBaseUrl, authorization } = this.options;
+    const { threadId } = request;
+
+    return new Observable<BaseEvent>((subscriber) => {
+      let cancelled = false;
+
+      (async () => {
+        try {
+          const res = await fetch(
+            `${agentBaseUrl}/threads/${encodeURIComponent(threadId)}/messages`,
+            { headers: authorization ? { Authorization: authorization } : {} },
+          );
+          if (!res.ok) {
+            console.error(
+              `[copilotkit] connect(): GET thread messages failed (${res.status}) for thread ${threadId}`,
+            );
+            return;
+          }
+          const messages = (await res.json()) as Message[];
+          // Skip emitting on a genuinely empty history: a MESSAGES_SNAPSHOT
+          // with an empty array would, per @ag-ui/client's apply() case,
+          // strip out any non-activity message not present in the snapshot —
+          // destructive if a live run already populated agent.messages while
+          // this fetch was in flight. A no-op is the safe default here.
+          if (!cancelled && messages.length > 0) {
+            const snapshot: MessagesSnapshotEvent = {
+              type: EventType.MESSAGES_SNAPSHOT,
+              messages,
+            };
+            subscriber.next(snapshot);
+          }
+        } catch (error) {
+          console.error(
+            `[copilotkit] connect(): error fetching thread history for thread ${threadId}`,
+            error,
+          );
+        } finally {
+          if (!cancelled) subscriber.complete();
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    });
+  }
+}
 
 export const POST = async (req: NextRequest) => {
   const header = req.headers.get("authorization");
@@ -50,6 +155,10 @@ export const POST = async (req: NextRequest) => {
         headers: authorization ? { Authorization: authorization } : {},
       }),
     },
+    runner: new LangGraphCheckpointRunner({
+      agentBaseUrl: AGENT_BASE,
+      authorization,
+    }),
   });
 
   const handler = createCopilotRuntimeHandler({

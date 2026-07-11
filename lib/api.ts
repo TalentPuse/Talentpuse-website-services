@@ -6,8 +6,6 @@
  *
  * Cache: `no-store` so refresh-on-load reflects latest gold marts.
  */
-import type { Message } from "@copilotkit/react-core/v2";
-
 const API_BASE =
   process.env.API_BASE_INTERNAL ||
   process.env.NEXT_PUBLIC_API_BASE ||
@@ -839,17 +837,6 @@ export const chatApi = {
         body: JSON.stringify({ content }),
       },
     ),
-
-  /**
-   * Lịch sử tin nhắn đã checkpoint của 1 thread AG-UI, dùng để rehydrate
-   * `CopilotChat` sau khi reload (backend đọc từ LangGraph checkpointer,
-   * KHÔNG phải bảng ChatMessage — xem app/api/agui.py::get_thread_messages).
-   * Trả về đúng wire shape của @ag-ui nên gọi thẳng `agent.setMessages(...)`.
-   */
-  getThreadMessages: (token: string, threadId: string) =>
-    clientFetch<Message[]>(`/api/agent/threads/${threadId}/messages`, {
-      headers: authHeaders(token),
-    }),
 
   sendMessageStream: async function* (
     token: string,
