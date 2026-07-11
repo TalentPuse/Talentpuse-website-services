@@ -129,3 +129,54 @@ Cài bằng `npm install --save-exact` — pin chính xác (không có `^`), xá
 3. **`result` trong render (câu 4): plan ĐÚNG** nếu dùng `useRenderTool`/`useFrontendTool` (v2) — nhưng đổi tên hook từ `useCopilotAction` (v1) sang `useRenderTool`/`useFrontendTool` (v2) để khớp với provider `/v2` đã chọn ở câu 1. Nhớ dùng status camelCase.
 4. **Append message chủ động (câu 5): dùng `agent.addMessage()` + `copilotkit.runAgent({agent})`**, KHÔNG dùng `sendMessage`/`useCopilotChat` — API đó thuộc root export (v1-compat), chưa xác minh tương thích với provider `/v2`. Nếu Task 6-7 plan giả định `sendMessage` là API chính — SỬA theo `agent.addMessage()`.
 5. Toàn bộ Task 6-7 PHẢI import `CopilotKit` (và mọi hook liên quan) từ subpath `@copilotkit/react-core/v2`, không phải root `@copilotkit/react-core` — nhầm lẫn 2 export surface (v1 vs v2) là rủi ro lớn nhất phát hiện được trong quá trình verify này.
+
+---
+
+## VERIFY cho generative UI (2026-07-11, spec 2026-07-11-copilotkit-generative-ui-design)
+
+> Câu hỏi này khác câu hỏi 4-5 ở trên: câu 4-5 hỏi chung chung "render có nhận result không / có API append message không" mà KHÔNG phân biệt tool chạy ở đâu. Task này cần câu trả lời riêng cho **backend tool** (LangGraph Python `ToolNode`, ví dụ `search_jobs_realtime`) — khác hẳn với `useFrontendTool` (handler chạy trong browser). Đã đọc lại toàn bộ implementation (không chỉ `.d.mts`) để xác nhận, không đoán từ tên type.
+
+### VERIFY-1 — `render` có nhận result của backend tool?
+
+- **Kết luận:** **CÓ.** Cơ chế này hoạt động ở tầng giao thức AG-UI (protocol-level), hoàn toàn không phân biệt tool chạy ở frontend hay backend.
+
+- **Bằng chứng (chuỗi suy luận đầy đủ, từ type tới implementation tới giao thức):**
+  1. Type của `render` — `RenderToolCompleteProps<S>.result: string` khi `status === "complete"` — `node_modules/@copilotkit/react-core/dist/copilotkit-Bp6BD8xe.d.mts:2222-2228` (union đầy đủ `RenderToolProps` tại dòng 2229; `useRenderTool` khai báo dùng union này tại dòng 2286-2291).
+  2. Implementation thật (không phải chỉ type) — component `ToolCallRenderer` gán `result: toolMessage.content` khi có `toolMessage` — `node_modules/@copilotkit/react-core/dist/copilotkit-ympAovXs.mjs:1553-1562`.
+  3. `toolMessage` được tìm bằng cách match **thuần theo message list**, không quan tâm tool chạy ở đâu: `messages.find((m) => m.role === "tool" && m.toolCallId === toolCall.id)` — `copilotkit-ympAovXs.mjs:5715` (trong `CopilotChatToolCallsView`, component nội bộ mà `<CopilotChat>` mặc định dùng để render tool call của MỌI assistant message — cùng cơ chế `useRenderToolCall()` mà custom chat surface cũng gọi, dòng 5711-5720).
+  4. `role: "tool"` message này tới từ đâu: `CopilotKitCore.processAgentResult()` chỉ gọi tool **frontend** (`executeSpecificTool`/`executeWildcardTool`, có `tool.handler`) khi **CHƯA có** `ToolMessage` khớp `toolCallId` trong `newMessages` — `node_modules/@copilotkit/core/dist/index.mjs:1941-1958` (điều kiện `newMessages.findIndex((m) => m.role === "tool" && m.toolCallId === toolCall.id) === -1`, dòng 1942). Với backend tool, LangGraph's `ToolNode` đã chạy tool VÀ append `ToolMessage` vào `state["messages"]` NGAY TRONG cùng lượt agent chạy (ví dụ tool trong skill: `.agents/skills/copilotkit-integrations/references/integrations/langgraph.md:54-59` định nghĩa `get_weather`, dòng 83 `ToolNode(tools=tools)` chạy nó) — nên `ToolMessage` đã có sẵn trong `newMessages` khi tới `processAgentResult`, điều kiện ở bước trên là `false` → CopilotKitCore **bỏ qua** hoàn toàn bước tìm/gọi frontend handler cho backend tool, chỉ dựa vào `ToolMessage` mà backend đã gửi kèm.
+  5. Đây là hành vi chuẩn giao thức AG-UI, không phải quy ước riêng của CopilotKit: `ToolMessageSchema.content` được type là `z.ZodString` (bắt buộc string) — `node_modules/@ag-ui/core/dist/index.d.mts:1539-1553`; sự kiện SSE tương ứng `TOOL_CALL_RESULT` cũng có `content: z.ZodString` — `node_modules/@ag-ui/core/dist/index.d.mts:4434-4442`. Vì vậy bất kỳ backend nào nói AG-UI (kể cả FastAPI/LangGraph self-hosted của dự án) đều PHẢI gửi result dưới dạng string qua field này.
+
+- **Chữ ký thật:**
+  ```ts
+  type RenderToolProps<S extends StandardSchemaV1> =
+    | { name: string; toolCallId: string; parameters: Partial<InferSchemaOutput<S>>; status: "inProgress"; result: undefined }
+    | { name: string; toolCallId: string; parameters: InferSchemaOutput<S>; status: "executing"; result: undefined }
+    | { name: string; toolCallId: string; parameters: InferSchemaOutput<S>; status: "complete"; result: string };
+
+  declare function useRenderTool<S extends StandardSchemaV1>(config: {
+    name: string;
+    parameters: S;
+    render: (props: RenderToolProps<S>) => React.ReactElement;
+    agentId?: string;
+  }, deps?: ReadonlyArray<unknown>): void;
+  ```
+  (`copilotkit-Bp6BD8xe.d.mts:2208-2291`)
+
+- **Hệ quả cho Đợt 2:** Dùng **`useRenderTool({ name: "search_jobs_realtime", parameters, render })`** (đăng ký renderer, KHÔNG cần `useCoAgentStateRender`). Backend tool `search_jobs_realtime` PHẢI trả về một **JSON string đã serialize** (Python: `json.dumps(...)`, không trả `dict`/object thô) — vì `ToolMessageSchema.content` là `string` bắt buộc ở tầng giao thức; LangChain's `ToolNode` sẽ coerce giá trị trả về thành string một cách nào đó nếu tool không tự làm, nhưng không đảm bảo ra JSON hợp lệ để `JSON.parse()` phía frontend. `render` sau đó tự `JSON.parse(result)` để lấy danh sách job.
+
+  **⚠️ Phát hiện thêm — gotcha cho người viết widget:** trạng thái `"executing"` sẽ **KHÔNG BAO GIỜ** xảy ra cho backend tool. `isExecuting` chỉ true khi `executingToolCallIds` chứa `toolCallId`, và tập này CHỈ được set bởi `onToolExecutionStart`/`onToolExecutionEnd` bên trong `executeToolHandler` — hàm chỉ chạy cho tool có `tool.handler` đăng ký ở frontend (`useFrontendTool`) — `node_modules/@copilotkit/core/dist/index.mjs:1973-2003` (`onToolExecutionStart` chỉ fire trong `executeToolHandler`), đối chiếu với `node_modules/@copilotkit/react-core/dist/copilotkit-ympAovXs.mjs:3643-3666` (state này populate qua subscribe `onToolExecutionStart`/`onToolExecutionEnd`). Vì `search_jobs_realtime` không có frontend handler, `ToolCallRenderer` chỉ nhảy thẳng `"inProgress"` → `"complete"` (`copilotkit-ympAovXs.mjs:1556-1576`), bỏ qua nhánh `"executing"` hoàn toàn. Nếu widget viết branch `if (status === "executing") return <Card>Đang tìm…</Card>` theo đúng ví dụ mẫu trong skill (`react-core/references/rendering-tool-calls.md:38-44`) — code đó sẽ là dead code, card đó không bao giờ hiện. Card "đang tìm việc..." cho job search phải nằm trong nhánh `"inProgress"` (khi tool call đang được LLM stream args) chứ không phải `"executing"`.
+
+### VERIFY-2 — bơm message vào hội thoại từ code?
+
+- **Kết luận:** **CÓ.**
+- **API:** `agent.addMessage(message)` (lấy `agent` từ `useAgent({ agentId })`) + `copilotkit.runAgent({ agent })` (lấy `copilotkit` từ `useCopilotKit()`).
+- **Bằng chứng:**
+  - `useAgent(...): { agent: AbstractAgent }` — `node_modules/@copilotkit/react-core/dist/copilotkit-Bp6BD8xe.d.mts:2381-2387`.
+  - `AbstractAgent.addMessage(message: Message): void` (method thật trên class, không phải mutate mảng) — `node_modules/@ag-ui/client/dist/index.d.mts:535` (class `AbstractAgent`, khai báo dòng 483).
+  - `useCopilotKit(): CopilotKitContextValue` với field `copilotkit: CopilotKitCoreReact` — `copilotkit-Bp6BD8xe.d.mts:2931-2940`. `CopilotKitCoreReact extends CopilotKitCore` — `node_modules/@copilotkit/react-core/dist/v2/context.d.mts:99`.
+  - `CopilotKitCore.runAgent(params: CopilotKitCoreRunAgentParams): Promise<RunAgentResult>` — `node_modules/@copilotkit/core/dist/index.d.mts:1905`; tham số `{ agent: AbstractAgent; forwardedProps?; runId?; resume? }` — `index.d.mts:390-403`. Đây LÀ method thật trên instance (không phải suy đoán từ docstring) — implementation thật chuyển tiếp tới `RunHandler.runAgent` (`node_modules/@copilotkit/core/dist/index.mjs`, class `RunHandler` dòng 444, method `runAgent` khai báo trong `.d.mts:532-537`), có xử lý đầy đủ vòng đời (tool follow-up, abort) — khác với `agent.runAgent()` cấp thấp hơn (chỉ chạy raw AG-UI run, không có follow-up logic của CopilotKit) — nên `copilotkit.runAgent({agent})` là API ĐÚNG cần dùng, không phải `agent.runAgent()`.
+  - `UserMessage` yêu cầu shape `{ id: string; role: "user"; content: string | ContentPart[] }` — `node_modules/@ag-ui/core/dist/index.d.mts:1049-1061` — khớp ví dụ skill `{ id: crypto.randomUUID(), role: "user", content: text }`.
+  - Ví dụ skill khớp 100% với type thật: `.agents/skills/react-core/references/agent-access.md:54-64` ("Send a message and stream the response"). Cảnh báo đi kèm: KHÔNG `agent.messages.push(...)` trực tiếp — bypass subscriber, UI không re-render — `agent-access.md:129-149`.
+- **Xác nhận/mâu thuẫn với ghi chú đợt trước:** **XÁC NHẬN, không mâu thuẫn.** Claim cũ (`agent.addMessage()` + `copilotkit.runAgent({agent})`, mục 5 phía trên) đã được verify độc lập lại từ đầu (không dùng lại kết luận cũ) bằng cách đọc `.d.mts` + implementation `.mjs` thật của `@ag-ui/client` và `@copilotkit/core` — khớp chính xác. Điểm khác: ghi chú cũ không nêu rõ tại sao `copilotkit.runAgent` (không phải `agent.runAgent()`) là lựa chọn đúng — bổ sung ở trên.
+- **Hệ quả cho Đợt 2:** Giữ note bơm message chủ động sau khi bấm "Ứng tuyển" — dùng đúng `agent.addMessage({id, role: "user", content})` rồi `await copilotkit.runAgent({agent})` để agent "nhận thấy" và trả lời. KHÔNG dùng `agent.messages.push()`, KHÔNG dùng `sendMessage`/`useCopilotChat` (thuộc root export v1, chưa xác minh tương thích `/v2`, xem mục 5 phía trên).
