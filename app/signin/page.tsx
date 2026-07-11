@@ -36,7 +36,7 @@ function SignInForm() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || (AI_HOME ? "/home" : "/dashboard");
+  const redirect = searchParams.get("redirect") || (AI_HOME ? "/assistant" : "/dashboard");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

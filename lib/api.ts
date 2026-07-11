@@ -809,11 +809,11 @@ export const chatApi = {
       headers: authHeaders(token),
     }),
 
-  createRoom: (token: string, title?: string) =>
+  createRoom: (token: string, opts?: { id?: string; title?: string }) =>
     clientFetch<ChatRoom>("/api/chat/rooms", {
       method: "POST",
       headers: authHeaders(token),
-      body: JSON.stringify({ title: title || null }),
+      body: JSON.stringify({ id: opts?.id ?? null, title: opts?.title ?? null }),
     }),
 
   deleteRoom: (token: string, roomId: string) =>

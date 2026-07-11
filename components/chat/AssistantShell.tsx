@@ -10,8 +10,10 @@ import { ArrowLeft, PanelLeft, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import SseChatSurface from "@/components/chat/SseChatSurface";
+import CopilotChatSurface from "@/components/chat/CopilotChatSurface";
 import CvPreview from "@/components/cv/CvPreview";
 import { chatApi, type ChatRoom } from "@/lib/api";
+import { AI_HOME } from "@/lib/flags";
 
 /** Chrome dùng chung cho /assistant và /assistant/[roomId]: sidebar lịch sử,
  *  header, khung CV. Bề mặt chat ở giữa do flag quyết định (Task 8 thêm
@@ -139,14 +141,22 @@ export default function AssistantShell({ roomId }: { roomId: string | null }) {
         </header>
 
         <div className="min-h-0 flex-1 bg-bg">
-          <SseChatSurface
-            roomId={roomId}
-            activeRoomId={activeRoomId}
-            onRoomCreated={handleRoomCreated}
-            onCvUpdated={handleCvUpdated}
-            onSent={fetchRooms}
-            userName={firstName}
-          />
+          {AI_HOME ? (
+            <CopilotChatSurface
+              roomId={roomId}
+              onRoomCreated={handleRoomCreated}
+              userName={firstName}
+            />
+          ) : (
+            <SseChatSurface
+              roomId={roomId}
+              activeRoomId={activeRoomId}
+              onRoomCreated={handleRoomCreated}
+              onCvUpdated={handleCvUpdated}
+              onSent={fetchRooms}
+              userName={firstName}
+            />
+          )}
         </div>
       </div>
 
