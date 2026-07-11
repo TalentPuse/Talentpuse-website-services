@@ -8,35 +8,25 @@ import Link from "next/link";
 import { ArrowLeft, PanelLeft, X } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
-import ChatWindow from "@/components/chat/ChatWindow";
 import ChatSidebar from "@/components/chat/ChatSidebar";
+import SseChatSurface from "@/components/chat/SseChatSurface";
 import CvPreview from "@/components/cv/CvPreview";
-import type { ChatMessage } from "@/lib/chat-types";
 import { chatApi, type ChatRoom } from "@/lib/api";
 
-const SUGGESTIONS = [
-  "Tôi biết Python & SQL, nên học gì để làm AI Engineer?",
-  "Thị trường đang cần kỹ năng nào nhất?",
-  "Review hồ sơ của tôi & gợi ý skill cần bổ sung",
-  "Mức lương Data Engineer ở TP.HCM hiện tại?",
-];
-
-/** Shared surface behind both /assistant (new chat) and /assistant/[roomId].
- *  `roomId` comes from the URL and decides which room's messages to load. */
+/** Chrome dùng chung cho /assistant và /assistant/[roomId]: sidebar lịch sử,
+ *  header, khung CV. Bề mặt chat ở giữa do flag quyết định (Task 8 thêm
+ *  CopilotChatSurface). Shell KHÔNG giữ state tin nhắn — mỗi bề mặt tự lo. */
 export default function AssistantShell({ roomId }: { roomId: string | null }) {
   const { token, user } = useAuth();
   const router = useRouter();
 
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  // Bumped whenever the agent's edit_cv tool changes the CV, to refresh the pane.
+  // Bumped whenever the CV changes, to refresh the preview pane.
   const [cvRefresh, setCvRefresh] = useState(0);
-  // The room being written to. Follows `roomId` on navigation, but is also set
-  // locally when the first message of a new chat creates a room — see handleSend.
+  // Room đang được ghi vào. Theo `roomId` khi điều hướng, nhưng cũng được set
+  // tại chỗ khi tin nhắn đầu của một chat mới tạo ra room.
   const [activeRoomId, setActiveRoomId] = useState<string | null>(roomId);
 
   useEffect(() => {
@@ -60,120 +50,12 @@ export default function AssistantShell({ roomId }: { roomId: string | null }) {
     fetchRooms();
   }, [fetchRooms]);
 
-  // Keyed on the URL's roomId, NOT activeRoomId: a room created mid-send swaps
-  // the URL via history.replaceState (no navigation), so this must not re-run
-  // and clobber the in-flight stream.
-  useEffect(() => {
-    if (!token || !roomId) {
-      setMessages([]);
-      return;
-    }
-    let cancelled = false;
-    setLoadingMessages(true);
-    chatApi
-      .getMessages(token, roomId)
-      .then((data) => {
-        if (cancelled) return;
-        setMessages(
-          data.map((m) => ({
-            id: m.id,
-            role: m.role,
-            content: m.content,
-            timestamp: new Date(m.created_at),
-          })),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) toast.error("Không thể tải tin nhắn");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingMessages(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token, roomId]);
+  const handleRoomCreated = useCallback((room: ChatRoom) => {
+    setActiveRoomId(room.id);
+    setRooms((prev) => (prev.some((r) => r.id === room.id) ? prev : [room, ...prev]));
+  }, []);
 
-  async function handleSend(text: string) {
-    if (!token || !text.trim() || isTyping) return;
-
-    let targetRoomId = activeRoomId;
-    if (!targetRoomId) {
-      try {
-        const room = await chatApi.createRoom(token);
-        targetRoomId = room.id;
-        setActiveRoomId(targetRoomId);
-        setRooms((prev) => [room, ...prev]);
-        // Give the new room its URL without a Next navigation — navigating here
-        // would unmount this component and kill the stream we are about to open.
-        // Reloading or sharing the URL later lands on /assistant/[roomId] properly.
-        window.history.replaceState(null, "", `/assistant/${targetRoomId}`);
-      } catch {
-        toast.error("Không thể tạo phòng chat");
-        return;
-      }
-    }
-
-    const tempUserId = `temp-user-${Date.now()}`;
-    const tempBotId = `temp-bot-${Date.now()}`;
-    setMessages((prev) => [
-      ...prev,
-      { id: tempUserId, role: "user", content: text, timestamp: new Date() },
-      { id: tempBotId, role: "assistant", content: "", timestamp: new Date() },
-    ]);
-    setIsTyping(true);
-
-    try {
-      const stream = chatApi.sendMessageStream(token, targetRoomId, text);
-      for await (const event of stream) {
-        if (event.type === "user_message") {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempUserId
-                ? {
-                    id: event.id,
-                    role: event.role,
-                    content: event.content,
-                    timestamp: new Date(event.created_at),
-                  }
-                : m,
-            ),
-          );
-        } else if (event.type === "token") {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempBotId ? { ...m, content: m.content + event.content } : m,
-            ),
-          );
-        } else if (event.type === "done") {
-          const am = event.assistant_message;
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempBotId
-                ? {
-                    id: am.id,
-                    role: am.role,
-                    content: am.content,
-                    timestamp: new Date(am.created_at),
-                  }
-                : m,
-            ),
-          );
-        } else if (event.type === "cv_updated") {
-          setCvRefresh((n) => n + 1);
-        } else if (event.type === "error") {
-          toast.error(event.message || "Lỗi khi tạo phản hồi");
-          setMessages((prev) => prev.filter((m) => m.id !== tempBotId));
-        }
-      }
-      fetchRooms();
-    } catch {
-      toast.error("Gửi tin nhắn thất bại, thử lại nhé");
-      setMessages((prev) => prev.filter((m) => m.id !== tempUserId && m.id !== tempBotId));
-    } finally {
-      setIsTyping(false);
-    }
-  }
+  const handleCvUpdated = useCallback(() => setCvRefresh((n) => n + 1), []);
 
   async function handleDeleteRoom(id: string) {
     if (!token) return;
@@ -198,12 +80,10 @@ export default function AssistantShell({ roomId }: { roomId: string | null }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg text-text">
-      {/* History — inline sidebar from lg up */}
       <aside className="hidden w-[260px] shrink-0 border-r border-border bg-surface lg:flex lg:flex-col">
         {sidebar}
       </aside>
 
-      {/* History — slide-in drawer below lg */}
       {drawerOpen && (
         <>
           <div
@@ -255,18 +135,17 @@ export default function AssistantShell({ roomId }: { roomId: string | null }) {
             Trợ lý sự nghiệp AI
           </span>
 
-          {/* Balances the left cluster so the title stays optically centred. */}
           <span className="w-16" aria-hidden="true" />
         </header>
 
         <div className="min-h-0 flex-1 bg-bg">
-          <ChatWindow
-            messages={messages}
-            onSend={handleSend}
-            loading={loadingMessages}
-            isTyping={isTyping}
+          <SseChatSurface
+            roomId={roomId}
+            activeRoomId={activeRoomId}
+            onRoomCreated={handleRoomCreated}
+            onCvUpdated={handleCvUpdated}
+            onSent={fetchRooms}
             userName={firstName}
-            suggestions={SUGGESTIONS}
           />
         </div>
       </div>
