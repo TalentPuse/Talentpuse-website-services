@@ -292,6 +292,35 @@ async def test_thread_messages_returns_history_for_owner(client):
 
 
 @pytestmark_db
+async def test_thread_messages_excludes_system_messages(client):
+    """The checkpointed state always includes an injected `__user_profile__`
+    SystemMessage (see app/services/agent/middleware/profile_injection.py,
+    `inject_user_profile` fires whenever `runtime.context.profile` is
+    truthy — true for any real signed-up user, since full_name/email are
+    always set). It must never leak into the chat UI as a rendered bubble.
+    Assert the route filters every system/developer-role message out,
+    keeping only the real user/assistant turns."""
+    token = await _signup_and_login(client, "sysfilter")
+    thread_id = str(uuid.uuid4())
+    await _create_room_and_seed_history(
+        client, token, thread_id, "kiem tra loc system message"
+    )
+
+    resp = await client.get(
+        f"/api/agent/threads/{thread_id}/messages",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    messages = resp.json()
+    assert messages, "expected at least the seeded user+assistant turn"
+    roles = {m.get("role") for m in messages}
+    assert roles <= {"user", "assistant"}, f"unexpected roles leaked: {roles}"
+    assert all(
+        "Thông tin người dùng" not in (m.get("content") or "") for m in messages
+    )
+
+
+@pytestmark_db
 async def test_thread_messages_cross_user_returns_404_and_hides_content(client):
     """SECURITY (the core requirement of this task): thread_id is a
     client-generated UUID. A different authenticated user who obtains/guesses

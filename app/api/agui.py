@@ -145,7 +145,14 @@ async def get_thread_messages(
     # Thread chưa có checkpoint (chưa gửi tin nào) → values rỗng, KHÔNG phải lỗi.
     messages = (state.values or {}).get("messages", [])
     agui_messages = langchain_messages_to_agui(messages)
-    return [m.model_dump(by_alias=True, exclude_none=True) for m in agui_messages]
+    # Chỉ giữ lại lượt hội thoại thật (user/assistant). Loại các SystemMessage
+    # nội bộ mà middleware tự chèn mỗi lượt gọi model — "App Context: {...}"
+    # (copilotkit_lg_middleware.py) và "__user_profile__" (profile_injection.py)
+    # — những message này không phải do người dùng hay assistant tạo ra và
+    # KHÔNG BAO GIỜ được render thành bong bóng chat ở frontend. Lọc ở đây
+    # (điểm chung duy nhất mọi consumer đều đi qua) thay vì ở từng nơi gọi.
+    visible_messages = [m for m in agui_messages if m.role in ("user", "assistant")]
+    return [m.model_dump(by_alias=True, exclude_none=True) for m in visible_messages]
 
 
 async def close_agui() -> None:
