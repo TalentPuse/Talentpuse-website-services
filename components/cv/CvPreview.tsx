@@ -58,7 +58,7 @@ export default function CvPreview({ refreshSignal = 0 }: { refreshSignal?: numbe
   return (
     <div className="flex h-full flex-col border-l border-border bg-bg">
       {/* Artifact-panel toolbar */}
-      <div className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-2.5">
+      <div className="flex h-[57px] shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-4">
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate text-sm font-medium text-text">CV của bạn</span>
           <AIBadge label="AI" />

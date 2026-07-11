@@ -4,40 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  Briefcase,
-  Sparkles,
-  MessageSquare,
-  Bell,
-  User,
-  Settings,
-  ClipboardCheck,
-  ICON,
-} from "@/lib/icons";
-
-type NavItem = {
-  href: string;
-  label: string;
-  icon: typeof LayoutDashboard;
-};
-
-const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/jobs", label: "Việc làm", icon: Briefcase },
-  { href: "/assistant", label: "Trợ lý AI", icon: Sparkles },
-  { href: "/interview", label: "Phỏng vấn", icon: MessageSquare },
-  { href: "/alerts", label: "Alerts", icon: Bell },
-  { href: "/applications", label: "Ứng tuyển", icon: ClipboardCheck },
-  { href: "/profile", label: "Hồ sơ", icon: User },
-];
-
-const ADMIN_ITEM: NavItem = { href: "/admin", label: "Quản trị", icon: Settings };
-
-function isActiveRoute(pathname: string, href: string): boolean {
-  if (href === "/dashboard") return pathname === "/dashboard";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+import { ICON } from "@/lib/icons";
+import { ADMIN_ITEM, NAV_ITEMS, isActiveRoute } from "@/components/shell/nav-items";
 
 /**
  * SideNav — primary work-shell navigation. Collapses to icons-only below

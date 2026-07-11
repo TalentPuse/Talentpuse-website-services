@@ -4,10 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import Link from "next/link";
-import { ArrowLeft, PanelLeft, X } from "lucide-react";
+import { PanelLeft, X } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
+import AssistantRail from "@/components/chat/AssistantRail";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import SseChatSurface from "@/components/chat/SseChatSurface";
 import CopilotChatSurface from "@/components/chat/CopilotChatSurface";
@@ -82,6 +82,11 @@ export default function AssistantShell({ roomId }: { roomId: string | null }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg text-text">
+      {/* Rail điều hướng — /assistant không dùng DashboardLayout, nên nếu thiếu
+          cái này thì user đăng nhập xong sẽ mắc kẹt trong chat, không sang được
+          Ứng tuyển / Việc làm / Hồ sơ. */}
+      <AssistantRail />
+
       <aside className="hidden w-[260px] shrink-0 border-r border-border bg-surface lg:flex lg:flex-col">
         {sidebar}
       </aside>
@@ -114,30 +119,26 @@ export default function AssistantShell({ roomId }: { roomId: string | null }) {
       )}
 
       <div className="relative flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border bg-surface px-3 py-2.5">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Mở lịch sử trò chuyện"
-              className="rounded-lg p-2 text-text-muted transition hover:bg-surface-2 hover:text-text lg:hidden"
-            >
-              <PanelLeft className="h-[18px] w-[18px]" strokeWidth={1.8} />
-            </button>
-            <Link
-              href="/dashboard"
-              aria-label="Thoát về Dashboard"
-              className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-text-muted transition hover:bg-surface-2 hover:text-text"
-            >
-              <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={1.8} />
-              <span className="hidden sm:inline">Thoát</span>
-            </Link>
-          </div>
+        {/* h-[57px] khớp đúng khối logo của AssistantRail để đường kẻ ngang của
+            rail, sidebar và header nằm trên cùng một hàng. */}
+        <header className="flex h-[57px] shrink-0 items-center justify-between border-b border-border bg-surface px-3">
+          {/* Nút "Thoát" cũ đã bỏ: rail bên trái có sẵn icon Dashboard, giữ cả
+              hai là hai lối làm cùng một việc. */}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Mở lịch sử trò chuyện"
+            className="rounded-lg p-2 text-text-muted transition hover:bg-surface-2 hover:text-text lg:hidden"
+          >
+            <PanelLeft className="h-[18px] w-[18px]" strokeWidth={1.8} />
+          </button>
+          {/* Giữ ô trống cùng bề rộng nút trên ở >=lg để tiêu đề vẫn cân giữa. */}
+          <span className="hidden w-[34px] lg:block" aria-hidden="true" />
 
           <span className="font-display text-sm font-medium text-text-muted">
             Trợ lý sự nghiệp AI
           </span>
 
-          <span className="w-16" aria-hidden="true" />
+          <span className="w-[34px]" aria-hidden="true" />
         </header>
 
         <div className="min-h-0 flex-1 bg-bg">
