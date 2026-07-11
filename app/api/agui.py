@@ -23,6 +23,7 @@ from app.core import database as db_module
 from app.core.config import DATABASE_URL_RAW, JWT_ALGORITHM, JWT_SECRET
 from app.models.user import User
 from app.services.agent.chains.skill_advisor_chain import build_agent
+from app.services.agent.context import current_agent_user_id
 from app.services.agent.middleware.request_user import current_agent_profile
 
 logger = logging.getLogger(__name__)
@@ -61,10 +62,12 @@ async def agui_auth(request: Request, call_next):
         )
 
     ctx_token = current_agent_profile.set(_build_profile_dict(user))
+    uid_token = current_agent_user_id.set(user.id)
     try:
         return await call_next(request)
     finally:
         current_agent_profile.reset(ctx_token)
+        current_agent_user_id.reset(uid_token)
 
 
 async def init_agui(app: FastAPI) -> None:
