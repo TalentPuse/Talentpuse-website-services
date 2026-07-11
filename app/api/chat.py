@@ -107,7 +107,27 @@ async def create_room(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    room = ChatRoom(user_id=current_user.id, title=body.title or "Cuộc trò chuyện mới")
+    # FE sinh id trước để làm threadId của CopilotKit, rồi gọi endpoint này khi
+    # có tin nhắn đầu tiên. Hook có thể chạy 2 lần (StrictMode, retry) → phải
+    # idempotent: cùng id ⇒ trả room cũ, không tạo trùng, không ghi đè title.
+    if body.id is not None:
+        existing = await db.get(ChatRoom, body.id)
+        if existing is not None:
+            if existing.user_id != current_user.id:
+                raise HTTPException(404, "Room not found")
+            return ChatRoomResponse(
+                id=str(existing.id),
+                title=existing.title,
+                created_at=existing.created_at,
+                updated_at=existing.updated_at,
+            )
+
+    room = ChatRoom(
+        user_id=current_user.id,
+        title=body.title or "Cuộc trò chuyện mới",
+    )
+    if body.id is not None:
+        room.id = body.id
     db.add(room)
     await db.commit()
     await db.refresh(room)

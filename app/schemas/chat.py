@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
 
 
 class ChatRoomCreate(BaseModel):
+    # Client cấp id để dùng làm threadId của CopilotKit (CopilotChat sở hữu ô
+    # nhập nên FE không hook được lúc gửi tin đầu để xin id từ server).
+    id: uuid.UUID | None = None
     title: str | None = None
 
 
