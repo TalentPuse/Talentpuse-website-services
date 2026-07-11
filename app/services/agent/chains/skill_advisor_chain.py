@@ -11,6 +11,7 @@ from app.services.agent.tools.application_tools import (
     list_my_applications,
 )
 from app.services.agent.tools.cv_coach_tool import get_cv_writing_guide
+from app.services.agent.tools.cv_edit_tool import edit_cv
 from app.services.agent.tools.job_search_tools import search_jobs_realtime
 from app.services.agent.tools.skill_tools import query_skill_gap
 
@@ -20,6 +21,7 @@ _BASE_TOOLS = [
     search_jobs_realtime,
     list_my_applications,
     get_application_stats,
+    edit_cv,
 ]
 _agent = None
 _llm = None

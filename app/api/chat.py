@@ -25,8 +25,7 @@ from app.schemas.chat import (
 )
 from app.services.agent import AgentContext, get_agent
 from app.services.agent.chains.skill_advisor_chain import build_agent
-from app.services.agent.context import current_agent_user_id
-from app.services.agent.tools.cv_edit_tool import make_edit_cv_tool
+from app.services.agent.context import current_agent_user_id, current_cv_update_flag
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -281,19 +280,15 @@ async def send_message_stream(
 
     async def _token_generator():
         cv_state = {"updated": False}
-
-        def _on_cv_update(_summary: str) -> None:
-            cv_state["updated"] = True
-
-        uid_token = current_agent_user_id.set(current_user.id)
-
-        edit_tool = make_edit_cv_tool(
-            current_user.id, db_module.async_session_factory, _on_cv_update
-        )
-        agent = build_agent(extra_tools=[edit_tool])
-        full_response = ""
+        uid_token = None
+        cv_token = None
 
         try:
+            uid_token = current_agent_user_id.set(current_user.id)
+            cv_token = current_cv_update_flag.set(cv_state)
+            agent = build_agent()
+            full_response = ""
+
             user_msg_data = {
                 "type": "user_message",
                 "id": str(user_msg.id),
@@ -346,7 +341,10 @@ async def send_message_stream(
                 logger.exception("Streaming error in room %s", room_id)
                 yield f"data: {json.dumps({'type': 'error', 'message': 'Loi khi tao phan hoi'}, ensure_ascii=False)}\n\n"
         finally:
-            current_agent_user_id.reset(uid_token)
+            if cv_token is not None:
+                current_cv_update_flag.reset(cv_token)
+            if uid_token is not None:
+                current_agent_user_id.reset(uid_token)
 
     return StreamingResponse(
         _token_generator(),
