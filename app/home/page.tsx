@@ -49,7 +49,7 @@ const SUGGESTIONS_HINT =
 export default function HomePage() {
   return (
     <ProtectedRoute>
-      <ForceTheme theme="dark" />
+      <ForceTheme theme="light" />
       <HomeContent />
     </ProtectedRoute>
   );
@@ -77,16 +77,20 @@ function HomeContent() {
       }}
     >
       <AuthTokenSync token={token} />
-      <div className="copilot-brand flex h-screen flex-col bg-bg text-text">
-        <header className="flex items-center justify-between border-b border-border px-3 py-2.5">
+      <div className="copilot-brand flex h-screen flex-col">
+        <header className="flex items-center justify-between border-b border-[color:var(--tp-border)] bg-white/55 px-3 py-2.5 backdrop-blur-sm">
           <Link
             href="/dashboard"
-            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-text-muted transition hover:bg-surface-2 hover:text-text"
+            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-[color:var(--tp-text-muted)] transition hover:bg-[color:var(--tp-muted)] hover:text-[color:var(--tp-primary)]"
           >
             <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={1.8} />
             <span className="hidden sm:inline">Dashboard</span>
           </Link>
-          <span className="font-display text-sm font-medium text-text-muted">
+          <span className="flex items-center gap-2 font-display text-sm font-medium text-[color:var(--tp-text)]">
+            <span
+              aria-hidden
+              className="h-2 w-2 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#ec4899]"
+            />
             TalentPuse — Trợ lý sự nghiệp AI
           </span>
           <span className="w-[90px]" />
