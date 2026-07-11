@@ -211,3 +211,142 @@ async def test_agui_streams_with_valid_token(client):
             if len(first) > 200:
                 break
         assert b"RUN" in first.upper()  # RUN_STARTED event
+
+
+# ---------------------------------------------------------------------------
+# 3. GET /threads/{thread_id}/messages — read-only rehydration route.
+#    Same Postgres gate as the streaming smoke test above (needs a live
+#    checkpointer + a real ChatRoom row for the ownership check).
+# ---------------------------------------------------------------------------
+
+
+async def _signup_and_login(client: httpx.AsyncClient, label: str) -> str:
+    email = f"agui-hist-{label}-{uuid.uuid4().hex[:8]}@example.com"
+    signup = await client.post(
+        "/api/auth/signup",
+        json={"email": email, "password": "Test12345!", "full_name": label},
+    )
+    assert signup.status_code == 201, signup.text
+    login = await client.post(
+        "/api/auth/login", json={"email": email, "password": "Test12345!"}
+    )
+    assert login.status_code == 200, login.text
+    return login.json()["access_token"]
+
+
+async def _create_room_and_seed_history(
+    client: httpx.AsyncClient, token: str, thread_id: str, content: str
+) -> None:
+    """Register the ChatRoom (mirrors FE RoomRegistrar) and run the agent once
+    so the LangGraph checkpointer has a real checkpoint for `thread_id`."""
+    room_resp = await client.post(
+        "/api/chat/rooms",
+        json={"id": thread_id, "title": "Test thread"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert room_resp.status_code == 201, room_resp.text
+
+    body = {
+        "threadId": thread_id,
+        "runId": str(uuid.uuid4()),
+        "messages": [{"id": "1", "role": "user", "content": content}],
+        "state": {},
+        "tools": [],
+        "context": [],
+        "forwardedProps": {},
+    }
+    async with client.stream(
+        "POST",
+        "/api/agent/",
+        json=body,
+        headers={"Authorization": f"Bearer {token}"},
+    ) as run_resp:
+        assert run_resp.status_code == 200, await run_resp.aread()
+        async for _ in run_resp.aiter_bytes():
+            pass  # drain so the run completes and the checkpoint is written
+
+
+@pytestmark_db
+async def test_thread_messages_requires_token(client):
+    resp = await client.get(f"/api/agent/threads/{uuid.uuid4()}/messages")
+    assert resp.status_code == 401
+
+
+@pytestmark_db
+async def test_thread_messages_returns_history_for_owner(client):
+    token = await _signup_and_login(client, "owner")
+    thread_id = str(uuid.uuid4())
+    await _create_room_and_seed_history(client, token, thread_id, "xin chào")
+
+    resp = await client.get(
+        f"/api/agent/threads/{thread_id}/messages",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    messages = resp.json()
+    assert any(
+        m.get("role") == "user" and "xin chào" in (m.get("content") or "")
+        for m in messages
+    )
+    assert any(m.get("role") == "assistant" for m in messages)
+
+
+@pytestmark_db
+async def test_thread_messages_cross_user_returns_404_and_hides_content(client):
+    """SECURITY (the core requirement of this task): thread_id is a
+    client-generated UUID. A different authenticated user who obtains/guesses
+    someone else's thread_id must NOT be able to read their private
+    conversation — must get 404, and the response body must not contain any
+    of the owner's message content."""
+    owner_token = await _signup_and_login(client, "owner")
+    thread_id = str(uuid.uuid4())
+    secret = "mat khau bi mat cua toi la hunter2"
+    await _create_room_and_seed_history(client, owner_token, thread_id, secret)
+
+    other_token = await _signup_and_login(client, "other")
+    resp = await client.get(
+        f"/api/agent/threads/{thread_id}/messages",
+        headers={"Authorization": f"Bearer {other_token}"},
+    )
+    assert resp.status_code == 404
+    assert secret not in resp.text
+
+
+@pytestmark_db
+async def test_thread_messages_new_thread_returns_empty_list(client):
+    """Room registered but no message sent yet -> no checkpoint -> [] (not 500)."""
+    token = await _signup_and_login(client, "empty")
+    thread_id = str(uuid.uuid4())
+    room_resp = await client.post(
+        "/api/chat/rooms",
+        json={"id": thread_id, "title": "Empty thread"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert room_resp.status_code == 201, room_resp.text
+
+    resp = await client.get(
+        f"/api/agent/threads/{thread_id}/messages",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == []
+
+
+@pytestmark_db
+async def test_thread_messages_nonexistent_room_returns_404(client):
+    token = await _signup_and_login(client, "noroom")
+    resp = await client.get(
+        f"/api/agent/threads/{uuid.uuid4()}/messages",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 404
+
+
+@pytestmark_db
+async def test_thread_messages_malformed_id_returns_404(client):
+    token = await _signup_and_login(client, "badid")
+    resp = await client.get(
+        "/api/agent/threads/not-a-uuid/messages",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 404
