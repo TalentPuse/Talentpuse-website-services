@@ -25,10 +25,7 @@ from app.schemas.chat import (
 )
 from app.services.agent import AgentContext, get_agent
 from app.services.agent.chains.skill_advisor_chain import build_agent
-from app.services.agent.tools.application_tools import (
-    make_application_stats_tool,
-    make_list_applications_tool,
-)
+from app.services.agent.context import current_agent_user_id
 from app.services.agent.tools.cv_edit_tool import make_edit_cv_tool
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -288,69 +285,68 @@ async def send_message_stream(
         def _on_cv_update(_summary: str) -> None:
             cv_state["updated"] = True
 
+        uid_token = current_agent_user_id.set(current_user.id)
+
         edit_tool = make_edit_cv_tool(
             current_user.id, db_module.async_session_factory, _on_cv_update
         )
-        list_apps_tool = make_list_applications_tool(
-            current_user.id, db_module.async_session_factory
-        )
-        stats_tool = make_application_stats_tool(
-            current_user.id, db_module.async_session_factory
-        )
-        agent = build_agent(extra_tools=[edit_tool, list_apps_tool, stats_tool])
+        agent = build_agent(extra_tools=[edit_tool])
         full_response = ""
 
-        user_msg_data = {
-            "type": "user_message",
-            "id": str(user_msg.id),
-            "role": user_msg.role,
-            "content": user_msg.content,
-            "created_at": user_msg.created_at.isoformat(),
-        }
-        yield f"data: {json.dumps(user_msg_data, ensure_ascii=False)}\n\n"
-
         try:
-            async for chunk in agent.astream(
-                {"messages": agent_messages},
-                context=agent_ctx,
-                stream_mode="messages",
-            ):
-                msg, metadata = chunk
-                if isinstance(msg, AIMessageChunk) and msg.content:
-                    full_response += msg.content
-                    yield f"data: {json.dumps({'type': 'token', 'content': msg.content}, ensure_ascii=False)}\n\n"
+            user_msg_data = {
+                "type": "user_message",
+                "id": str(user_msg.id),
+                "role": user_msg.role,
+                "content": user_msg.content,
+                "created_at": user_msg.created_at.isoformat(),
+            }
+            yield f"data: {json.dumps(user_msg_data, ensure_ascii=False)}\n\n"
 
-            if cv_state["updated"]:
-                yield f"data: {json.dumps({'type': 'cv_updated'}, ensure_ascii=False)}\n\n"
+            try:
+                async for chunk in agent.astream(
+                    {"messages": agent_messages},
+                    context=agent_ctx,
+                    stream_mode="messages",
+                ):
+                    msg, metadata = chunk
+                    if isinstance(msg, AIMessageChunk) and msg.content:
+                        full_response += msg.content
+                        yield f"data: {json.dumps({'type': 'token', 'content': msg.content}, ensure_ascii=False)}\n\n"
 
-            # Save assistant message using a fresh DB session
-            async with db_module.async_session_factory() as db_sess:
-                bot_msg = ChatMessage(
-                    room_id=uid,
-                    role="assistant",
-                    content=full_response,
-                )
-                db_sess.add(bot_msg)
-                room_obj = await db_sess.get(ChatRoom, uid)
-                if room_obj:
-                    room_obj.updated_at = func.now()
-                await db_sess.commit()
-                await db_sess.refresh(bot_msg)
+                if cv_state["updated"]:
+                    yield f"data: {json.dumps({'type': 'cv_updated'}, ensure_ascii=False)}\n\n"
 
-                done_payload = {
-                    "type": "done",
-                    "assistant_message": {
-                        "id": str(bot_msg.id),
-                        "role": bot_msg.role,
-                        "content": bot_msg.content,
-                        "created_at": bot_msg.created_at.isoformat(),
-                    },
-                }
-                yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
+                # Save assistant message using a fresh DB session
+                async with db_module.async_session_factory() as db_sess:
+                    bot_msg = ChatMessage(
+                        room_id=uid,
+                        role="assistant",
+                        content=full_response,
+                    )
+                    db_sess.add(bot_msg)
+                    room_obj = await db_sess.get(ChatRoom, uid)
+                    if room_obj:
+                        room_obj.updated_at = func.now()
+                    await db_sess.commit()
+                    await db_sess.refresh(bot_msg)
 
-        except Exception:
-            logger.exception("Streaming error in room %s", room_id)
-            yield f"data: {json.dumps({'type': 'error', 'message': 'Loi khi tao phan hoi'}, ensure_ascii=False)}\n\n"
+                    done_payload = {
+                        "type": "done",
+                        "assistant_message": {
+                            "id": str(bot_msg.id),
+                            "role": bot_msg.role,
+                            "content": bot_msg.content,
+                            "created_at": bot_msg.created_at.isoformat(),
+                        },
+                    }
+                    yield f"data: {json.dumps(done_payload, ensure_ascii=False)}\n\n"
+
+            except Exception:
+                logger.exception("Streaming error in room %s", room_id)
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Loi khi tao phan hoi'}, ensure_ascii=False)}\n\n"
+        finally:
+            current_agent_user_id.reset(uid_token)
 
     return StreamingResponse(
         _token_generator(),

@@ -6,11 +6,21 @@ from app.services.agent.middleware import AgentContext, inject_user_profile
 from app.services.agent.middleware.request_user import inject_request_user
 from app.services.agent.prompts.skill_advisor_prompt import SYSTEM_PROMPT
 from app.services.agent.services.llm import create_llm
+from app.services.agent.tools.application_tools import (
+    get_application_stats,
+    list_my_applications,
+)
 from app.services.agent.tools.cv_coach_tool import get_cv_writing_guide
 from app.services.agent.tools.job_search_tools import search_jobs_realtime
 from app.services.agent.tools.skill_tools import query_skill_gap
 
-_BASE_TOOLS = [query_skill_gap, get_cv_writing_guide, search_jobs_realtime]
+_BASE_TOOLS = [
+    query_skill_gap,
+    get_cv_writing_guide,
+    search_jobs_realtime,
+    list_my_applications,
+    get_application_stats,
+]
 _agent = None
 _llm = None
 
