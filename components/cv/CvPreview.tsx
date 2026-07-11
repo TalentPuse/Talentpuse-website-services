@@ -85,7 +85,7 @@ export default function CvPreview({ refreshSignal = 0 }: { refreshSignal?: numbe
               download="cv.pdf"
               aria-label="Tải PDF"
               title="Tải PDF"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition hover:bg-surface-2 hover:text-brand-400"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition hover:bg-surface-2 hover:text-brand-600 dark:hover:text-brand-400"
             >
               <Download className="h-4 w-4" strokeWidth={1.9} />
             </a>

@@ -83,11 +83,11 @@ export default function ChatWindow({
     <form onSubmit={handleSubmit} className="w-full">
       <div
         className={cn(
-          "relative flex items-end gap-2 rounded-[1.75rem] border border-border bg-surface/80 p-2 pl-4 shadow-lg shadow-black/20 backdrop-blur-md transition focus-within:border-brand-500/50",
+          "relative flex items-end gap-2 rounded-[1.75rem] border border-border bg-surface/80 p-2 pl-4 shadow-lg shadow-black/5 backdrop-blur-md transition focus-within:border-brand-500/50 dark:shadow-black/20",
           isTyping && "ai-glow",
         )}
       >
-        <Sparkles className="mb-3 h-4 w-4 shrink-0 text-brand-400" strokeWidth={1.75} aria-hidden="true" />
+        <Sparkles className="mb-3 h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" strokeWidth={1.75} aria-hidden="true" />
         <textarea
           ref={taRef}
           rows={1}
@@ -149,7 +149,7 @@ export default function ChatWindow({
                     transition={{ delay: 0.15 + i * 0.05 }}
                     className="group flex items-start gap-2.5 rounded-2xl border border-border bg-surface px-4 py-3.5 text-left text-sm text-text-muted shadow-xs transition hover:-translate-y-0.5 hover:border-brand-500/40 hover:bg-surface-2 hover:text-text"
                   >
-                    <Icon className="h-4 w-4 shrink-0 text-brand-400" strokeWidth={1.75} aria-hidden="true" />
+                    <Icon className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" strokeWidth={1.75} aria-hidden="true" />
                     <span>{s}</span>
                   </motion.button>
                 );
@@ -204,7 +204,7 @@ export default function ChatWindow({
         <div className="mx-auto max-w-4xl">
           {inputBar}
           <p className="mt-2 text-center text-[11px] text-text-muted">
-            TalentPulse AI có thể sai — hãy kiểm chứng những thông tin quan trọng.
+            TalentPuse AI có thể sai — hãy kiểm chứng những thông tin quan trọng.
           </p>
         </div>
       </div>

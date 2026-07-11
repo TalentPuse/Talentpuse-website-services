@@ -16,7 +16,7 @@ function renderMarkdown(md: string, streaming?: boolean): string {
   html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) =>
     `<pre class="bg-surface-2 border border-border text-text rounded-xl p-3.5 my-3 overflow-x-auto text-[13px] leading-relaxed"><code>${code.trim()}</code></pre>`,
   );
-  html = html.replace(/`([^`]+)`/g, '<code class="bg-surface-2 text-brand-400 px-1.5 py-0.5 rounded-sm text-[13px]">$1</code>');
+  html = html.replace(/`([^`]+)`/g, '<code class="bg-surface-2 text-brand-600 dark:text-brand-400 px-1.5 py-0.5 rounded-sm text-[13px]">$1</code>');
 
   html = html.replace(
     /(?:^|\n)(\|.+\|)\n(\|[-| :]+\|)\n((?:\|.+\|\n?)*)/g,
