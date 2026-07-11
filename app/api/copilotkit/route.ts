@@ -33,7 +33,13 @@ import { CopilotRuntime, createCopilotRuntimeHandler, InMemoryAgentRunner } from
 import type { AgentRunnerConnectRequest } from "@copilotkit/runtime/v2";
 import { LangGraphHttpAgent } from "@copilotkit/runtime/langgraph";
 import { EventType } from "@ag-ui/client";
-import type { BaseEvent, Message, MessagesSnapshotEvent } from "@ag-ui/client";
+import type {
+  BaseEvent,
+  Message,
+  MessagesSnapshotEvent,
+  RunFinishedEvent,
+  RunStartedEvent,
+} from "@ag-ui/client";
 import { Observable } from "rxjs";
 import type { NextRequest } from "next/server";
 
@@ -76,13 +82,13 @@ const AUTH_COOKIE = "tp_token";
  * app/api/agui.py, which reads `graph.aget_state(...)` — never re-runs the
  * graph) and replays it as a single `MESSAGES_SNAPSHOT` event.
  *
- * `MESSAGES_SNAPSHOT` is safe to emit standalone (no `RUN_STARTED`/
- * `RUN_FINISHED` bookend needed): `AbstractAgent.connectAgent()` pipes the
- * connect() Observable through the same `apply()` / `processApplyEvents()`
- * used by `runAgent()` (node_modules/@ag-ui/client/dist/index.mjs, the
- * `connectAgent` method), and the `MESSAGES_SNAPSHOT` case in `apply()`'s
- * event switch operates on the current message list independent of any run
- * lifecycle — verified by reading that switch-case directly.
+ * The event stream MUST be bookended with `RUN_STARTED` … `RUN_FINISHED`.
+ * @ag-ui/client runs every stream (connect() included) through a verifier that
+ * throws `AGUIError: First event must be 'RUN_STARTED'` otherwise — observed
+ * live as `agent_connect_failed`, which discarded the snapshot and left the
+ * chat empty even though the correct history had arrived over the wire. The
+ * bookends are emitted on EVERY path (empty history, fetch failure) so connect
+ * always terminates cleanly.
  *
  * ⚠️ Deliberately does NOT call the run/stream endpoint to "fetch history" —
  * `ag_ui_langgraph`'s `prepare_stream` has a regenerate heuristic that would
@@ -100,8 +106,16 @@ class LangGraphCheckpointRunner extends InMemoryAgentRunner {
 
     return new Observable<BaseEvent>((subscriber) => {
       let cancelled = false;
+      const runId = crypto.randomUUID();
 
       (async () => {
+        const started: RunStartedEvent = {
+          type: EventType.RUN_STARTED,
+          threadId,
+          runId,
+        };
+        subscriber.next(started);
+
         try {
           const res = await fetch(
             `${agentBaseUrl}/threads/${encodeURIComponent(threadId)}/messages`,
@@ -132,7 +146,15 @@ class LangGraphCheckpointRunner extends InMemoryAgentRunner {
             error,
           );
         } finally {
-          if (!cancelled) subscriber.complete();
+          if (!cancelled) {
+            const finished: RunFinishedEvent = {
+              type: EventType.RUN_FINISHED,
+              threadId,
+              runId,
+            };
+            subscriber.next(finished);
+            subscriber.complete();
+          }
         }
       })();
 
