@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessageChunk
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import database as db_module
@@ -129,7 +130,29 @@ async def create_room(
     if body.id is not None:
         room.id = body.id
     db.add(room)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Concurrent double-fire with the same client-supplied id (React
+        # StrictMode, a retry, two tabs): both requests saw `existing is None`
+        # above and both tried to insert, so the loser's commit hits the PK
+        # constraint. Discard our attempt and reuse the winner's row instead
+        # of surfacing a 500 — same race-recovery shape as `ensure_document`
+        # in app/services/cv_tailor/build.py.
+        await db.rollback()
+        existing = await db.get(ChatRoom, room.id)
+        if existing is None:
+            # Not a PK collision from this endpoint after all — something
+            # else went wrong. Don't swallow it.
+            raise
+        if existing.user_id != current_user.id:
+            raise HTTPException(404, "Room not found") from None
+        return ChatRoomResponse(
+            id=str(existing.id),
+            title=existing.title,
+            created_at=existing.created_at,
+            updated_at=existing.updated_at,
+        )
     await db.refresh(room)
     return ChatRoomResponse(
         id=str(room.id),
