@@ -98,9 +98,6 @@ jobs:
     needs: build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: apps/frontend
 
     steps:
       - name: Checkout code
@@ -146,8 +143,8 @@ jobs:
           # Go container cua compose project cu (xem chu thich trong backend.yml).
           docker rm -f tp-frontend-standalone 2>/dev/null || true
 
-          docker compose up -d --no-build
+          docker compose up -d --no-build frontend
           docker image prune -f
 
           echo "Deployment successful!"
-          docker compose ps
+          docker compose ps frontend

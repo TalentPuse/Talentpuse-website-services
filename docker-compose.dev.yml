@@ -1,0 +1,17 @@
+# Dev-only overlay. KHONG tu dong nap — phai goi ten ro rang:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+#
+# Truoc day file nay ten `docker-compose.override.yml` va nam canh compose cua
+# backend, nen `docker compose up` TU DONG merge no — ke ca tren runner CI/CD, du
+# header cu ghi "Not used by CI/CD deploys". Hau qua that su: prod bind-mount source
+# tu thu muc checkout de len code trong image, va DATABASE_URL bi ghi de bang creds
+# duoi day thay vi secret. Doi ten sang *.dev.yml de chan han hanh vi do.
+services:
+  backend:
+    volumes:
+      - ./apps/backend/app:/app/app
+      - ./apps/backend/tests:/app/tests
+      - ./apps/backend/alembic:/app/alembic
+    environment:
+      DATABASE_URL: postgresql://admin:password@talentpulse-postgres:5432/warehouse

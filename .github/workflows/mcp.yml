@@ -71,9 +71,6 @@ jobs:
     needs: build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     timeout-minutes: 10
-    defaults:
-      run:
-        working-directory: apps/mcp
 
     steps:
       - name: Checkout code
@@ -108,12 +105,12 @@ jobs:
           # Remove old container if exists (handles manual runs, name conflicts)
           docker rm -f tp-mcp 2>/dev/null || true
 
-          docker compose up -d --no-build --force-recreate
+          docker compose up -d --no-build --force-recreate mcp
           docker image prune -f
 
           # Ensure container is on talentpulse network
           docker network connect talentpulse tp-mcp 2>/dev/null || true
 
           echo "MCP deployment successful!"
-          docker compose ps
+          docker compose ps mcp
           docker logs tp-mcp --tail 5

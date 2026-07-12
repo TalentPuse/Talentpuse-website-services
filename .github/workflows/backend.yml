@@ -95,9 +95,6 @@ jobs:
     needs: build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: apps/backend
 
     steps:
       - name: Checkout code
@@ -156,8 +153,12 @@ jobs:
           # "container name already in use". Idempotent, giong workflow MCP.
           docker rm -f tp-backend tp-latex 2>/dev/null || true
 
-          docker compose up -d --no-build
+          # tp-latex khong publish len GHCR (chi build tu source). `--no-build` se
+          # bo qua no, nen phai dam bao image ton tai truoc.
+          docker image inspect tp-latex:local >/dev/null 2>&1 || docker compose build tp-latex
+
+          docker compose up -d --no-build backend
           docker image prune -f
 
           echo "Deployment successful!"
-          docker compose ps
+          docker compose ps backend

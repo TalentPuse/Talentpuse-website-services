@@ -1,0 +1,106 @@
+# Monorepo compose — ca 3 app trong 1 file, 1 project.
+#
+# Deploy: moi workflow chi dung service cua no, chay tu GOC repo:
+#   docker compose up -d --no-build backend    # keo theo tp-latex
+#   docker compose up -d --no-build frontend
+#   docker compose up -d --no-build mcp
+# `up -d <service>` khong dung toi service khac (dung --remove-orphans o day).
+#
+# Local dev (build tu source thay vi keo image tu GHCR):
+#   docker compose up -d --build
+name: talentpulse
+
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-tp-backend-local}
+    build:
+      context: ./apps/backend
+    container_name: tp-backend
+    ports:
+      - "127.0.0.1:8001:8001"
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8001"]
+    # Bat buoc: `docker compose up -d backend` chi dung service duoc goi ten, nen
+    # thieu depends_on thi tp-latex (render CV PDF) se khong bao gio duoc khoi dong.
+    depends_on:
+      - tp-latex
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://metabase_ro:metabase_ro@localhost:5432/warehouse}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8002}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-TalentPuseBot}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-dev-webhook-secret}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-talentpulse-raw}
+      MCP_SERVER_URL: ${MCP_SERVER_URL:-http://tp-mcp:8080/mcp/}
+      LATEX_SERVICE_URL: ${LATEX_SERVICE_URL:-http://tp-latex:8090}
+    networks:
+      - talentpulse
+    restart: unless-stopped
+
+  tp-latex:
+    # Image name pin cung. Neu de compose tu dat ten (<project>-tp-latex), doi
+    # project name la doi ten image -> `up --no-build` khong tim thay image cu va
+    # deploy gay. Service nay khong publish len GHCR, runner tu build khi thieu
+    # (xem step "Ensure tp-latex image" trong .github/workflows/backend.yml).
+    image: tp-latex:local
+    build:
+      context: ./apps/backend/deploy/tp-latex
+    container_name: tp-latex
+    networks:
+      - talentpulse
+    restart: unless-stopped
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-tp-frontend-local}
+    build:
+      context: ./apps/frontend
+      args:
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8001}
+        NEXT_PUBLIC_DOMAIN: ${NEXT_PUBLIC_DOMAIN:-http://localhost:8002}
+    container_name: tp-frontend-standalone
+    ports:
+      - "127.0.0.1:8002:8002"
+    environment:
+      PORT: "8002"
+      # Next.js standalone binds to $HOSTNAME; Docker defaults it to the container id,
+      # which is unresolvable (EAI_AGAIN) and crash-loops the server. Force 0.0.0.0.
+      HOSTNAME: "0.0.0.0"
+      API_BASE_INTERNAL: ${API_BASE_INTERNAL:-http://tp-backend:8001}
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8001}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
+    networks:
+      - talentpulse
+    restart: unless-stopped
+
+  mcp:
+    image: ${MCP_IMAGE:-tp-mcp-local}
+    build:
+      context: ./apps/mcp
+    container_name: tp-mcp
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      # MCP_DATABASE_URL chu khong phai DATABASE_URL: trong monorepo, ten
+      # DATABASE_URL da thuoc ve backend (schema app). MCP tro vao warehouse.
+      DATABASE_URL: ${MCP_DATABASE_URL:-postgresql://admin:password@talentpulse-postgres:5432/warehouse}
+      DASHBOARD_API_URL: ${DASHBOARD_API_URL:-http://tp-backend:8001}
+      DASHBOARD_API_SECRET: ${DASHBOARD_API_SECRET:-}
+    networks:
+      - talentpulse
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  talentpulse:
+    external: true
