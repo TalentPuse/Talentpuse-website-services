@@ -1,0 +1,32 @@
+[project]
+
+name = "talentpulse-backend"
+version = "0.2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.0",
+    "uvicorn[standard]==0.32.0",
+    "asyncpg==0.30.0",
+    "pydantic==2.9.2",
+    "pydantic[email]",
+    "sqlalchemy[asyncio]==2.0.36",
+    "alembic==1.14.1",
+    "passlib[bcrypt]==1.7.4",
+    "bcrypt==4.2.1",
+    "python-jose[cryptography]==3.3.0",
+    "python-multipart==0.0.12",
+    "PyMuPDF==1.27.2",
+    "openai==2.36.0",
+    "minio==7.2.15",
+    "langchain>=1.0",
+    "langchain-openai>=0.3",
+    "fastmcp>=2.0",
+    "pyyaml>=6.0",
+    "resend>=2.0",
+    "httpx>=0.28.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["."]

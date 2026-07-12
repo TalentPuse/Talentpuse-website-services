@@ -1,0 +1,2 @@
+# Binary assets must never get CRLF/text normalization (would corrupt them).
+*.pdf binary

@@ -1,0 +1,1007 @@
+categories:
+  - id: "leadership"
+    label: "Leadership"
+    label_vi: "Lãnh đạo"
+    description: "Câu hỏi về khả năng dẫn dắt, ra quyết định, và inspire team"
+
+  - id: "teamwork"
+    label: "Teamwork"
+    label_vi: "Làm việc nhóm"
+    description: "Câu hỏi về collaboration, conflict resolution trong team"
+
+  - id: "problem_solving"
+    label: "Problem Solving"
+    label_vi: "Giải quyết vấn đề"
+    description: "Câu hỏi về tư duy phân tích, cách tiếp cận vấn đề phức tạp"
+
+  - id: "communication"
+    label: "Communication"
+    label_vi: "Giao tiếp"
+    description: "Câu hỏi về presentation, thuyết phục, giải thích technical cho non-technical"
+
+  - id: "adaptability"
+    label: "Adaptability"
+    label_vi: "Thích ứng"
+    description: "Câu hỏi về xử lý thay đổi, ambiguity, học nhanh"
+
+  - id: "conflict_resolution"
+    label: "Conflict Resolution"
+    label_vi: "Xử lý xung đột"
+    description: "Câu hỏi về xử lý bất đồng, negotiate, diplomacy"
+
+  - id: "time_management"
+    label: "Time Management"
+    label_vi: "Quản lý thời gian"
+    description: "Câu hỏi về prioritize, deadline pressure, multitasking"
+
+questions:
+  # ── LEADERSHIP (6 questions) ──────────────────────────────
+
+  - id: "leadership_001"
+    text: "Hãy kể về một lần bạn dẫn dắt team qua giai đoạn khó khăn. Bạn đã làm gì để giữ team đi đúng hướng?"
+    category: "leadership"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Chọn situation có thật: deadline bùng, team mất member, hoặc pivot dự án
+      - Focus vào Action — đừng chỉ nói "tôi đã motivate team", hãy nói cụ thể: "tôi tổ chức daily standup 15 phút, tạo priority matrix, reassign tasks theo strength từng người"
+      - Nhấn mạnh communication strategy: bạn thông báo thay đổi thế nào, transparent ra sao
+      - Result phải có: deadline có met không, team morale thế nào, lesson learned gì
+      - Tránh: "team tự ổn" → interviewer muốn thấy YOUR leadership, không phải team tự fix
+    star_cues:
+      situation: "Deadline, conflict, technical debt, hoặc team member rời đi"
+      task: "Trách nhiệm của bạn với tư cách leader — specific, không chung chung"
+      action: "Giao tiếp (1-1, standup), phân task, remove blockers, motivate"
+      result: "Deadline met? Quality metrics? Team satisfaction? Lesson learned?"
+    evaluation_criteria:
+      - "Có cấu trúc STAR rõ ràng (Situation → Task → Action → Result)"
+      - "Action cụ thể, không chung chung ('I motivated the team' → BAD)"
+      - "Result có định lượng (số liệu, %, metric)"
+      - "Thể hiện decision-making va delegation"
+      - "Self-awareness: nhận ra điểm yếu và bài học"
+    sample_answer: "Trong dự án migration tại FPT, team 6 người bị trễ 3 tuần do legacy code phức tạp hơn dự kiến. Tôi đảm nhiệm role tech lead, đã: (1) Tổ chức war room xác định blockers, (2) Chia lại task theo strength — 2 người giảm tech debt, 3 người focus migration, tôi lo POC. Kết quả: bắt kịp deadline, team satisfaction tăng từ 3.5/5 lên 4.2/5."
+
+  - id: "leadership_002"
+    text: "Kể về một lần bạn phải ra quyết định không phổ biến (unpopular decision) trong team. Bạn xử lý thế nào?"
+    category: "leadership"
+    difficulty: "hard"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Unpopular decision: chuyển tech stack, cancel feature, thay đổi deadline, let someone go
+      - Điểm chính: bạn GIẢI THÍCH why (data-driven) không phải chỉ ra lệnh
+      - Cho thấy bạn listen feedback NHƯNG vẫn stand firm khi cần
+      - Result: team hiểu và follow, outcome tốt hơn
+      - Tránh: "tôi không quan tâm ý kiến team" hoặc "tôi đổi ý theo team" → cả hai đều không phải leadership
+    star_cues:
+      situation: "Context của quyết định không phổ biến"
+      task: "Tại sao bạn phải ra quyết định này (constraints, data)"
+      action: "Cách bạn trình bày, giải thích, lắng nghe, và communicate final decision"
+      result: "Team reaction và outcome cụ thể"
+    evaluation_criteria:
+      - "Data-driven decision making"
+      - "Transparent communication (not top-down dictation)"
+      - "Handling resistance constructively"
+      - "Standing firm when needed while showing empathy"
+      - "Positive outcome despite initial pushback"
+    sample_answer: "Ở dự án X, tôi quyết định chuyển từ REST sang GraphQL giữa dự án. Team react mạnh vì phải học mới. Tôi: (1) Demo POC cho thấy GraphQL giảm 40% API calls, (2) Organize 2 training sessions, (3) Pair senior+junior để transfer knowledge. Sau 1 tháng, team đồng ý là performance tốt hơn và development speed tăng 25%."
+
+  - id: "leadership_003"
+    text: "Mô tả một tình huống bạn phải delegate một task quan trọng cho người khác. Bạn chọn ai và thế nào?"
+    category: "leadership"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Delegate = trust + oversight, không phải dump và forget
+      - Giải thích WHY bạn chọn người đó (skills, growth opportunity)
+      - Cho thấy bạn vẫn follow-up mà không micromanage
+      - Result: task completed + người đó grow thêm skill
+      - Tránh: "tôi làm hết" → không phải leadership, hoặc "tôi giao xong không quan tâm"
+    star_cues:
+      situation: "Task quan trọng cần delegate"
+      task: "Tại sao bạn không tự làm, tại sao chọn người đó"
+      action: "Cách bạn delegate (context, expectation, support), check-in frequency"
+      result: "Task outcome + development of delegate"
+    evaluation_criteria:
+      - "Thoughtful delegation based on skills and growth potential"
+      - "Clear communication of expectations"
+      - "Appropriate level of oversight (not micromanaging)"
+      - "Result: task success + person developed"
+      - "Ability to let go of control"
+    sample_answer: "Trong dự án real-time dashboard, tôi cần giao module WebSocket cho junior dev. Tôi chọn bạn vì: (1) bạn đã hiểu Node.js, (2) đây là cơ hội bạn học real-time. Tôi: viết clear spec + accept/reject criteria, set up daily 15-min check-in tuần đầu, sau đó giảm còn 2 lần/tuần. Kết quả: bạn hoàn thành module đúng deadline, tự tin hơn, và sau đó mentor bạn khác."
+
+  - id: "leadership_004"
+    text: "Bạn đã bao giờ mentor hoặc coach một đồng nghiệp mới thế nào? Hãy kể cụ thể."
+    category: "leadership"
+    difficulty: "easy"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Mentor không chỉ là "chỉ dẫn code" — còn là culture, process, soft skills
+      - Cho thấy bạn patient và adapt teaching style theo mentee
+      - Nếu chưa có kinh nghiệm mentor ở work → dùng project đại học, club, hackathon
+      - Result: mentee progress cụ thể (skill improved, shipped feature, got promoted)
+      - Tránh: "tôi chỉ nói làm thế này" → quá passive, hoặc "tôi dạy hết mọi thứ" → unrealistic
+    star_cues:
+      situation: "Ai cần mentor, background của họ"
+      task: "Mục tiêu mentor (skill gap cần fill)"
+      action: "Cách bạn approach: 1-1, pair programming, code review, resource sharing"
+      result: "Mentee progress cụ thể"
+    evaluation_criteria:
+      - "Genuine investment in others' growth"
+      - "Adapted approach to mentee's level"
+      - "Specific mentoring techniques used"
+      - "Measurable mentee progress"
+      - "Self-reflection on what you learned from mentoring"
+    sample_answer: "Tôi mentor một bạn fresher Java khi vào công ty. Bạn chưa làm việc với Spring Boot. Tôi: (1) Tạo 1-week onboarding plan, (2) Pair programming 2h/ngày tuần đầu, (3) Assign mini-project CRUD API, (4) Review code và giải thích WHY không chỉ WHAT. Sau 1 tháng bạn độc lập làm feature, sau 3 tháng bạn được assign task mid-level."
+
+  - id: "leadership_005"
+    text: "Hãy kể về một lần bạn phải dẫn dắt dự án mà bạn chưa có kinh nghiệm trước đó. Bạn xử lý thế nào?"
+    category: "leadership"
+    difficulty: "hard"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Interviewer muốn thấy: learning agility + leadership under uncertainty
+      - Điểm mạnh: admit không biết → học nhanh → lead bằng cách tạo structure
+      - Cho thấy bạn tập trung vào process + communication hơn là technical ego
+      - Result: project thành công, bạn học được gì mới
+      - Tránh: "tôi đọc document rồi biết hết" → không thật, hoặc "tôi vồ tim và thất bại"
+    star_cues:
+      situation: "Project mới, domain mới, hoặc tech stack mới"
+      task: "Mục tiêu project và thách thức của bạn"
+      action: "Học nhanh (resource, mentor, POC), tạo structure, delegate phần bạn không giỏi"
+      result: "Project outcome + what you learned"
+    evaluation_criteria:
+      - "Honest about knowledge gap"
+      - "Proactive learning approach (not passive)"
+      - "Smart delegation of unfamiliar areas"
+      - "Strong process/communication despite technical uncertainty"
+      - "Growth mindset — what they learned"
+    sample_answer: "Tôi được assign lead dự án ML pipeline tôi chưa làm bao giờ. Tôi: (1) Hỏi 2 senior ML engineers để hiểu basic architecture, (2) Đọc 3 technical blogs và 1 course trong 1 tuần, (3) Delegate model training cho ML engineer, tôi focus data pipeline và infrastructure. Project ship đúng deadline, tôi học được MLOps fundamentals và sau đó apply vào 2 project khác."
+
+  - id: "leadership_006"
+    text: "Bạn đã bao giờ phải motivate một team đang chán nản (demotivated)? Bạn làm gì?"
+    category: "leadership"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Motivation không phải "pep talk" — là understand root cause và address it
+      - Phân biệt: burnout, lack of purpose, unclear goals, bad process
+      - Action cụ thể: 1-1 để hiểu nguyên nhân, thay đổi process, celebrate small wins
+      - Result: team engagement tăng, velocity improve
+      - Tránh: "tôi nói try harder" → surface level, hoặc "tôi tăng lương" → không phải leadership skill
+    star_cues:
+      situation: "Signs of demotivation: missed deadlines, low quality, complaints"
+      task: "Root cause analysis + action plan"
+      action: "1-1s, process changes, recognition, remove blockers"
+      result: "Measurable improvement in team morale/output"
+    evaluation_criteria:
+      - "Root cause analysis (not just treating symptoms)"
+      - "Empathy and active listening"
+      - "Concrete actions (not just pep talks)"
+      - "Sustained improvement (not one-time)"
+      - "Understanding of different motivation drivers"
+    sample_answer: "Sprint velocity giảm 40% trong 2 tuần. Tôi hỏi 1-1 từng người và phát hiện: (1) Code review chậm làm block, (2) 2 bạn mệt vì OT liên tục, (3) Feature không rõ ý nghĩa. Tôi: (1) Change review SLA thành 4h, assign reviewer rõ, (2) Cancel non-critical tasks để giảm load, (3) Invite PM giải thích business impact. Sau 2 sprint: velocity tăng lại 90% baseline, team happier."
+
+  # ── TEAMWORK (6 questions) ──────────────────────────────
+
+  - id: "teamwork_001"
+    text: "Kể về lần bạn làm việc với đồng nghiệp có cách làm hoàn toàn khác mình. Bạn xử lý thế nào?"
+    category: "teamwork"
+    difficulty: "easy"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Đừng phán xét đồng nghiệp — interviewer đánh giá emotional intelligence của BẠN
+      - Show empathy: "tôi hiểu tại sao anh ấy làm thế" trước khi nói "và tôi đề xuất..."
+      - Nhấn mạnh finding common ground: align trên mục tiêu chung trước, rồi compromise cách làm
+      - Nếu có thể, đưa ra ví dụ bạn đã adapt style của mình (không phải bắt người khác thay đổi)
+      - Tránh: "tôi thuyết phục được anh ấy làm theo cách tôi" → one-sided
+    star_cues:
+      situation: "Sự khác biệt: working style, communication, technical approach"
+      task: "Mục tiêu chung cần deliver"
+      action: "Active listening, 1-1, compromise, tìm điểm chung"
+      result: "Delivered on time, relationship improved"
+    evaluation_criteria:
+      - "Empathy và emotional intelligence"
+      - "Không phán xét/chỉ trích đồng nghiệp"
+      - "Action cụ thể: 1-1, active listening, compromise"
+      - "Result tích cực cho cả hai bên"
+      - "Bài học về working with different personalities"
+    sample_answer: "Trong project X, tôi pair programming với anh A — anh ấy thích waterfall, tôi thích agile. Tôi: (1) Hỏi anh ấy WHY anh ấy thích waterfall (hiểu perspective), (2) Đề xuất hybrid: daily standup (agile) + clear phase milestones (waterfall), (3) Tôi adapt documentation style của anh ấy. Kết quả: ship đúng deadline, anh ấy sau đó apply thêm agile practices."
+
+  - id: "teamwork_002"
+    text: "Kể về một lần bạn phải làm việc với team khác department (cross-functional). Thách thức là gì và bạn xử lý thế nào?"
+    category: "teamwork"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Cross-functional = khác vocab, khác priorities, khác KPI
+      - Điểm mạnh: bạn tạo shared understanding + align trên common goal
+      - Cho thấy bạn translate technical → non-technical (hoặc ngược lại)
+      - Result: project thành công cả 2 bên hài lòng
+      - Tránh: chỉ nói về phía bạn, phải show empathy cho department kia
+    star_cues:
+      situation: "Project cần 2+ departments, different languages/priorities"
+      task: "Common goal và role của bạn"
+      action: "Bridge communication, translate jargon, align priorities"
+      result: "Project success + improved cross-team relationship"
+    evaluation_criteria:
+      - "Understanding of different team perspectives"
+      - "Bridge-building communication skills"
+      - "Jargon translation ability"
+      - "Conflict prevention through alignment"
+      - "Result benefiting all parties"
+    sample_answer: "Tôi làm API cho marketing team. Gap: tôi nói REST/JSON, họ nói campaign/CTR. Tôi: (1) Organize kickoff hiểu marketing flow, (2) Tạo API doc bằng business language (không tech jargon), (3) Weekly sync 15 min. Kết quả: API đúng spec từ đầu, marketing tăng 30% campaign automation, sau đó họ recommend IT team cho department khác."
+
+  - id: "teamwork_003"
+    text: "Mô tả một tình huống bạn đóng góp vào team không phải ở role chính của mình. Tại sao và kết quả thế nào?"
+    category: "teamwork"
+    difficulty: "easy"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Going beyond your job description = initiative + team player
+      - Ví dụ: dev giúp QA viết test, backend giúp frontend debug, hoặc non-tech: organize team event
+      - Cho thấy bạn hiểu big picture, không chỉ silo role mình
+      - Tránh: "tôi làm vì bị bắt" → phải là voluntary, hoặc "tôi làm hộ hết" → không phải teamwork
+    star_cues:
+      situation: "Team gap hoặc opportunity bạn nhận thấy"
+      task: "Tại sao bạn bước vào (gap, skill match, initiative)"
+      action: "What you did beyond your role"
+      result: "Team outcome + what you gained"
+    evaluation_criteria:
+      - "Genuine initiative (not forced)"
+      - "Understanding of team's bigger picture"
+      - "Skill applied outside comfort zone"
+      - "Result that helped the team"
+      - "Humility — not overstepping, but complementing"
+    sample_answer: "Trong sprint, QA bị bệnh 2 ngày trước release. Tôi (backend dev) tự nhiên review all E2E tests và run manual smoke test. Tôi biết Playwright từ personal project nên run được. Phát hiện 1 bug critical trên staging, fix trong 1h. Release đúng deadline. QA trở lại cảm ơn và sau đó tôi giúp bạn automate thêm 5 test cases."
+
+  - id: "teamwork_004"
+    text: "Bạn đã bao giờ phải code review cho đồng nghiệp và phải nói họ cần sửa nhiều thứ. Bạn trình bày thế nào mà không làm họ buồn?"
+    category: "teamwork"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Code review = feedback skill, không phải technical skill
+      - Cách trình bày: bắt đầu bằng positive, rồi specific suggestion, kết bằng question không phải statement
+      - Focus vào CODE không phải PERSON: "function này có thể optimize" không phải "bạn viết chậm"
+      - Cho thấy bạn tinh cảm feedback structure: praise → suggest → question
+      - Tránh: "tôi nói thẳng là code như rác" hoặc "tôi không nói gì, tự sửa cho"
+    star_cues:
+      situation: "Large PR hoặc nhiều issues cần address"
+      task: "Balance quality standards và team morale"
+      action: "Feedback approach, prioritization, tone"
+      result: "Code improved + relationship maintained"
+    evaluation_criteria:
+      - "Constructive feedback delivery"
+      - "Praise → Suggest → Question structure"
+      - "Focus on code, not person"
+      - "Prioritization of issues (critical vs nice-to-have)"
+      - "Follow-up to ensure understanding"
+    sample_answer: "Tôi review PR của junior dev có 15 comments. Tôi: (1) Bắt đầu bằng 'Great job on the API structure, really clean!', (2) Group issues: 2 critical (security), 5 improvements, 8 nits, (3) Add suggestions không chỉ 'fix this' mà kèm code example, (4) Schedule 15-min call giải thích 2 critical items. Bạn cảm ơn vì rõ ràng, sau đó tự apply pattern vào PR tiếp theo."
+
+  - id: "teamwork_005"
+    text: "Kể về một lần team bạn không đồng thuận về cách giải quyết một vấn đề technical. Bạn đóng vai trò gì?"
+    category: "teamwork"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Technical disagreement là bình thường — interviewer muốn thấy HOW bạn resolve
+      - Show: bạn listen trước, argue với data (không phải opinion), và chịu thua khi sai
+      - Nếu bạn là người trung gian: facilitate discussion, không phải take side
+      - Tránh: "tôi đúng vì tôi senior hơn" hoặc "tôi nhường vì không muốn tranh cãi"
+    star_cues:
+      situation: "The technical debate: what, who involved"
+      task: "Decision cần đạt được"
+      action: "How you facilitated/discussed: data, POC, pros/cons"
+      result: "Decision made + team bought in"
+    evaluation_criteria:
+      - "Open to different opinions"
+      - "Data-driven argumentation"
+      - "Facilitation skills (if mediator role)"
+      - "Ability to disagree and commit"
+      - "Result: best technical decision, not ego-driven"
+    sample_answer: "Team tranh cãi: Redis vs Memcached cho caching layer. Tôi: (1) Listen cả 2 phía, (2) Đề xuất: tạo comparison matrix (latency, memory, features), (3) Chạy POC cả 2 với real workload. Kết quả: Redis phù hợp hơn vì cần persistence + pub/sub. Team đồng ý, phía Memcached cũng công nhận data rõ ràng."
+
+  - id: "teamwork_006"
+    text: "Bạn đã bao giờ làm việc với một team member không hoàn thành task đúng deadline? Bạn xử lý thế nào?"
+    category: "teamwork"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Đừng nhảy sang kết luận "bạn ấy lazy" — có thể là skill gap, personal issue, hoặc unclear requirement
+      - Action: private 1-1, hiểu root cause, offer help, set clear expectation
+      - Nếu không cải thiện → escalate đúng cách (không talk behind back)
+      - Tránh: "tôi làm hộ" → enable bad behavior, hoặc "tôi kêu manager ngay" → no teamwork
+    star_cues:
+      situation: "Missed deadlines, blocked others"
+      task: "Your responsibility to the team + helping the person"
+      action: "Private conversation, understanding root cause, support plan"
+      result: "Improved performance or appropriate escalation"
+    evaluation_criteria:
+      - "Private and respectful approach"
+      - "Root cause analysis (not blame)"
+      - "Offering support while setting expectations"
+      - "Appropriate escalation if needed"
+      - "Balance: helping individual vs protecting team"
+    sample_answer: "Bạn B liên tục commit trễ 2-3 ngày, block 2 người khác. Tôi hỏi private: bạn đang gặp khó hiểu, thay đổi môi trường không quen. Tôi: (1) Help bạn break task thành nhỏ hơn, (2) Pair 1h/ngày, (3) Agree new deadline còn thừa 1 ngày buffer. Sau 2 tuần bạn commit đúng hạn. Tôi cũng suggest manager thêm estimation training cho toàn team."
+
+  # ── PROBLEM SOLVING (6 questions) ──────────────────────────
+
+  - id: "problem_solving_001"
+    text: "Hãy kể về một vấn đề technical phức tạp nhất bạn đã giải quyết. Tư duy của bạn thế nào?"
+    category: "problem_solving"
+    difficulty: "hard"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Focus vào THINKING PROCESS, không chỉ technical detail
+      - Cấu trúc: How you approached → What you tried → What failed → Final solution
+      - Cho thấy bạn: (1) Diagnose trước khi fix, (2) Consider multiple solutions, (3) Learn from failed attempts
+      - Tránh: chỉ nói solution cụ thể mà không show thinking, hoặc "tôi Google rồi làm theo"
+    star_cues:
+      situation: "Complex bug, performance issue, hoặc architecture challenge"
+      task: "What needed to be solved + constraints"
+      action: "Diagnosis process, approaches tried, tools used"
+      result: "Solution + impact + lesson learned"
+    evaluation_criteria:
+      - "Systematic approach to diagnosis"
+      - "Considered multiple solutions before choosing"
+      - "Ability to explain complex problem simply"
+      - "Learning from failed attempts"
+      - "Measurable impact of solution"
+    sample_answer: "API response time tăng từ 200ms lên 2s bất ngờ. Tôi: (1) Profile: trace request, phát hiện DB query chạy 1.8s, (2) EXPLAIN ANALYZE → missing index, N+1 queries, (3) Thử 1: thêm index → giảm còn 800ms, vẫn chậm, (4) Thử 2: batch queries + eager loading → 150ms. Root cause: code review miss khi thêm mới relationship. Lesson: luôn check query plan khi thêm ORM relationship."
+
+  - id: "problem_solving_002"
+    text: "Kể về một lần bạn phải giải quyết vấn đề mà không có đầy đủ thông tin. Bạn làm thế nào để tiếp cận?"
+    category: "problem_solving"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Real world: luôn thiếu info — interviewer muốn thấy bạn handle ambiguity
+      - Cách tiếp cận: (1) Identify what you know vs don't know, (2) Gather info nhanh nhất, (3) Make assumption + validate, (4) Iterate
+      - Tránh: "chờ đủ thông tin rồi mới làm" hoặc "đoán bừa"
+    star_cues:
+      situation: "Ambiguous problem, unclear requirements"
+      task: "What you needed to figure out"
+      action: "Info gathering, assumptions, validation, iteration"
+      result: "Solution despite incomplete info"
+    evaluation_criteria:
+      - "Structured approach to ambiguity"
+      - "Smart information gathering"
+      - "Stated assumptions explicitly"
+      - "Iterative refinement"
+      - "Comfortable with uncertainty"
+    sample_answer: "PM yêu cầu 'optimize performance' mà không nói cụ thể. Tôi: (1) Hỏi: metric nào? response time? throughput? User complain gì?, (2) Khi PM không rõ: tôi tự define metrics baseline (P95 latency 500ms, throughput 100 req/s), (3) Identify bottlenecks qua monitoring, (4) Optimize → đạt P95 < 200ms. PM happy và sau đó adopt metrics này cho toàn team."
+
+  - id: "problem_solving_003"
+    text: "Bạn đã bao giờ phải chọn giữa 2 solution đều có trade-off? Bạn quyết định thế nào?"
+    category: "problem_solving"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Mọi technical decision có trade-off — interviewer muốn thấy framework quyết định của bạn
+      - Show: bạn evaluate cả 2 phía (pros/cons), consider context (timeline, team skill, scale), rồi chọn + justify
+      - Decision framework: time vs quality vs cost, short-term vs long-term
+      - Tránh: "chọn cái dễ nhất" hoặc "chọn cái mới nhất"
+    star_cues:
+      situation: "Two valid approaches with different trade-offs"
+      task: "Decision criteria + constraints"
+      action: "Evaluation process, comparison, stakeholder input"
+      result: "Decision + outcome + reflection"
+    evaluation_criteria:
+      - "Clear evaluation framework"
+      - "Considered multiple factors (not just technical)"
+      - "Aware of trade-offs"
+      - "Justified decision with context"
+      - "Honest reflection on outcome"
+    sample_answer: "Build vs Buy cho notification system. Build: full control, 2 weeks. Buy (SaaS): nhanh (3 days), nhưng monthly cost và data lock-in. Tôi: (1) Tạo comparison matrix: time, cost 1-year, scalability, team skill, (2) Decision: Buy cho MVP (time-to-market), plan build trong Q2 khi scale. Outcome: launch nhanh 2 tuần, sau 3 tháng rebuild vì cost tăng 3x khi scale."
+
+  - id: "problem_solving_004"
+    text: "Mô tả một lần bạn phải debug một bug rất khó tìm. Quy trình của bạn thế nào?"
+    category: "problem_solving"
+    difficulty: "easy"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Process > Result — interviewer muốn thấy bạn có hệ thống debug
+      - Steps: reproduce → isolate → hypothesis → test → fix → verify
+      - Cho thấy bạn dùng tool (logging, debugger, monitoring) không phải chỉ print
+      - Tránh: "tôi print và tìm thấy" → quá đơn giản, hoặc "tôi đọc code rồi hiểu" → may mắn
+    star_cues:
+      situation: "Bug: intermittent, hoặc production-only, hoặc edge case"
+      task: "Reproduce và fix"
+      action: "Debug methodology: logs, debugger, hypothesis testing"
+      result: "Root cause + fix + prevention"
+    evaluation_criteria:
+      - "Systematic debugging process"
+      - "Good use of tools (not just print statements)"
+      - "Hypothesis-driven approach"
+      - "Root cause analysis (not just symptom fixing)"
+      - "Prevention measures to avoid recurrence"
+    sample_answer: "Production 500 error chỉ xuất hiện lúc traffic cao, local không bao giờ bị. Tôi: (1) Check monitoring: error chỉ xuất hiện 9-10am (peak), (2) Hypothesis: connection pool full, (3) Check: pool size = 5, max_connections DB = 20, nhưng có 4 services share DB, (4) Fix: tăng pool + add connection timeout + retry logic, (5) Add alert khi pool usage > 80%. Error mất hoàn toàn."
+
+  - id: "problem_solving_005"
+    text: "Hãy kể về một lần bạn phải quick-fix một vấn đề critical trong production. Bạn xử lý thế nào?"
+    category: "problem_solving"
+    difficulty: "hard"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Production fire: (1) Mitigate first (stop bleeding), (2) Root cause later, (3) Communicate
+      - Cho thấy bạn stay calm under pressure, prioritize user impact
+      - Trình bày: What happened → Impact → Immediate fix → Long-term fix → Prevention
+      - Tránh: "tôi panic và tìm cách fix hoàn hảo" hoặc "tôi tắt server rồi đi ngủ"
+    star_cues:
+      situation: "Production incident: crash, data loss, hoặc outage"
+      task: "Minimize user impact + restore service"
+      action: "Triage, communicate, mitigate, then root cause"
+      result: "Time to recovery + prevention measures"
+    evaluation_criteria:
+      - "Calmness under pressure"
+      - "User-first prioritization"
+      - "Clear communication to stakeholders"
+      - "Quick mitigation + proper long-term fix"
+      - "Post-mortem and prevention"
+    sample_answer: "Payment service down 30 phút Black Friday. Tôi oncall. (1) Notification: Slack incident channel + page team, (2) Immediate: feature flag tắt payment module, redirect users to 'try again in 5 min' page, (3) Triage: Redis connection pool overflow, (4) Quick fix: restart Redis + tăng pool, (5) Service restore sau 20 min. Post-mortem: add circuit breaker + pool auto-scaling + load test trước event."
+
+  - id: "problem_solving_006"
+    text: "Bạn đã bao giờ nhận ra một vấn đề lớn hơn (systemic issue) khi đang fix một bug nhỏ? Bạn xử lý thế nào?"
+    category: "problem_solving"
+    difficulty: "hard"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Nhỏ bug → mở ra vấn đề lớn hơn là kỹ năng quan trọng
+      - Cho thấy bạn: (1) Nhận pattern, (2) Nghiên cứu scope, (3) Communicate lên team/manager, (4) Propose systemic fix
+      - Tránh: chỉ fix bug nhỏ và bỏ qua, hoặc "lai thông báo vấn đề lớn mà không có solution"
+    star_cues:
+      situation: "Small bug that revealed larger issue"
+      task: "Investigate scope of the real problem"
+      action: "Research, communicate, propose systemic solution"
+      result: "Comprehensive fix + improved process"
+    evaluation_criteria:
+      - "Pattern recognition ability"
+      - "Curiosity to investigate beyond the surface"
+      - "Proper scoping of the larger issue"
+      - "Communication to stakeholders"
+      - "Proposed systemic solution, not just patch"
+    sample_answer: "Fix 1 bug: user nhận được 2 email confirm. Khi debug: (1) Code gửi email ở 2 places, (2) Check thêm: 3 module khác cũng duplicate logic, (3) Root cause: không có centralized notification service. Tôi: (1) Quick fix bug cụ thể, (2) Tạo RFC cho NotificationService, (3) Present cho team. Sau 1 tháng migrate hết, loại bỏ 15 duplicate logic, giảm 80% email-related bugs."
+
+  # ── COMMUNICATION (6 questions) ──────────────────────────
+
+  - id: "communication_001"
+    text: "Hãy kể về một lần bạn phải giải thích một concept technical phức tạp cho người không có background technical."
+    category: "communication"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Core skill cho developer: translate tech → business
+      - Cách tiếp cận: (1) Hiểu audience, (2) Dùng analogy/real-world, (3) Focus on WHY (business impact), không phải HOW (technical detail)
+      - Ví dụ: API như là nhà hàng (menu = endpoint, waiter = request, kitchen = server)
+      - Tránh: dùng jargon (database, cache, latency), hoặc đơn giản quá (mất accuracy)
+    star_cues:
+      situation: "Who needed to understand + why (decision, buy-in, etc.)"
+      task: "What concept + what level of understanding needed"
+      action: "Analogy, visual, real-world example, checking understanding"
+      result: "Person understood + outcome (decision made, buy-in gained)"
+    evaluation_criteria:
+      - "Audience-appropriate language"
+      - "Effective use of analogies or metaphors"
+      - "Focus on business impact, not technical details"
+      - "Checking for understanding"
+      - "Successful outcome from the explanation"
+    sample_answer: "Tôi cần explain cho CEO tại sao cần upgrade server. Thay vì nói CPU/RAM, tôi: 'Hiện tại cửa hàng chỉ có 1 thu ngân. Khi 10 khách cùng lúc → phải xếp hàng. Thêm server = thêm thu ngân. Chỉ mất 500K/tháng nhưng tăng 50% khách phục vụ được → doanh thu tăng 30M.' CEO approve ngay."
+
+  - id: "communication_002"
+    text: "Kể về một lần bạn phải present một idea hoặc solution cho team/manager. Bạn chuẩn bị và trình bày thế nào?"
+    category: "communication"
+    difficulty: "easy"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Presentation = structure + audience awareness
+      - Cấu trúc: Problem → Context → Solution → Trade-offs → Recommendation
+      - Cho thấy bạn prepare, không chỉ improvisation
+      - Tránh: "tôi nói theo ý tưởng" → không structured, hoặc "tôi đọc slide" → không engaging
+    star_cues:
+      situation: "What needed to be presented + to whom"
+      task: "What decision/action you wanted from audience"
+      action: "Preparation, structure, delivery, handling questions"
+      result: "Audience response + decision made"
+    evaluation_criteria:
+      - "Structured presentation (not rambling)"
+      - "Audience-tailored content"
+      - "Clear ask/recommendation"
+      - "Handling questions well"
+      - "Successful outcome"
+    sample_answer: "Tôi present đề xuất migrate monolith sang microservices cho CTO. Tôi: (1) Slide 1: pain points hiện tại (deploy 2h, 1 bug kill toàn system), (2) Slide 2-3: proposed architecture + diagram, (3) Slide 4: migration plan 3 phases, (4) Slide 5: cost vs benefit timeline. CTO hỏi 3 câu về team readiness → tôi đã chuẩn bị ROI. Approved phase 1 pilot."
+
+  - id: "communication_003"
+    text: "Bạn đã bao giờ phải viết technical documentation cho một feature hoặc system? Quy trình của bạn?"
+    category: "communication"
+    difficulty: "easy"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Doc là kỹ năng quan trọng — nhiều dev bỏ qua
+      - Quy trình: (1) Audience, (2) Structure, (3) Write, (4) Review, (5) Update
+      - Cho thấy bạn viết cho người khác hiểu, không phải cho mình đọc lại
+      - Tránh: "tôi viết README 1 lần xong" → không maintain, hoặc "tôi không viết vì code tự explain" → unrealistic
+    star_cues:
+      situation: "What needed documenting + why"
+      task: "Who the audience is + what they need"
+      action: "Structure, writing process, review, maintenance"
+      result: "Doc usage + feedback"
+    evaluation_criteria:
+      - "Audience-first approach"
+      - "Clear structure (not wall of text)"
+      - "Diagrams/examples included"
+      - "Maintenance plan"
+      - "Measurable impact of documentation"
+    sample_answer: "Tôi viết onboarding doc cho team mới. Tôi: (1) Hỏi 3 junior dev: các bạn cần gì khi join?, (2) Structure: Day 1 (setup), Day 2-3 (first PR), Week 2 (architecture), (3) Kèm screenshot, diagram, và troubleshooting. Doc giảm onboarding time từ 2 tuần xuống 4 ngày. Update quarterly khi có thay đổi."
+
+  - id: "communication_004"
+    text: "Kể về một lần bạn phải communicate bad news (delay, bug, hoặc failure) cho stakeholder. Bạn nói thế nào?"
+    category: "communication"
+    difficulty: "hard"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Bad news = transparency + solution, không phải blame + excuse
+      - Structure: (1) State the problem clearly, (2) Impact, (3) What you're doing about it, (4) Timeline
+      - Timeliness: nói sớm hơn muộn, không chờ người khác phát hiện
+      - Tránh: "không phải lỗi tôi" hoặc "để tôi tìm ra người làm"
+    star_cues:
+      situation: "What went wrong + when you discovered it"
+      task: "Who needs to know + what decision they need to make"
+      action: "How/when you communicated + what solution you proposed"
+      result: "Stakeholder response + outcome"
+    evaluation_criteria:
+      - "Timely communication (not hiding)"
+      - "Honest about problem and impact"
+      - "Come with solutions, not just problems"
+      - "Professional tone (no blame)"
+      - "Preserved trust relationship"
+    sample_answer: "Tôi phát hiện data leak cho 1 user ở staging (không production). Tôi: (1) Notify CTO ngay trong 15 phút, (2) Email: 'What happened, Impact (1 user, staging only), What I did (fixed + added test), What we should do (audit all endpoints)', (3) Timeline: fix deploy trong 1h, full audit trong 1 tuần. CTO đánh giá cao về transparency, approve audit và sau đó add security review vào CI/CD."
+
+  - id: "communication_005"
+    text: "Bạn đã bao giờ phải thuyết phục team hoặc manager adopt một công nghệ hoặc process mới? Bạn làm thế nào?"
+    category: "communication"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Persuasion = data + empathy + timing
+      - Hiểu resistance: (1) Fear of change, (2) sunk cost, (3) "if it ain't broke"
+      - Strategy: POC trước → data → proposal → pilot → full rollout
+      - Tránh: "tôi nói là tốt thì phải làm" hoặc "tôi bắt làm vì tôi senior"
+    star_cues:
+      situation: "What tech/process + why you believed it's better"
+      task: "Who needs convincing + their concerns"
+      action: "Data gathering, POC, addressing concerns, pilot plan"
+      result: "Adoption + impact"
+    evaluation_criteria:
+      - "Data-driven persuasion"
+      - "Understanding of others' concerns"
+      - "POC approach (prove, don't preach)"
+      - "Patience and incremental approach"
+      - "Successful adoption with measurable impact"
+    sample_answer: "Tôi muốn team adopt TypeScript (đang JS). Resistance: 'Mất thời gian học, code chậm'. Tôi: (1) Chạy POC: convert 1 module → show 0 runtime errors (trước đó 5 bugs/tháng), (2) Demo cho team: type safety bắt lỗi trước khi run, (3) Đề xuất: 1 module mới/tuần, team vote. Sau 2 tháng: toàn bộ codebase TypeScript, bug giảm 60%, team đồng ý rằng 'không muốn quay lại JS'."
+
+  - id: "communication_006"
+    text: "Mô tả một tình huống bạn phải give feedback cho đồng nghiệp về performance hoặc code của họ. Bạn tiếp cận thế nào?"
+    category: "communication"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Feedback = gift when done right, attack when done wrong
+      - Framework SBI: Situation → Behavior → Impact
+      - Always: private, specific, timely, dựa trên observation không phải judgment
+      - Tránh: feedback qua Slack (thiếu tone), feedback chung chung ("code bạn chưa tốt"), hoặc feedback public
+    star_cues:
+      situation: "What triggered the need for feedback"
+      task: "What change you wanted to see"
+      action: "SBI framework, tone, timing, follow-up"
+      result: "Person's response + behavior change"
+    evaluation_criteria:
+      - "Used SBI or similar framework"
+      - "Private and timely delivery"
+      - "Specific and actionable (not vague)"
+      - "Based on observation, not judgment"
+      - "Positive behavior change resulted"
+    sample_answer: "Tôi nhận thấy bạn A commit code không có tests liên tục. Tôi: (1) Hỏi 1-1 coffee, không phải ở Slack, (2) 'Situation: Trong 2 tuần qua, thấy 5 PR không có test (Behavior). Điều này làm QA mất thêm 1 ngày test manual và release chậm (Impact)', (3) Đề xuất: viết test cùng pair. Bạn cảm ơn, từ đó luôn kèm test. Tôi cũng khen publicly khi bạn có PR best test coverage."
+
+  # ── ADAPTABILITY (6 questions) ──────────────────────────
+
+  - id: "adaptability_001"
+    text: "Hãy kể về một lần project yêu cầu thay đổi đột ngột (pivot). Bạn thích ứng thế nào?"
+    category: "adaptability"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Pivot là bình thường trong tech — interviewer muốn thấy bạn handle change positively
+      - Show: (1) Accept quickly, (2) Assess impact, (3) Re-plan, (4) Motivate team (if leading)
+      - Tránh: "tôi không đồng ý và làm cách cũ" hoặc "tôi hoang mang không biết làm gì"
+    star_cues:
+      situation: "What changed + why (business, client, market)"
+      task: "New direction + constraints"
+      action: "How you adapted: re-prioritize, learn new stuff, communicate"
+      result: "Project success in new direction + what you learned"
+    evaluation_criteria:
+      - "Positive attitude toward change"
+      - "Quick reassessment and planning"
+      - "Ability to let go of previous work"
+      - "Learning agility"
+      - "Result in new direction"
+    sample_answer: "Dự án ML recommendation → client muốn đổi sang rule-based system vì không đủ data. Tôi: (1) Accept trong 1 ngày, (2) Assess: giữ được data pipeline, chỉ thay model layer, (3) Re-plan: 3 ngày refactor, (4) Ship rule-based trong 1 tuần (vs 3 tuần ML). Client happy, tôi học được: validate data availability trước khi commit architecture."
+
+  - id: "adaptability_002"
+    text: "Bạn đã bao giờ phải học một công nghệ hoặc skill mới rất nhanh để hoàn thành task? Bạn học thế nào?"
+    category: "adaptability"
+    difficulty: "easy"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Học nhanh là kỹ năng quan trọng nhất trong tech
+      - Show: (1) Approach có hệ thống, (2) 80/20 rule, (3) Learn by doing
+      - Tránh: "tôi đọc document hết rồi mới làm" → chậm, hoặc "tôi làm bừa học trên kinh nghiệm"
+    star_cues:
+      situation: "What needed learning + time constraint"
+      task: "What you needed to deliver"
+      action: "Learning approach: resources, POC, mentor, practice"
+      result: "Delivered + level of proficiency achieved"
+    evaluation_criteria:
+      - "Structured learning approach"
+      - "80/20 focus (most important first)"
+      - "Learning by doing (not just reading)"
+      - "Resourcefulness (asking for help, finding materials)"
+      - "Successful delivery despite newness"
+    sample_answer: "Cần deploy Kubernetes chưa từng dùng. Còn 1 tuần. Tôi: (1) 4h: Kubernetes.io crash course (core concepts only: pod, service, deployment), (2) 1 ngày: local minikube POC, (3) 2 ngày: deploy staging, gap 3 issues → Google + hỏi senior, (4) 2 ngày: deploy production. Kết quả: ship đúng deadline, sau 1 tháng giúp 2 project khác migrate sang Kubernetes."
+
+  - id: "adaptability_003"
+    text: "Kể về một lần bạn làm việc trong môi trường mới (công ty mới, team mới, hoặc văn hóa mới). Bạn thích nghi thế nào?"
+    category: "adaptability"
+    difficulty: "easy"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Adapt to new environment = observe + ask + contribute
+      - Cho thấy bạn: (1) Observe culture trước khi act, (2) Ask questions (không phải assume), (3) Contribute sớm (build trust)
+      - Tránh: "tôi làm y như công ty cũ" hoặc "tôi chờ 2 tháng mới bắt đầu làm"
+    star_cues:
+      situation: "New environment: company, team, country, culture"
+      task: "Become productive + integrated"
+      action: "Observation, asking, building relationships, early contributions"
+      result: "Time to productivity + relationships built"
+    evaluation_criteria:
+      - "Observation before action"
+      - "Asking good questions"
+      - "Building relationships early"
+      - "Quick first contribution"
+      - "Respect for existing culture"
+    sample_answer: "Tôi chuyển từ startup sang corporate. Khác biệt: quy trình nhiều hơn, review chậm hơn. Tôi: (1) Tuần 1: hỏi process từ senior, (2) Học unwritten rules (meeting culture, communication channels), (3) Tuần 2: contribute task nhỏ để build trust, (4) Sau 1 tháng: proposed improve 1 process (show value). Sau 3 tháng được assign lead feature — nhanh hơn trung bình 6 tháng."
+
+  - id: "adaptability_004"
+    text: "Bạn đã bao giờ phải làm việc dưới ambiguity — không có clear requirements hoặc changing goals? Bạn xử lý thế nào?"
+    category: "adaptability"
+    difficulty: "hard"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Ambiguity là bình thường — interviewer muốn thấy bạn tạo clarity
+      - Approach: (1) Define minimum viable scope, (2) Get feedback sớm, (3) Iterate
+      - Tránh: "chờ PM viết spec rõ ràng rồi mới làm" hoặc "làm bừa rồi sửa sau"
+    star_cues:
+      situation: "Vague requirements, changing priorities"
+      task: "What you needed to deliver"
+      action: "Clarifying questions, MVP approach, frequent check-ins"
+      result: "Delivered something useful despite ambiguity"
+    evaluation_criteria:
+      - "Proactive clarification (not waiting)"
+      - "MVP approach to reduce risk"
+      - "Frequent feedback loops"
+      - "Comfortable with iteration"
+      - "Result: useful output despite unclear inputs"
+    sample_answer: "PM muốn 'AI feature cho users' — không cụ thể gì thêm. Tôi: (1) Hỏi 5 câu: ai dùng, để làm gì, data gì có, budget, timeline, (2) Khi vẫn vague: đề xuất 3 options (simple → complex) với effort estimate, (3) PM chọn option 2. Tôi build MVP trong 1 tuần, demo, PM feedback, iterate 2 lần. Final feature tăng 15% engagement."
+
+  - id: "adaptability_005"
+    text: "Hãy kể về một lần bạn thất bại hoặc làm sai. Bạn xử lý và học gì từ đó?"
+    category: "adaptability"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Thất bại là cơ hội show growth mindset — NHƯNG phải là real failure, không phải "tôi đến trễ 5 phút"
+      - Cấu trúc: What happened → Why → What I did to fix → What I learned → How I prevent
+      - Tránh: "tôi không bao giờ thất bại" → red flag, hoặc thất bại do người khác
+    star_cues:
+      situation: "The failure — be specific and honest"
+      task: "Your responsibility in the failure"
+      action: "How you responded, fixed, communicated"
+      result: "What you learned + prevention measures"
+    evaluation_criteria:
+      - "Honest self-assessment"
+      - "Taking responsibility (not blaming others)"
+      - "Quick response to mitigate"
+      - "Concrete lessons learned"
+      - "Systemic prevention (not just 'I will try harder')"
+    sample_answer: "Tôi deploy bug xóa duplicate records nhưng xóa nhầm 500 valid records. Tôi: (1) Stop deployment ngay, (2) Restore từ backup (mất 1h downtime), (3) Notify manager + team, (4) Root cause: query không có WHERE condition chính xác. Lesson: (1) Luôn run trên staging trước, (2) Add dry-run mode cho destructive queries, (3) Required 2 người review destructive SQL. Từ đó 0 data incident."
+
+  - id: "adaptability_006"
+    text: "Bạn đã bao giờ phải handle nhiều priorities cùng lúc (context switching)? Bạn manage thế nào?"
+    category: "adaptability"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Context switching là thực tế — interviewer muốn thấy bạn có hệ thống
+      - Strategies: (1) Prioritize (urgency + impact matrix), (2) Time-block, (3) Communicate timeline
+      - Tránh: "tôi làm tất cả cùng lúc" → burnout, hoặc "tôi từ chối task mới" → không flexible
+    star_cues:
+      situation: "Multiple competing priorities"
+      task: "What needed to be delivered + deadlines"
+      action: "Prioritization framework, communication, time management"
+      result: "All critical items delivered + managed expectations"
+    evaluation_criteria:
+      - "Clear prioritization framework"
+      - "Stakeholder communication (setting expectations)"
+      - "Time management strategy"
+      - "Saying no when appropriate"
+      - "All critical deliverables met"
+    sample_answer: "Cùng lúc: fix production bug (urgent), finish feature cho sprint (deadline), và onboarding intern mới. Tôi: (1) Priority: bug > feature > intern, (2) Bug: fix trong 2h (critical), (3) Feature: renegotiate deadline từ Thứ 5 sang Thứ 6 (PM đồng ý), (4) Intern: delegate onboarding doc (đã có sẵn) + 1h/ngày pair. Kết quả: bug fixed, feature ship 1 ngày trễ, intern onboarded smooth."
+
+  # ── CONFLICT RESOLUTION (6 questions) ──────────────────────────
+
+  - id: "conflict_001"
+    text: "Hãy kể về một lần bạn có bất đồng ý kiến mạnh với đồng nghiệp về technical decision. Bạn giải quyết thế nào?"
+    category: "conflict_resolution"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Technical disagreement ≠ personal conflict
+      - Show: bạn listen, argue với data, và commit khi quyết định đạt được
+      - "Disagree and commit" — important principle
+      - Tránh: "tôi tránh tranh cãi và làm theo ý mình" hoặc "tôi luôn nhường"
+    star_cues:
+      situation: "The disagreement: what, who, why"
+      task: "Decision that needed to be made"
+      action: "How you handled: data, compromise, escalation if needed"
+      result: "Decision + relationship + outcome"
+    evaluation_criteria:
+      - "Respectful disagreement"
+      - "Data-driven argumentation"
+      - "Active listening to other side"
+      - "Disagree and commit when decision made"
+      - "Relationship maintained"
+    sample_answer: "Tôi và senior dev tranh cãi: SQL vs NoSQL cho new service. Tôi thích NoSQL (flexible schema), bạn ấy thích SQL (ACID). Tôi: (1) Listen lý do bạn ấy, (2) Tạo comparison: data structure, query patterns, scale requirements, (3) Chạy POC cả 2 với sample data. Kết quả: SQL phù hợp hơn vì cần transaction + complex joins. Tôi commit và implement SQL, học thêm về query optimization."
+
+  - id: "conflict_002"
+    text: "Bạn đã bao giờ phải handle một đồng nghiệp không cooperate hoặc không responsive? Bạn làm thế nào?"
+    category: "conflict_resolution"
+    difficulty: "hard"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Approach: (1) Assume positive intent, (2) Private 1-1, (3) Understand their situation, (4) Find solution together
+      - Có thể họ: busy, không hiểu priority, hoặc có personal issue
+      - Tránh: "tôi kêu manager ngay" hoặc "tôi làm hộ cho nhanh"
+    star_cues:
+      situation: "Who was unresponsive + impact on your work"
+      task: "What you needed from them"
+      action: "1-1 conversation, understanding their situation, finding workaround"
+      result: "Got what you needed + maintained relationship"
+    evaluation_criteria:
+      - "Assumed positive intent first"
+      - "Private approach (not public call-out)"
+      - "Empathy for their situation"
+      - "Practical workaround or solution"
+      - "Professional escalation only if needed"
+    sample_answer: "Tôi cần API spec từ team backend để làm frontend, nhưng họ không reply Slack 3 ngày. Tôi: (1) Đi bộ qua bàn ngồi, hỏi thân thiện: 'Bạn đang busy à?', (2) Hỏi được: họ đang fight production bug critical. Tôi: 'OK, priority của bạn hơn. Mình lấy tạm old spec và adjust, sau đó review cùng bạn khi bạn rảnh.' Tôi làm frontend dựa trên old spec + assumptions, sau đó review cùng backend trong 30 phút. Deadline met, relationship tốt."
+
+  - id: "conflict_003"
+    text: "Kể về một lần bạn và manager không đồng thuận về priority hoặc approach. Bạn xử lý thế nào?"
+    category: "conflict_resolution"
+    difficulty: "hard"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Disagree upward cần tact: data + respect + timing
+      - Show: bạn push back với lý do hợp lý, NHƯNG vẫn respect final decision
+      - Tránh: "tôi luôn đồng ý vì là sếp" (pushover) hoặc "tôi cãi lớn vì tôi đúng" (arrogant)
+    star_cues:
+      situation: "What you disagreed about"
+      task: "Your reasoning + their reasoning"
+      action: "How you presented your case, tone, evidence"
+      result: "Final decision + your response + outcome"
+    evaluation_criteria:
+      - "Respectful pushback with data"
+      - "Understanding manager's perspective"
+      - "Good timing and setting for discussion"
+      - "Accepting final decision gracefully"
+      - "Supporting the decision even if you disagreed"
+    sample_answer: "Manager muốn release feature chưa test full vì client deadline. Tôi: (1) Hiểu business pressure, (2) Show data: '3 issues critical chưa fix, xác suất crash 30% khi traffic cao', (3) Đề xuất: release v1 (5 features stable) ngay, v2 (3 features còn lại) sau 3 ngày. Manager accept. V1 deploy thành công, v2 deploy sau 3 ngày. Tôi học: frame technical concern thành business risk để manager hiểu."
+
+  - id: "conflict_004"
+    text: "Bạn đã bao giờ là người trung gian (mediator) giữa 2 người hoặc 2 team có xung đột? Bạn đóng vai trò thế nào?"
+    category: "conflict_resolution"
+    difficulty: "hard"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Mediator = neutral facilitator, không phải judge
+      - Skills: (1) Listen cả 2 phía, (2) Find common ground, (3) Propose win-win
+      - Tránh: take side hoặc "cái đó là việc của 2 người đó"
+    star_cues:
+      situation: "The conflict between who + about what"
+      task: "Your role as mediator"
+      action: "Listening to both, finding common ground, proposing solution"
+      result: "Resolution + relationship preserved"
+    evaluation_criteria:
+      - "Neutral stance"
+      - "Active listening to both sides"
+      - "Finding common ground"
+      - "Win-win solution (not compromise that satisfies nobody)"
+      - "Follow-up to ensure resolution sticks"
+    sample_answer: "Frontend và backend team tranh cãi: API contract thay đổi liên tục. Tôi (tech lead): (1) Hỏi private cả 2: frontend phàn contract unstable, backend phàn requirements thay đổi, (2) Organize joint meeting: hiện tại gap, (3) Đề xuất: contract-first development (OpenAPI spec trước, review chung, freeze 1 tuần), (4) Implement contract testing. Sau 1 tháng: 0 API-related bug, cả 2 team hài lòng."
+
+  - id: "conflict_005"
+    text: "Mô tả một tình huống bạn nhận thấy đồng nghiệp đang làm sai (bad practice, hoặc ethical issue). Bạn hành động thế nào?"
+    category: "conflict_resolution"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Approach: (1) Private first, (2) Assume mistake (not malice), (3) Help fix
+      - Nếu là ethical issue: báo manager/security — không cover up
+      - Tránh: phán xét trước mặt người khác hoặc bỏ qua
+    star_cues:
+      situation: "What you noticed + potential impact"
+      task: "Your responsibility to act"
+      action: "Private conversation, offering help, escalation if needed"
+      result: "Issue resolved + lessons"
+    evaluation_criteria:
+      - "Noticed the issue (attention to detail)"
+      - "Private approach first"
+      - "Assumed good intent initially"
+      - "Offered help to fix"
+      - "Appropriate escalation for serious issues"
+    sample_answer: "Tôi thấy senior dev commit password vào git (trong .env). Tôi: (1) Slack private: 'Anh ơi, thấy .env trong PR, có lẽ anh quên add vào .gitignore', (2) Anh ấy cảm ơn, fix ngay, (3) Tôi đề xuất: add pre-commit hook check secret. Anh ấy implement, team adopt. Không drama, anh ấy thẳng cảm ơn vì tôi nói private."
+
+  - id: "conflict_006"
+    text: "Bạn đã bao giờ phải xử lý feedback tiêu cực (negative feedback) từ đồng nghiệp hoặc manager? Bạn react thế nào?"
+    category: "conflict_resolution"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Nhận feedback = growth opportunity — show maturity
+      - Steps: (1) Listen (not defend), (2) Ask clarifying questions, (3) Reflect, (4) Act
+      - Tránh: "tôi tự bảo vệ" hoặc "tôi đồng ý cho xong nhưng không đổi"
+    star_cues:
+      situation: "What feedback + from whom"
+      task: "Your initial reaction + processing"
+      action: "How you sought to understand, reflected, and acted"
+      result: "What changed + relationship with feedback giver"
+    evaluation_criteria:
+      - "Did not get defensive"
+      - "Asked clarifying questions"
+      - "Genuine reflection"
+      - "Concrete actions taken"
+      - "Improved performance as result"
+    sample_answer: "Trong 1-1, manager nói: 'Code của bạn chất lượng nhưng communication cần cải thiện — bạn ít update progress.' Tôi: (1) Không bảo chữa, hỏi: 'Anh có thể cho ví dụ cụ thể không?', (2) Nhận ra: tôi thật sự ít proactive update, (3) Action: set up weekly update email + Slack daily standup bot, (4) Sau 1 tháng: manager khen improved significantly, team cũng biết rõ hơn tôi đang làm gì."
+
+  # ── TIME MANAGEMENT (6 questions) ──────────────────────────
+
+  - id: "time_001"
+    text: "Hãy kể về một lần bạn có nhiều deadline cùng lúc. Bạn ưu tiên và manage thế nào?"
+    category: "time_management"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Priority matrix: Urgent+Important > Important+Not Urgent > Urgent+Not Important > Neither
+      - Show: (1) Assess all tasks, (2) Negotiate deadlines, (3) Delegate if possible, (4) Communicate
+      - Tránh: "tôi OT hết để làm tất cả" hoặc "tôi bỏ task không quan trọng"
+    star_cues:
+      situation: "Multiple deadlines + their importance"
+      task: "What you needed to deliver + constraints"
+      action: "Prioritization, negotiation, delegation, communication"
+      result: "All critical items delivered + managed expectations"
+    evaluation_criteria:
+      - "Systematic prioritization"
+      - "Stakeholder communication"
+      - "Negotiation of unrealistic deadlines"
+      - "Delegation when appropriate"
+      - "All critical deliverables met"
+    sample_answer: "Tuần cuối sprint: feature A (client deadline), bug P1 (production), và report cho CEO. Tôi: (1) Priority: bug > feature > report, (2) Bug: fix trong 3h (urgent), (3) Feature: hỏi PM có thể deliver 1 ngày sớm không vì cần test → PM đồng ý, (4) Report: delegate data gathering cho junior, tôi chỉ compile và review. Tất cả hoàn thành đúng deadline."
+
+  - id: "time_002"
+    text: "Bạn đã bao giờ bị trễ deadline? Lý do gì và bạn xử lý thế nào?"
+    category: "time_management"
+    difficulty: "easy"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Trễ deadline là bình thường — quan trọng là bạn handle thế nào
+      - Steps: (1) Nhận sớm (không chờ đến ngày cuối), (2) Explain why (honest), (3) Propose new deadline + plan
+      - Tránh: "tôi không bao giờ trễ" (không thật) hoặc "do ... (người khác)"
+    star_cues:
+      situation: "What was late + why (honest assessment)"
+      task: "Your responsibility in the delay"
+      action: "Communication, re-planning, prevention"
+      result: "New deadline met + trust preserved"
+    evaluation_criteria:
+      - "Early communication (not last minute)"
+      - "Honest about reasons (not blame)"
+      - "Took responsibility"
+      - "Realistic new plan"
+      - "Prevention measures for future"
+    sample_answer: "Feature trễ 2 ngày vì API dependency mất thêm 1 ngày debug. Tôi: (1) Notify PM ngay khi biết (không chờ deadline), (2) Explain: 'API X response sai spec, cần thêm 1 ngày fix + 1 ngày test', (3) Proposed: deploy feature B (smaller, ready) thay thế, feature A deploy Thứ 6. PM accept vì communication sớm. Từ đó: luôn add buffer cho dependency và check integration sớm hơn."
+
+  - id: "time_003"
+    text: "Bạn manage workload thế nào khi có task mới được thêm vào giữa sprint hoặc project đang chạy?"
+    category: "time_management"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Scope creep là bình thường — cần có process handle
+      - Show: (1) Assess impact to existing tasks, (2) Negotiate: swap or extend, (3) Communicate trade-offs
+      - Tránh: "nhận thêm và làm hết" (burnout) hoặc "từ chối tất cả" (inflexible)
+    star_cues:
+      situation: "New task + existing commitments"
+      task: "Assessing impact + making trade-offs"
+      action: "Negotiation, re-prioritization, communication"
+      result: "Managed expectations + delivered value"
+    evaluation_criteria:
+      - "Impact assessment before accepting"
+      - "Trade-off communication (if I do X, Y will slip)"
+      - "Negotiation skills"
+      - "Flexibility within reason"
+      - "Stakeholder bought into trade-offs"
+    sample_answer: "Manager thêm task critical giữa sprint. Tôi: (1) List current tasks + effort, (2) Show: 'Nếu nhận task mới, task C sẽ bị trễ 2 ngày', (3) Hỏi: 'Task C có thể delay không?', (4) Manager: 'C có thể delay, task mới ưu tiên hơn.' Tôi nhận, complete task mới trong 2 ngày, task C hoàn thành 2 ngày sau. Transparent communication giúp manager take informed decision."
+
+  - id: "time_004"
+    text: "Hãy kể về một lần bạn phải học và làm một task cùng lúc (learning on the job). Bạn manage thời gian thế nào?"
+    category: "time_management"
+    difficulty: "easy"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Learning + doing = common in tech
+      - Strategy: (1) Time-box learning, (2) Learn just enough to start, (3) Learn deeper as needed
+      - Tránh: "học hết rồi mới làm" (paralysis) hoặc "làm bừa không học" (mistakes)
+    star_cues:
+      situation: "What you needed to learn + deliver"
+      task: "Deadline + learning scope"
+      action: "Time allocation, learning strategy, doing strategy"
+      result: "Delivered + proficiency gained"
+    evaluation_criteria:
+      - "Time-boxed learning"
+      - "Just-in-time learning (not over-studying)"
+      - "Balanced learning and doing"
+      - "Delivered on time"
+      - "Efficient learning approach"
+    sample_answer: "Cần build dashboard bằng React (chưa từng dùng) trong 2 tuần. Tôi: (1) Ngày 1-2: học React basics (components, state, props) — 4h học, 4h POC, (2) Ngày 3-10: build dashboard, Google khi gặp gì, (3) Ngày 11-14: refine + test. Strategy: chỉ học những cần dùng ngay (80/20). Kết quả: ship đúng deadline, React proficiency level 3/5, sau 1 tháng lên 4/5."
+
+  - id: "time_005"
+    text: "Bạn đã bao giờ phải estimate thời gian cho một task mà bạn chưa từng làm? Bạn estimate thế nào?"
+    category: "time_management"
+    difficulty: "medium"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Estimation skill = quan trọng cho developer
+      - Approach: (1) Break down thành nhỏ, (2) Estimate từng phần, (3) Add buffer, (4) Get second opinion
+      - Luôn estimate range (2-3 days) không phải số chính xác (2.5 days)
+      - Tránh: "tôi đoán" hoặc "tôi nói ngắn để impress rồi OT"
+    star_cues:
+      situation: "What needed estimating + unknowns"
+      task: "Your estimation approach"
+      action: "Breakdown, research, second opinion, buffer"
+      result: "Estimate accuracy + what you learned"
+    evaluation_criteria:
+      - "Task breakdown approach"
+      - "Research before estimating"
+      - "Buffer for unknowns"
+      - "Getting second opinions"
+      - "Honest about uncertainty"
+    sample_answer: "PM hỏi thời gian build notification system (chưa từng làm). Tôi: (1) Break down: backend (2 days), frontend (2 days), testing (1 day), deployment (0.5 day), (2) Google similar projects: average 5-8 days, (3) Add 30% buffer vì chưa làm → estimate 7-9 days, (4) Hỏi senior: ổn định. Thực tế: 8 days. Estimate chính xác vì breakdown + buffer."
+
+  - id: "time_006"
+    text: "Mô tả một ngày làm việc của bạn. Bạn tổ chức và optimize thời gian thế nào?"
+    category: "time_management"
+    difficulty: "easy"
+    answer_tips: |
+      Tips trả lời câu này:
+      - Không cần perfect schedule — interviewer muốn thấy bạn có hệ thống
+      - Show: (1) Deep work blocks, (2) Meeting consolidation, (3) End-of-day review
+      - Tránh: "tôi làm khi có hứng thú" hoặc "tôi chỉ họp không làm được gì"
+    star_cues:
+      situation: "Typical workday structure"
+      task: "Productivity goals"
+      action: "Time blocking, meeting management, focus techniques"
+      result: "Consistent output + work-life balance"
+    evaluation_criteria:
+      - "Intentional time blocking"
+      - "Protected deep work time"
+      - "Meeting management strategy"
+      - "Regular review/reflection"
+      - "Sustainable (not burnout pace)"
+    sample_answer: "Tôi block: (1) 9-11h: deep work (coding, không meeting), (2) 11-12h: code review + async communication, (3) 2-3h: meetings/standup (gom vào 1 block), (4) 3-5h: coding + testing, (5) 5-5.30h: review today + plan tomorrow. Quy tắc: meeting chỉ buổi chiều, Slack mute buổi sáng. Productivity tăng ~40% khi áp dụng deep work blocks vs trước đó họp tán."

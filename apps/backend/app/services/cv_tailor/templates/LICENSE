@@ -1,0 +1,12 @@
+LaTeX resume template attribution.
+
+The current template (base_rover.tex.j2) follows the widely-used "Jake's Resume"
+LaTeX style (Jake Gutierrez, https://github.com/jakegut/resume, MIT-licensed),
+customized for TalentPulse and rendered deterministically from a ResumeModel.
+
+An earlier version of this file was adapted from subidit/rover-resume
+(CC BY 4.0, https://github.com/subidit/rover-resume). Attribution retained.
+
+Note: pdfTeX-only primitives (\pdfgentounicode) and the fontawesome5 icon font
+were removed because the Tectonic (XeTeX) engine used to compile does not
+support them (they garble output / crash font loading).

@@ -1,0 +1,39 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-tp-backend-local}
+    build: .
+    container_name: tp-backend
+    ports:
+      - "127.0.0.1:8001:8001"
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8001"]
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://metabase_ro:metabase_ro@localhost:5432/warehouse}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8002}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-TalentPulseBot}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-dev-webhook-secret}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-talentpulse-raw}
+      MCP_SERVER_URL: ${MCP_SERVER_URL:-http://tp-mcp:8080/mcp/}
+      LATEX_SERVICE_URL: ${LATEX_SERVICE_URL:-http://tp-latex:8090}
+    networks:
+      - talentpulse
+    restart: unless-stopped
+
+  tp-latex:
+    build: ./deploy/tp-latex
+    container_name: tp-latex
+    networks:
+      - talentpulse
+    restart: unless-stopped
+
+networks:
+  talentpulse:
+    external: true

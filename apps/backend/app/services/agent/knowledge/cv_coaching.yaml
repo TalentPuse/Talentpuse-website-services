@@ -1,0 +1,167 @@
+bullet_points:
+  formula: "Action Verb + Technology + Context + Result/Impact"
+  rules:
+    - Bắt đầu bằng action verb (Developed, Built, Optimized, Implemented, Designed, Automated, Architected, Migrated, Integrated, Reduced, Improved, Delivered)
+    - Kèm tech stack cụ thể (React, PostgreSQL, Docker, Kubernetes, etc.)
+    - Có số liệu khi được (reduced 30%, handled 10K requests, 99.9% uptime, served 50K users)
+    - Mỗi bullet 1 dòng, không quá 2 dòng
+    - Dùng metrics cụ thể thay vì "improved performance" → "reduced latency from 800ms to 120ms"
+    - Dùng "Led", "Spearheaded", "Owned" khi làm lead hoặc solo project
+  examples:
+    backend:
+      bad: "Làm backend cho hệ thống quản lý"
+      good: "Designed REST API with Spring Boot serving 5K req/min for inventory management system"
+      bad2: "Dùng database lưu data"
+      good2: "Optimized PostgreSQL queries reducing average response time from 800ms to 120ms"
+      bad3: "Viết API cho app"
+      good3: "Implemented authentication & authorization system with JWT and RBAC, securing 15 API endpoints for multi-tenant SaaS platform"
+    frontend:
+      bad: "Làm giao diện web"
+      good: "Built responsive dashboard with React + TypeScript, improving user engagement by 25%"
+      bad2: "Làm trang web cho khách hàng"
+      good2: "Developed e-commerce storefront with Next.js and Tailwind CSS, achieving 95+ Lighthouse performance score and 30% faster page loads"
+    data:
+      bad: "Train model AI"
+      good: "Developed recommendation model using collaborative filtering, achieving 92% precision@10 on 500K user dataset"
+      bad2: "Làm data pipeline"
+      good2: "Built real-time data pipeline with Apache Kafka and Spark Streaming, processing 100K events/min with <5s latency"
+    qa:
+      bad: "Test phần mềm"
+      good: "Automated 200+ test cases with Playwright, reducing manual QA time by 60%"
+      bad2: "Tìm bug"
+      good2: "Designed end-to-end testing framework with Cypress covering 95% of critical user flows, integrated into CI/CD pipeline"
+    devops:
+      bad: "Quản lý server"
+      good: "Migrated 20 microservices from EC2 to Kubernetes, reducing infrastructure cost by 40% and deployment time from 2hrs to 10min"
+      bad2: "Setup CI/CD"
+      good2: "Built CI/CD pipeline with GitHub Actions and Terraform, achieving zero-downtime deployments across 3 environments"
+
+project_description:
+  template:
+    - "Tên project: ngắn gọn, rõ nghĩa (ví dụ: JobPulse - AI-powered Job Recommendation Engine)"
+    - "Mô tả: 1-2 câu project làm gì, cho ai, giải quyết vấn đề gì"
+    - "Tech stack: liệt kê technologies used, group theo type (Language, Framework, DB, DevOps)"
+    - "Role của bạn: làm phần gì trong team (hoặc solo)"
+    - "Kết quả/impact: con số, metrics, hoặc outcome cụ thể"
+  rules:
+    - Personal project, coursework, hackathon đều được ghi cho fresher
+    - Ưu tiên project có source trên GitHub (kèm link)
+    - Nhấn mạnh phần bạn contribute, không phải mô tả chung chung
+    - Nếu là solo project → ghi rõ "Solo developer, end-to-end implementation"
+    - Sắp xếp project theo relevance với target role
+    - Mỗi project 3-5 bullet points
+  examples:
+    good: |
+      JobPulse — AI Job Recommendation Engine (GitHub: github.com/user/jobpulse)
+      • Solo developer, end-to-end implementation
+      • Built content-based filtering engine using TF-IDF + cosine similarity, matching candidates to 10K+ job postings
+      • Developed REST API with FastAPI + PostgreSQL, handling 500 req/min
+      • Deployed on AWS EC2 with Docker, achieving 99.5% uptime over 3 months
+      • Tech: Python, FastAPI, scikit-learn, PostgreSQL, Docker, AWS
+    bad: |
+      Đồ án tốt nghiệp
+      • Làm project tốt nghiệp về AI
+      • Sử dụng Python và machine learning
+      • Làm việc nhóm 4 người
+
+summary_section:
+  rules:
+    - "2-3 câu maximum"
+    - "Cấu trúc: Background + Target Role + Key Strengths"
+    - "Không dùng generic phrases: hardworking, team player, fast learner, motivated, passionate"
+    - "Nhắc đến years of experience nếu có, hoặc 'fresh graduate' nếu mới ra trường"
+    - "Nếu chuyển ngành khác → nhắc transferable skills (data analysis, problem-solving, project management)"
+    - "Focus vào value bạn mang lại cho employer, không phải bạn muốn gì"
+  examples:
+    student: "Third-year CS student at HCMUT focusing on backend development. Experienced with Python, Django, and PostgreSQL through 3 personal projects deployed on AWS. Seeking internship to apply system design skills in production environment."
+    fresher_backend: "Backend developer with hands-on experience building REST APIs using Node.js and PostgreSQL. Built 2 full-stack projects deployed on AWS with CI/CD. Looking for junior backend role to deepen microservices and cloud expertise."
+    fresher_data: "Data enthusiast with strong Python and SQL skills from 4 personal data projects. Built ML models achieving 90%+ accuracy on real-world datasets. Seeking Data Analyst role to apply statistical analysis and visualization skills."
+    career_switch: "Former math teacher transitioning to data engineering. Leverage 3 years of analytical thinking and Python self-study to build ETL pipelines. Completed 2 data engineering projects with Apache Airflow and BigQuery."
+
+skills_section:
+  rules:
+    - "Group theo category: Programming Languages → Frameworks & Libraries → Databases → DevOps & Cloud → Data & AI Tools → Other"
+    - "Xếp theo relevance với target role (không theo alphabetical)"
+    - "Chỉ list skills có thể demonstrate (trong project/work)"
+    - "Không ghi: MS Office, Internet, Windows, Word, Excel (quá cơ bản cho IT CV)"
+    - "Không ghi 'Basic/Intermediate/Advanced' → để bullet points chứng minh level"
+    - "Nếu biết nhiều hơn 5 languages → chỉ list top 5 relevant, phần còn lại vào 'Familiar with'"
+  optimization:
+    - "Match keywords từ JD target vào skills section"
+    - "Gọi query_skill_gap để xem skills nào đang hot → ưu tiên đưa lên"
+    - "Nếu JD yêu cầu skill chưa có → ghi vào 'Learning' hoặc 'In Progress' section"
+  categories:
+    languages: "Python, JavaScript, TypeScript, Java, Go, Rust, C++, SQL"
+    frameworks: "React, Next.js, Django, FastAPI, Spring Boot, Express, Vue, Angular"
+    databases: "PostgreSQL, MongoDB, Redis, MySQL, Elasticsearch, BigQuery, Snowflake"
+    devops: "Docker, Kubernetes, AWS, GCP, Terraform, GitHub Actions, Jenkins, Nginx"
+    data_ai: "PyTorch, TensorFlow, scikit-learn, Pandas, Apache Spark, Airflow, MLflow, LangChain"
+
+ats_optimization:
+  rules:
+    - "Sections bắt buộc theo thứ tự: Contact → Summary → Skills → Experience → Education → Projects"
+    - "Dùng font chuẩn (Arial, Calibri, Times New Roman), size 10-12"
+    - "Không dùng: tables, text boxes, images, headers/footers, fancy formatting, columns"
+    - "File format: PDF (không docx, không doc)"
+    - "File name: FullName_Role_CV.pdf (không CV_final_v3.pdf, không CV_Nhật.pdf)"
+    - "Section headers: định dạng đơn giản (SUMMARY, SKILLS, EXPERIENCE) — ATS parse tốt hơn"
+    - "Tránh dùng icons, emojis, special characters"
+    - "Dates định dạng nhất: Month Year (January 2024 hoặc Jan 2024)"
+  keyword_strategy:
+    - "Đọc JD → extract keywords → chen tự nhiên vào bullet points và skills section"
+    - "Đừng chỉ liệt kê keywords, mà dùng trong context cụ thể"
+    - "Ví dụ: JD yêu cầu 'microservices' → bullet point 'Designed microservices architecture with Spring Boot...'"
+    - "Nếu ATS-friendly va human-friendly xung đột → ưu tiên ATS"
+  ats_checklist:
+    - "Tất cả section headers rõ ràng, không dùng icons"
+    - "Mỗi position có: Title, Company, Date Range, 3-5 bullet points"
+    - "Skills section chứa keywords từ JD"
+    - "Không có gaps không giải thích (nếu có → ghi sabbatical, freelance, self-study)"
+    - "Contact info có: email, phone, LinkedIn, GitHub (nếu có)"
+
+common_mistakes:
+  vietnam_fresher:
+    - "Thiếu project thực hành → thêm 2-3 personal/coursework projects vào Projects section"
+    - "Skills ghi quá chung ('MS Office', 'Internet') → thay bằng tech skills cụ thể"
+    - "Summary quá dài hoặc copy-paste mẫu → viết cá nhân hóa, 2-3 câu"
+    - "Không có GitHub/portfolio link → thêm vào, kể cả personal projects"
+    - "Ghi tiếng Việt lẫn tiếng Anh → chọn 1 ngôn ngữ, recommend tiếng Anh cho IT CV quốc tế"
+    - "Photo/địa chỉ/tôn giáo/tình trạng hôn nhân → không cần cho IT CV chuẩn quốc tế"
+    - "CV quá dài >2 trang → fresher chỉ cần 1 trang, senior 2 trang tối đa"
+    - "Objective statement quá chung → thay bằng targeted Summary"
+    - "Ghi 'References available upon request' → không cần, ATS bỏ qua section này"
+    - "Email không chuyên nghiệp (hotboy2000@...) → dùng email có tên mình"
+    - "Không tailor CV theo JD → mỗi lần apply chỉnh sửa CV cho phù hợp"
+    - "Dùng CV template có sẵn mà không chỉnh sửa nội dung → template chỉ cho layout"
+
+role_specific:
+  backend:
+    keywords: ["API", "REST", "GraphQL", "microservices", "database optimization", "caching", "authentication", "CI/CD", "Docker", "unit testing", "system design", "scalability"]
+    emphasis: "API design, database optimization, system performance, security, scalability"
+    projects_to_show: "API service, database design, authentication system, caching layer, message queue integration"
+    bullet_focus: "Request throughput, latency reduction, system uptime, data volume handled"
+  frontend:
+    keywords: ["responsive", "cross-browser", "state management", "component architecture", "performance optimization", "accessibility", "TypeScript", "SEO", "web vitals"]
+    emphasis: "UI/UX, responsive design, component architecture, performance, accessibility"
+    projects_to_show: "dashboard, e-commerce UI, landing page, component library, mobile-first app"
+    bullet_focus: "Lighthouse score, page load time, user engagement metrics, bundle size reduction"
+  data_ai:
+    keywords: ["machine learning", "model training", "data pipeline", "ETL", "feature engineering", "model evaluation", "deployment", "MLOps", "A/B testing", "data visualization"]
+    emphasis: "data processing, model performance metrics, end-to-end ML pipeline, business impact"
+    projects_to_show: "prediction model, data pipeline, recommendation system, NLP project, dashboard"
+    bullet_focus: "Model accuracy/F1/precision, data volume, processing time, business metric improvement"
+  qa:
+    keywords: ["test automation", "regression testing", "performance testing", "CI/CD integration", "test coverage", "bug tracking", "API testing", "load testing"]
+    emphasis: "test strategy, automation framework, coverage metrics, CI integration, defect reduction"
+    projects_to_show: "automation framework, test suite, performance benchmark, CI pipeline integration"
+    bullet_focus: "Test coverage %, automation rate, bug escape rate reduction, testing time saved"
+  devops:
+    keywords: ["CI/CD", "Docker", "Kubernetes", "Terraform", "monitoring", "logging", "infrastructure as code", "cloud", "cost optimization", "zero-downtime"]
+    emphasis: "pipeline automation, infrastructure management, monitoring, cost optimization, reliability"
+    projects_to_show: "CI/CD pipeline, container orchestration, IaC setup, monitoring system, migration project"
+    bullet_focus: "Deployment frequency, recovery time, infrastructure cost reduction, uptime SLA"
+  fullstack:
+    keywords: ["full-stack", "end-to-end", "frontend + backend", "REST API", "database design", "deployment", "authentication", "responsive UI"]
+    emphasis: "end-to-end feature delivery, frontend + backend integration, deployment ownership"
+    projects_to_show: "full-stack web app, SaaS product, e-commerce platform, real-time app"
+    bullet_focus: "Features shipped end-to-end, user adoption, system reliability, tech stack breadth"
