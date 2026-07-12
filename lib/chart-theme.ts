@@ -96,6 +96,8 @@ export function chartTooltipStyle(
     border: `1px solid ${theme.border}`,
     borderRadius: 12,
     color: theme.text,
+    boxShadow: "0 1px 2px rgb(15 23 42 / 0.04), 0 12px 32px -12px rgb(15 23 42 / 0.18)",
+    padding: "8px 12px",
   }
 }
 

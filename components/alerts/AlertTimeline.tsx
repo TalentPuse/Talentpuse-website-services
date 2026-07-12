@@ -1,12 +1,14 @@
 "use client";
 
-import { motion } from "framer-motion";
+import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 
 import type { MyAlertRow } from "@/lib/api";
 import Monogram from "@/components/brand/Monogram";
 import CaptureButton from "@/components/applications/CaptureButton";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bell, Mail, Send, ICON } from "@/lib/icons";
+import { Bell, Mail, Send, ArrowRight, ICON } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 type AlertTimelineProps = {
@@ -81,31 +83,56 @@ function ChannelBadge({ channel }: { channel: string }) {
   );
 }
 
-function AlertTimelineItem({ alert, tracked }: { alert: MyAlertRow; tracked?: boolean }) {
+function AlertTimelineItem({
+  alert,
+  tracked,
+  isNewest,
+}: {
+  alert: MyAlertRow;
+  tracked?: boolean;
+  isNewest?: boolean;
+}) {
   const sentDate = new Date(alert.sent_at);
   const monogramName = alert.company_name || alert.title || "Không rõ";
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <li className="relative pl-8">
       <span
         aria-hidden="true"
-        className="absolute left-[7px] top-5 h-2.5 w-2.5 -translate-x-1/2 rounded-full border-2 border-bg bg-brand"
+        className={cn(
+          "absolute left-[7px] top-5 -translate-x-1/2 rounded-full border-2 border-bg bg-brand",
+          isNewest ? "h-3 w-3" : "h-2.5 w-2.5",
+          isNewest && !shouldReduceMotion && "glow-brand"
+        )}
       />
-      <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-border bg-surface p-3 transition-colors hover:bg-surface-2">
+      <div
+        className={cn(
+          "flex items-start gap-3 rounded-[var(--radius-md)] border bg-surface p-3 transition-colors hover:bg-surface-2",
+          isNewest ? "border-brand-300/70 ring-1 ring-brand-200/60" : "border-border"
+        )}
+      >
         <Monogram name={monogramName} size="sm" />
         <div className="min-w-0 flex-1">
-          {alert.source_url ? (
-            <a
-              href={alert.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="line-clamp-1 font-medium text-text hover:text-brand hover:underline"
-            >
-              {alert.title || "—"}
-            </a>
-          ) : (
-            <p className="line-clamp-1 font-medium text-text">{alert.title || "—"}</p>
-          )}
+          <div className="flex items-center gap-2">
+            {alert.source_url ? (
+              <a
+                href={alert.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="line-clamp-1 font-medium text-text hover:text-brand hover:underline"
+              >
+                {alert.title || "—"}
+              </a>
+            ) : (
+              <p className="line-clamp-1 font-medium text-text">{alert.title || "—"}</p>
+            )}
+            {isNewest && (
+              <span className="inline-flex shrink-0 items-center rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                Mới nhất
+              </span>
+            )}
+          </div>
           <p className="mt-0.5 line-clamp-1 text-xs text-text-muted">
             {alert.company_name || "—"}
             {alert.city_canonical ? ` · ${alert.city_canonical}` : ""}
@@ -166,9 +193,16 @@ function TimelineLoadingSkeleton() {
 }
 
 function TimelineEmptyState() {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-border bg-surface-2/50 px-6 py-16 text-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-text-muted">
+    <motion.div
+      initial={shouldReduceMotion ? undefined : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-border bg-surface-2/50 px-6 py-16 text-center"
+    >
+      <span className="ai-glow flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600">
         <Bell {...ICON} aria-hidden="true" />
       </span>
       <p className="font-display text-lg font-medium text-text">Chưa có alert nào</p>
@@ -176,7 +210,13 @@ function TimelineEmptyState() {
         Khi có công việc phù hợp với tiêu chí của bạn, alert sẽ xuất hiện tại đây theo thời gian
         thực qua Telegram hoặc Email.
       </p>
-    </div>
+      <Button asChild size="sm" className="mt-1 gap-1.5">
+        <Link href="/profile#alerts">
+          Thiết lập tiêu chí alert
+          <ArrowRight size={14} strokeWidth={2} />
+        </Link>
+      </Button>
+    </motion.div>
   );
 }
 
@@ -196,6 +236,9 @@ export default function AlertTimeline({ alerts, isLoading, trackedKeys }: AlertT
   }
 
   const groups = groupAlertsByDate(alerts);
+  const newestKey = groups[0]?.items[0]
+    ? `${groups[0].items[0].source_job_id}-${groups[0].items[0].sent_at}`
+    : null;
 
   return (
     <div className="space-y-8">
@@ -212,16 +255,20 @@ export default function AlertTimeline({ alerts, isLoading, trackedKeys }: AlertT
           <div className="relative">
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute left-[7px] top-1 bottom-1 w-px bg-border"
+              className="pointer-events-none absolute left-[7px] top-1 bottom-1 w-0.5 rounded-full bg-gradient-to-b from-brand-200 via-border to-border"
             />
             <ul className="space-y-3">
-              {group.items.map((alert) => (
-                <AlertTimelineItem
-                  key={`${alert.source_job_id}-${alert.sent_at}`}
-                  alert={alert}
-                  tracked={trackedKeys?.has(`${alert.source ?? ""}:${alert.source_job_id}`)}
-                />
-              ))}
+              {group.items.map((alert) => {
+                const itemKey = `${alert.source_job_id}-${alert.sent_at}`;
+                return (
+                  <AlertTimelineItem
+                    key={itemKey}
+                    alert={alert}
+                    tracked={trackedKeys?.has(`${alert.source ?? ""}:${alert.source_job_id}`)}
+                    isNewest={itemKey === newestKey}
+                  />
+                );
+              })}
             </ul>
           </div>
         </motion.section>

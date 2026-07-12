@@ -10,7 +10,7 @@ import SalaryByLevel from "@/components/SalaryByLevel";
 import CompaniesTable from "@/components/CompaniesTable";
 import Card from "@/components/Card";
 import ScrollReveal from "@/components/landing/ScrollReveal";
-import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -39,20 +39,25 @@ type Props = {
 /** Sentinel used by the shadcn `Select` — Radix disallows an empty-string item value. */
 const ALL_CATEGORIES = "all";
 
+/** Shimmering placeholder block — see `.skeleton` in app/globals.css. */
+function SkeletonBlock({ className }: { className?: string }) {
+  return <div className={cn("skeleton", className)} aria-hidden="true" />;
+}
+
 function DashboardSkeleton() {
   return (
     <div className="space-y-8">
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-[132px] rounded-[var(--radius-lg)]" />
+          <SkeletonBlock key={i} className="h-[132px] rounded-[var(--radius-lg)]" />
         ))}
       </section>
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Skeleton className="h-[440px] rounded-[var(--radius-lg)]" />
-        <Skeleton className="h-[440px] rounded-[var(--radius-lg)]" />
+        <SkeletonBlock className="h-[440px] rounded-[var(--radius-lg)]" />
+        <SkeletonBlock className="h-[440px] rounded-[var(--radius-lg)]" />
       </section>
-      <Skeleton className="h-[480px] rounded-[var(--radius-lg)]" />
-      <Skeleton className="h-[540px] rounded-[var(--radius-lg)]" />
+      <SkeletonBlock className="h-[480px] rounded-[var(--radius-lg)]" />
+      <SkeletonBlock className="h-[540px] rounded-[var(--radius-lg)]" />
     </div>
   );
 }
@@ -115,37 +120,39 @@ export default function DashboardClient({
     <DashboardLayout>
       <ForceTheme theme="light" />
       <div className="mx-auto max-w-7xl px-6 py-8">
-        <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-semibold text-text">Dashboard</h1>
-            <p className="mt-1 text-sm text-text-muted">
-              Thị trường tuyển dụng DE/AI Việt Nam — cập nhật hàng ngày
-            </p>
-          </div>
-          <Select
-            value={category || ALL_CATEGORIES}
-            onValueChange={(v) => setCategory(v === ALL_CATEGORIES ? "" : v)}
-            disabled={loading}
-          >
-            <SelectTrigger className="w-auto min-w-48">
-              <SelectValue placeholder="Tất cả ngành nghề" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_CATEGORIES}>Tất cả ngành nghề</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </header>
+        <ScrollReveal>
+          <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="font-display text-2xl font-semibold text-text">Dashboard</h1>
+              <p className="mt-1 text-sm text-text-muted">
+                Thị trường tuyển dụng DE/AI Việt Nam — cập nhật hàng ngày
+              </p>
+            </div>
+            <Select
+              value={category || ALL_CATEGORIES}
+              onValueChange={(v) => setCategory(v === ALL_CATEGORIES ? "" : v)}
+              disabled={loading}
+            >
+              <SelectTrigger className="w-auto min-w-48">
+                <SelectValue placeholder="Tất cả ngành nghề" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_CATEGORIES}>Tất cả ngành nghề</SelectItem>
+                {categories.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </header>
+        </ScrollReveal>
 
         {loading ? (
           <DashboardSkeleton />
         ) : (
           <>
-            <ScrollReveal>
+            <ScrollReveal delay={0.05}>
               <section className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
                 <KpiCard
                   label="Việc làm đang tuyển"
@@ -175,7 +182,7 @@ export default function DashboardClient({
               </section>
             </ScrollReveal>
 
-            <ScrollReveal>
+            <ScrollReveal delay={0.1}>
               <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card
                   title="Top 15 kỹ năng được yêu cầu"
@@ -192,7 +199,7 @@ export default function DashboardClient({
               </section>
             </ScrollReveal>
 
-            <ScrollReveal>
+            <ScrollReveal delay={0.15}>
               <section className="mb-8">
                 <Card
                   title="Mức lương theo Level x Thành phố"
@@ -203,7 +210,7 @@ export default function DashboardClient({
               </section>
             </ScrollReveal>
 
-            <ScrollReveal>
+            <ScrollReveal delay={0.2}>
               <section className="mb-8">
                 <Card
                   title="Top 20 công ty tuyển dụng"

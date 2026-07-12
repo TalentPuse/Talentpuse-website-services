@@ -33,12 +33,19 @@ export default function SkillsBar({ data }: { data: SkillRow[] }) {
         />
         <Tooltip
           contentStyle={theme.tooltip}
+          cursor={{ fill: theme.grid, opacity: 0.5 }}
           formatter={(value: number, _name, props) => {
             const pct = props?.payload?.pct_of_jobs;
             return [`${value} jobs (${pct}%)`, "Demand"];
           }}
         />
-        <Bar dataKey="n_jobs" fill={theme.series[0]} radius={[0, 4, 4, 0]} />
+        <Bar
+          dataKey="n_jobs"
+          fill={theme.series[0]}
+          radius={[0, 4, 4, 0]}
+          maxBarSize={28}
+          animationDuration={500}
+        />
       </BarChart>
     </ResponsiveContainer>
   );

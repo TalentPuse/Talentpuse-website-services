@@ -164,3 +164,50 @@
 .tp-msg-in {
   animation: tp-msg-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/*
+  Landing-only LIGHT canvas — a soft, cool off-white (NOT pure white), à la
+  astryx.atmeta.com. Scoped to `.landing-shell`, paired with <ForceTheme light>.
+*/
+.landing-shell {
+  --bg: oklch(0.972 0.013 255);        /* soft cool blue-grey off-white */
+  --surface: oklch(1 0 0);             /* white cards pop against the tint */
+  --surface-2: oklch(0.958 0.015 255); /* subtle nested surface */
+  --border: oklch(0.905 0.02 255);     /* soft cool hairline */
+  color-scheme: light;
+}
+
+/*
+  Soft gradient-mesh atmosphere for the light landing — two very low-opacity brand
+  washes (top-left blue, right cyan) so the page reads as premium ambient color
+  instead of flat white. `aria-hidden`; host needs `position`.
+*/
+.landing-mesh::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 12% -5%, color-mix(in oklch, var(--color-brand-500) 16%, transparent), transparent 60%),
+    radial-gradient(50rem 40rem at 100% 8%, color-mix(in oklch, var(--ai-to) 14%, transparent), transparent 55%);
+}
+
+/* Subtle film grain — inline SVG noise, no network request. Host needs `position`. */
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
+/* Marquee ticker: 40s loop, pause on hover, frozen under reduced motion. */
+.marquee-track { animation: marquee 40s linear infinite; }
+.marquee-paused:hover .marquee-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
+}

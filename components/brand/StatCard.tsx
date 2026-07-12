@@ -1,4 +1,7 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { useReducedMotion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 
@@ -25,9 +28,17 @@ export default function StatCard({ label, value, delta, className, children }: S
   const hasDelta = typeof delta === "number" && !Number.isNaN(delta);
   const isPositive = hasDelta && delta! > 0;
   const isNegative = hasDelta && delta! < 0;
+  const reduceMotion = useReducedMotion();
 
   return (
-    <GlowCard className={cn("p-5", className)}>
+    <GlowCard
+      className={cn(
+        "p-5 shadow-[0_1px_2px_rgb(15_23_42_/_0.04)] transition-shadow duration-300 hover:shadow-[0_16px_32px_-16px_rgb(15_23_42_/_0.18)]",
+        className
+      )}
+      whileHover={reduceMotion ? undefined : { y: -2 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+    >
       <div className="text-xs font-medium uppercase tracking-wide text-text-muted">{label}</div>
       <div className="mt-2 flex items-baseline gap-2">
         <span className="font-mono text-3xl font-semibold tabular-nums text-text">{value}</span>

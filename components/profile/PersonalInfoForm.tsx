@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import { TrendingUp, Star, Banknote, GraduationCap, CalendarDays } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 
 import GlowCard from "@/components/brand/GlowCard";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import SkillPillSelect from "@/components/auth/SkillPillSelect";
 import CityPillSelect from "@/components/auth/CityPillSelect";
 import TitlePillSelect from "@/components/auth/TitlePillSelect";
-import { User, Briefcase, MapPin, Building2, ICON } from "@/lib/icons";
+import { User, Briefcase, MapPin, Building2 } from "@/lib/icons";
 import type { UserResponse } from "@/lib/api";
 
 /** Radix Select forbids an empty-string item value; this sentinel stands in for "chưa chọn". */
@@ -87,10 +88,17 @@ export default function PersonalInfoForm({
   onSave, onCancel,
 }: PersonalInfoFormProps) {
   const isStudent = experienceLevel === "student";
+  const reduceMotion = useReducedMotion();
+  const sectionMotion = (delay: number) => ({
+    initial: { opacity: 0, y: reduceMotion ? 0 : 12 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, margin: "-40px" },
+    transition: { duration: 0.4, delay, ease: [0.16, 1, 0.3, 1] as const },
+  });
 
   return (
     <form onSubmit={onSave}>
-      <section id="profile" className="scroll-mt-6">
+      <motion.section id="profile" className="scroll-mt-6" {...sectionMotion(0)}>
         <SectionHeading icon={User} title="Hồ sơ cá nhân" subtitle="Thông tin giúp AI matching tìm việc phù hợp hơn" />
         <GlowCard className="mt-4 p-6">
           {editing ? (
@@ -174,9 +182,9 @@ export default function PersonalInfoForm({
             </div>
           )}
         </GlowCard>
-      </section>
+      </motion.section>
 
-      <section id="preferences" className="mt-10 scroll-mt-6">
+      <motion.section id="preferences" className="mt-10 scroll-mt-6" {...sectionMotion(0.08)}>
         <SectionHeading icon={Building2} title="Ưu tiên công việc" subtitle="Mức lương, địa điểm và loại hình mong muốn" />
         <GlowCard className="mt-4 p-6">
           {editing ? (
@@ -241,7 +249,7 @@ export default function PersonalInfoForm({
                         type="checkbox"
                         checked={openToInternship}
                         onChange={(e) => onOpenToInternshipChange(e.target.checked)}
-                        className="h-4 w-4 rounded-sm border-border accent-brand-600 focus:ring-brand-500/40"
+                        className="h-4 w-4 rounded-sm border-border accent-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                       />
                       Sẵn sàng thực tập
                     </Label>
@@ -250,7 +258,7 @@ export default function PersonalInfoForm({
                         type="checkbox"
                         checked={partTimeOk}
                         onChange={(e) => onPartTimeOkChange(e.target.checked)}
-                        className="h-4 w-4 rounded-sm border-border accent-brand-600 focus:ring-brand-500/40"
+                        className="h-4 w-4 rounded-sm border-border accent-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
                       />
                       Có thể part-time
                     </Label>
@@ -322,7 +330,7 @@ export default function PersonalInfoForm({
             </div>
           )}
         </GlowCard>
-      </section>
+      </motion.section>
     </form>
   );
 }
@@ -331,8 +339,10 @@ export default function PersonalInfoForm({
 
 function SectionHeading({ icon: Icon, title, subtitle }: { icon: LucideIcon; title: string; subtitle: string }) {
   return (
-    <header className="flex items-center gap-2">
-      <Icon {...ICON} className="text-text-muted" />
+    <header className="flex items-center gap-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-text-muted">
+        <Icon size={18} strokeWidth={1.75} />
+      </div>
       <div>
         <h2 className="font-display text-lg font-bold text-text">{title}</h2>
         <p className="mt-0.5 text-sm text-text-muted">{subtitle}</p>

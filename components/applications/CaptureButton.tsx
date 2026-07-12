@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 
 import { ClipboardCheck, Check, ICON } from "@/lib/icons";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { applicationsApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 type CaptureButtonProps = {
   source: string;
@@ -25,6 +27,7 @@ export default function CaptureButton({ source, sourceJobId, tracked = false }: 
   const [done, setDone] = useState(tracked);
   const [saving, setSaving] = useState(false);
   const isDone = done || tracked;
+  const shouldReduceMotion = useReducedMotion();
 
   async function apply(e: React.MouseEvent) {
     e.preventDefault();
@@ -50,8 +53,31 @@ export default function CaptureButton({ source, sourceJobId, tracked = false }: 
       onClick={apply}
       disabled={isDone || saving}
       aria-label={isDone ? "Đã lưu vào ứng tuyển" : "Đánh dấu đã apply"}
+      className={cn("transition-transform active:scale-95")}
     >
-      {isDone ? <Check {...ICON} className="h-4 w-4" /> : <ClipboardCheck {...ICON} className="h-4 w-4" />}
+      <AnimatePresence mode="wait" initial={false}>
+        {isDone ? (
+          <motion.span
+            key="done"
+            className="inline-flex"
+            initial={shouldReduceMotion ? undefined : { scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 500, damping: 20 }}
+          >
+            <Check {...ICON} className="h-4 w-4" />
+          </motion.span>
+        ) : (
+          <motion.span
+            key="pending"
+            className="inline-flex"
+            initial={shouldReduceMotion ? undefined : { scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.15 }}
+          >
+            <ClipboardCheck {...ICON} className="h-4 w-4" />
+          </motion.span>
+        )}
+      </AnimatePresence>
       Đã apply
     </Button>
   );

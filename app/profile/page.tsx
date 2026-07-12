@@ -256,6 +256,7 @@ function SettingsSubNav({ active, onNavigate }: { active: SectionId; onNavigate:
                 }}
                 className={cn(
                   "flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
                   isActive ? "bg-brand-50 text-brand-700" : "text-text-muted hover:bg-surface-2 hover:text-text"
                 )}
               >

@@ -1,7 +1,9 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
+
 import ConnectionCard from "@/components/ConnectionCard";
-import { Bell, ICON } from "@/lib/icons";
+import { Bell } from "@/lib/icons";
 
 /* ── Channel icons (colocated: 1:1 with the cards rendered below) ── */
 
@@ -34,10 +36,21 @@ type ConnectionsSectionProps = {
  * since `ConnectionCard` (shared, not ours to edit) has no id/className prop.
  */
 export default function ConnectionsSection({ token }: ConnectionsSectionProps) {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <section id="alerts" className="scroll-mt-6">
-      <header className="flex items-center gap-2">
-        <Bell {...ICON} className="text-text-muted" />
+    <motion.section
+      id="alerts"
+      className="scroll-mt-6"
+      initial={{ opacity: 0, y: reduceMotion ? 0 : 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <header className="flex items-center gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-text-muted">
+          <Bell size={18} strokeWidth={1.75} />
+        </div>
         <div>
           <h2 className="font-display text-lg font-bold text-text">Kênh nhận thông báo</h2>
           <p className="mt-0.5 text-sm text-text-muted">Quản lý các kênh nhận alert việc làm mới</p>
@@ -72,6 +85,6 @@ export default function ConnectionsSection({ token }: ConnectionsSectionProps) {
           comingSoon
         />
       </div>
-    </section>
+    </motion.section>
   );
 }

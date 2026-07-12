@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { ClipboardCheck } from "@/lib/icons";
 import { useAuth } from "@/context/AuthContext";
@@ -67,8 +68,11 @@ function Content() {
       <div className="mb-4 flex flex-wrap gap-2">
         {(["all", ...STATUS_ORDER] as const).map((f) => (
           <button key={f} onClick={() => setFilter(f)}
-            className={cn("rounded-full border px-3 py-1 text-sm transition",
-              filter === f ? "border-brand-500 bg-brand-50 text-brand-700" : "border-border text-text-muted hover:bg-surface-2")}>
+            className={cn(
+              "rounded-full border px-3 py-1 text-sm transition-[transform,background-color,border-color,color] duration-150",
+              "hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
+              filter === f ? "border-brand-500 bg-brand-50 text-brand-700" : "border-border text-text-muted hover:bg-surface-2"
+            )}>
             {f === "all" ? "Tất cả" : STATUS_LABEL[f]}
           </button>
         ))}
@@ -83,7 +87,9 @@ function Content() {
         </div>
       ) : (
         <div className="space-y-3">
-          {shown.map((a) => <ApplicationCard key={a.id} app={a} onStatusChange={changeStatus} onDelete={remove} />)}
+          <AnimatePresence initial={false} mode="popLayout">
+            {shown.map((a) => <ApplicationCard key={a.id} app={a} onStatusChange={changeStatus} onDelete={remove} />)}
+          </AnimatePresence>
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { SearchX } from "lucide-react";
 
@@ -41,6 +41,7 @@ function JobBoardContent() {
   const [trackedKeys, setTrackedKeys] = useState<Set<string>>(new Set());
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const abortRef = useRef<AbortController>();
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (!token) return;
@@ -171,7 +172,13 @@ function JobBoardContent() {
           </div>
         ) : data && data.jobs.length > 0 ? (
           <>
-            <div className="grid gap-4 md:grid-cols-2">
+            <motion.div
+              key={page}
+              initial={shouldReduceMotion ? undefined : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="grid gap-4 md:grid-cols-2"
+            >
               <AnimatePresence mode="popLayout">
                 {data.jobs.map((job, idx) => (
                   <motion.div
@@ -188,7 +195,7 @@ function JobBoardContent() {
                   </motion.div>
                 ))}
               </AnimatePresence>
-            </div>
+            </motion.div>
 
             {/* Pagination */}
             {totalPages > 1 && (

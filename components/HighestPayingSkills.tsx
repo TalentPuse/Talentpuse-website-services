@@ -41,12 +41,19 @@ export default function HighestPayingSkills({
         />
         <Tooltip
           contentStyle={theme.tooltip}
+          cursor={{ fill: theme.grid, opacity: 0.5 }}
           formatter={(value: number, _name, props) => {
             const n = props?.payload?.n_jobs;
             return [`${value}M VND/month (${n} jobs)`, "Avg salary"];
           }}
         />
-        <Bar dataKey="avg_salary_million" fill={theme.series[3]} radius={[0, 4, 4, 0]} />
+        <Bar
+          dataKey="avg_salary_million"
+          fill={theme.series[3]}
+          radius={[0, 4, 4, 0]}
+          maxBarSize={28}
+          animationDuration={500}
+        />
       </BarChart>
     </ResponsiveContainer>
   );

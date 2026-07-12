@@ -32,7 +32,7 @@ export default function JobCard({ job, tracked }: JobCardProps) {
   const extraSkillCount = job.skills.length - visibleSkills.length;
 
   return (
-    <GlowCard className="group h-full p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md">
+    <GlowCard className="group h-full p-5 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-brand-500/40 hover:shadow-lg hover:shadow-brand-900/5">
       <div className="mb-3 flex items-start gap-3">
         <Monogram name={job.company_name || job.title || "?"} size="md" />
         <div className="min-w-0 flex-1">

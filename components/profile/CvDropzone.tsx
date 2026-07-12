@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { Upload, Loader2, ListChecks } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -89,11 +89,21 @@ export default function CvDropzone({ token, hasExistingCv, onParsed }: CvDropzon
 
   const showChip = fileName || hasExistingCv;
   const showSuccessBadge = step === "done" || (step === "idle" && hasExistingCv && !fileName);
+  const reduceMotion = useReducedMotion();
 
   return (
-    <section id="cv" className="scroll-mt-6">
-      <header className="flex items-center gap-2">
-        <FileText {...ICON} className="text-text-muted" />
+    <motion.section
+      id="cv"
+      className="scroll-mt-6"
+      initial={{ opacity: 0, y: reduceMotion ? 0 : 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <header className="flex items-center gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-2 text-text-muted">
+          <FileText size={18} strokeWidth={1.75} />
+        </div>
         <div>
           <h2 className="font-display text-lg font-bold text-text">CV & Hồ sơ ứng tuyển</h2>
           <p className="mt-0.5 text-sm text-text-muted">Tải CV lên để AI tự động trích xuất thông tin</p>
@@ -208,7 +218,7 @@ export default function CvDropzone({ token, hasExistingCv, onParsed }: CvDropzon
           </div>
         )}
       </GlowCard>
-    </section>
+    </motion.section>
   );
 }
 

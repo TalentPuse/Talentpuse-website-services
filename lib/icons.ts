@@ -38,6 +38,22 @@ export {
   Check,
   Trash2,
   ExternalLink,
+  ArrowRight,
+  ArrowLeft,
+  TrendingUp,
+  ChevronDown,
+  BarChart3,
+  LineChart,
+  Database,
+  Brain,
+  BadgeDollarSign,
+  Target,
+  Play,
+  RotateCcw,
+  GraduationCap,
+  Layers,
+  Zap,
+  ShieldCheck,
 } from "lucide-react";
 
 export const ICON = { size: 20, strokeWidth: 1.75 } as const;

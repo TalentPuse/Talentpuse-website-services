@@ -7,15 +7,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Monogram from "@/components/brand/Monogram";
-import { MapPin } from "@/lib/icons";
+import { Building2, MapPin, ICON } from "@/lib/icons";
 import type { CompanyRow } from "@/lib/api";
 
 export default function CompaniesTable({ data }: { data: CompanyRow[] }) {
   if (data.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-text-muted">
-        Không có dữ liệu công ty phù hợp.
-      </p>
+      <div className="flex flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-dashed border-border bg-surface-2/50 px-6 py-16 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-text-muted">
+          <Building2 {...ICON} aria-hidden="true" />
+        </span>
+        <p className="font-display text-lg font-medium text-text">Không có dữ liệu công ty</p>
+        <p className="max-w-sm text-sm text-text-muted">
+          Chưa tìm thấy công ty tuyển dụng nào phù hợp với ngành nghề đã chọn.
+        </p>
+      </div>
     );
   }
 
