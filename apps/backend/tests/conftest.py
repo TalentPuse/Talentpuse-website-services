@@ -4,14 +4,26 @@ This file provides common fixtures for all tests.
 """
 from __future__ import annotations
 
+import os
 import sys
 import uuid
 
-import pytest
-import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
+# Must run BEFORE anything imports app.core.config, which now refuses to boot on a
+# missing or placeholder secret rather than quietly falling back to one.
+#
+# Assigned, not setdefault: the test suite must not inherit whatever secret happens
+# to be in the ambient environment. Otherwise it either picks up a real production
+# secret, or — as on this project's dev box — a leftover placeholder that config
+# now rejects, and every test errors on import for reasons that have nothing to do
+# with the code under test.
+os.environ["JWT_SECRET"] = "test-only-jwt-secret-not-used-in-any-real-env"
+os.environ["TELEGRAM_WEBHOOK_SECRET"] = "test-only-webhook-secret-value"
 
-from app.core import database as db_module
+import pytest  # noqa: E402
+import pytest_asyncio  # noqa: E402
+from httpx import ASGITransport, AsyncClient  # noqa: E402
+
+from app.core import database as db_module  # noqa: E402
 from app.core.security import create_access_token
 from app.main import app
 from app.models.user import User

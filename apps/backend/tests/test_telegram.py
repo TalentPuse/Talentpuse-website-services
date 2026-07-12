@@ -63,7 +63,9 @@ def _auth_override(fake_user):
     app.dependency_overrides[get_current_user] = _override
 
 
-WEBHOOK_SECRET = "dev-webhook-secret"
+# Read the secret the app actually runs with rather than restating it here — a
+# test that hardcodes the value keeps passing after the real secret is rotated.
+from app.core.config import TELEGRAM_WEBHOOK_SECRET as WEBHOOK_SECRET  # noqa: E402
 WEBHOOK_HEADERS = {"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET}
 
 

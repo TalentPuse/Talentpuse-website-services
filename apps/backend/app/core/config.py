@@ -13,7 +13,38 @@ if DATABASE_URL_RAW.startswith("postgresql://"):
 else:
     DATABASE_URL = DATABASE_URL_RAW
 
-JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-in-prod")
+_WEAK_SECRETS = frozenset({
+    "",
+    "dev-secret-change-in-prod",
+    "dev-webhook-secret",
+    "TELEGRAM_WEBHOOK_SECRET",
+    "changeme",
+    "CHANGE_ME",
+    "secret",
+})
+
+
+def _require_secret(name: str, *, min_length: int = 32) -> str:
+    """Read a secret that must never fall back to a default.
+
+    `os.getenv(name, "some-default")` is how production ends up signing tokens
+    with a value that is committed to the repo: nothing fails, nothing warns, and
+    anyone who has read the source can mint an admin token. Refusing to boot is
+    the only behaviour that cannot be ignored.
+    """
+    value = os.getenv(name, "")
+    if value in _WEAK_SECRETS or len(value) < min_length:
+        raise RuntimeError(
+            f"{name} is unset, shorter than {min_length} chars, or a known "
+            f"placeholder. Generate one with:\n"
+            f'    python -c "import secrets; print(secrets.token_urlsafe(48))"\n'
+            f"then set it in the environment. Note that rotating it invalidates "
+            f"every existing session."
+        )
+    return value
+
+
+JWT_SECRET = _require_secret("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
@@ -24,7 +55,9 @@ CORS_ORIGINS = [
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "TalentPuseBot")
-TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "dev-webhook-secret")
+# Guards the public Telegram webhook: a caller who knows it can inject bot
+# updates, so it gets the same treatment as the JWT key.
+TELEGRAM_WEBHOOK_SECRET = _require_secret("TELEGRAM_WEBHOOK_SECRET", min_length=24)
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "TalentPulse <alerts@talentpuse.io.vn>")

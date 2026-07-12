@@ -36,7 +36,11 @@ def _override_db():
     app.dependency_overrides.clear()
 
 
-CRON_HEADERS = {"X-Cron-Secret": "dev-webhook-secret"}
+# Read the secret the app actually runs with rather than restating it here — a
+# test that hardcodes the value keeps passing after the real secret is rotated.
+from app.core.config import TELEGRAM_WEBHOOK_SECRET  # noqa: E402
+
+CRON_HEADERS = {"X-Cron-Secret": TELEGRAM_WEBHOOK_SECRET}
 
 
 def _make_user(**overrides) -> MagicMock:
@@ -147,7 +151,7 @@ async def test_internal_dispatch_success():
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
             r = await c.post(
                 "/api/admin/alerts/dispatch-internal",
-                headers={"X-Webhook-Secret": "dev-webhook-secret"},
+                headers={"X-Webhook-Secret": TELEGRAM_WEBHOOK_SECRET},
             )
 
     assert r.status_code == 200
