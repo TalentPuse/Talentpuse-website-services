@@ -1,0 +1,8 @@
+node_modules
+.next
+.env*.local
+npm-debug.log*
+.DS_Store
+
+# UI audit screenshots (local artifacts, khong dua vao git)
+docs/ui-audit/

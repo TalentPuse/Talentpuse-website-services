@@ -1,0 +1,79 @@
+/*
+ * CopilotKit v2 theming for /home — "AI violet + generation pink".
+ *
+ * Palette from the ui-ux-pro-max design system (AI assistant / personalization
+ * product): a tinted light canvas rather than stark white, violet primary with
+ * a pink accent, slate-900 text (high contrast on the tint, comfortable for
+ * long chat threads). Scoped to `.copilot-brand` so it only affects /home —
+ * deliberately kept out of globals.css (that file carries unrelated WIP).
+ *
+ * v1 vs v2 variable names differ: v1 (@copilotkit/react-ui) used a
+ * `--copilot-kit-*` prefix. v2 (@copilotkit/react-core/v2) does NOT ship those
+ * at all — verified by grepping node_modules/@copilotkit/react-core/dist/v2/
+ * index.css (zero `--copilot-kit-*` occurrences). v2 reuses shadcn/radix
+ * semantic token names scoped under a `[data-copilotkit]` attribute selector,
+ * and <CopilotChat>'s root element sets `data-copilotkit` on itself — so an
+ * ancestor class override is all we need.
+ *
+ * `!important` is required because the library's own `[data-copilotkit]` rules
+ * have the same specificity (0,2,0) as `.copilot-brand [data-copilotkit]`; a
+ * same-specificity tie is decided by source order, which Next.js does not
+ * guarantee across separate CSS imports once webpack splits chunks.
+ */
+
+.copilot-brand {
+  --tp-canvas: #f3f0ff; /* violet-tinted base — deliberately not white */
+  --tp-surface: #ffffff;
+  --tp-text: #0f172a; /* slate-900 */
+  --tp-text-muted: #64748b; /* slate-500 */
+  --tp-primary: #7c3aed; /* violet-600 */
+  --tp-secondary: #6366f1; /* indigo-500 — the existing brand hue */
+  --tp-accent: #ec4899; /* pink-500 */
+  --tp-muted: #ece5fd;
+  --tp-border: #ddd6fe; /* violet-200 — visible, not washed out */
+
+  /* Aurora: violet bloom top-center, pink top-right, indigo bottom-left.
+     Sits behind the chat, which runs on a transparent --background (below). */
+  background:
+    radial-gradient(58rem 32rem at 50% -8%, #d8cffc 0%, transparent 60%),
+    radial-gradient(42rem 26rem at 92% 2%, #fbcfe8 0%, transparent 58%),
+    radial-gradient(46rem 30rem at 4% 104%, #c7d2fe 0%, transparent 60%),
+    var(--tp-canvas);
+  color: var(--tp-text);
+}
+
+.copilot-brand [data-copilotkit] {
+  /* transparent so the aurora shows through the chat surface */
+  --background: transparent !important;
+  --foreground: var(--tp-text) !important;
+
+  --card: var(--tp-surface) !important;
+  --card-foreground: var(--tp-text) !important;
+  --popover: var(--tp-surface) !important;
+  --popover-foreground: var(--tp-text) !important;
+
+  --primary: var(--tp-primary) !important;
+  --primary-foreground: #ffffff !important;
+  --secondary: var(--tp-muted) !important;
+  --secondary-foreground: var(--tp-text) !important;
+
+  --muted: var(--tp-muted) !important;
+  --muted-foreground: var(--tp-text-muted) !important;
+  --accent: var(--tp-accent) !important;
+  --accent-foreground: #ffffff !important;
+
+  --destructive: #dc2626 !important;
+  --destructive-foreground: #ffffff !important;
+
+  --border: var(--tp-border) !important;
+  --input: var(--tp-border) !important;
+  --ring: var(--tp-primary) !important;
+}
+
+/* Composer: the one element that must read as a raised, tappable surface
+   against the aurora — real elevation + a violet caret instead of the flat
+   hairline the library ships. */
+.copilot-brand [data-copilotkit] textarea,
+.copilot-brand [data-copilotkit] [contenteditable="true"] {
+  caret-color: var(--tp-primary);
+}
