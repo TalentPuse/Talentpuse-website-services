@@ -105,11 +105,15 @@ async def get_cv_document(
     try:
         return await ensure_document(db, user)
     except ValueError:
+        logger.info("CV document unavailable for user %s (chua co cv_text)", user.id)
         raise HTTPException(
             status_code=409,
             detail="Chưa có CV — hãy upload CV ở trang Hồ sơ trước.",
         )
     except RuntimeError:
+        # Khong nuot exception: 502 nay tung khong de lai dau vet nao trong log,
+        # phai vao container tai hien moi biet la LLM hay Tectonic that bai.
+        logger.exception("CV render failed for user %s", user.id)
         raise HTTPException(
             status_code=502,
             detail="Không render được CV, thử lại sau.",
@@ -129,8 +133,10 @@ async def get_cv_document_pdf(
         try:
             pdf = await render_pdf_bytes(db, user)
         except ValueError:
+            logger.info("No rendered CV for user %s", user.id)
             raise HTTPException(status_code=409, detail="Chưa có CV đã render.")
         except RuntimeError:
+            logger.exception("CV re-render failed for user %s", user.id)
             raise HTTPException(status_code=502, detail="Không render được CV, thử lại sau.")
     return Response(
         content=pdf,

@@ -22,6 +22,24 @@ def test_missing_required_header_raises():
         ResumeModel.model_validate({"education": []})
 
 
+@pytest.mark.parametrize("bad_email", ["", "   ", None, "khong-phai-email"])
+def test_blank_or_invalid_email_becomes_none(bad_email):
+    """CV khong ghi email -> LLM tra "" -> truoc day EmailStr bat buoc khien
+    GET /api/cv/document tra 502. Gio ha xuong None va van render duoc."""
+    m = ResumeModel.model_validate({**MINIMAL, "header": {"full_name": "A", "email": bad_email}})
+    assert m.header.email is None
+
+
+def test_header_without_email_key_is_valid():
+    m = ResumeModel.model_validate({**MINIMAL, "header": {"full_name": "A"}})
+    assert m.header.email is None
+
+
+def test_valid_email_is_kept():
+    m = ResumeModel.model_validate({**MINIMAL, "header": {"full_name": "A", "email": "a@b.com"}})
+    assert m.header.email == "a@b.com"
+
+
 def test_rich_sections_parse():
     m = ResumeModel.model_validate({
         "header": {"full_name": "A", "email": "a@b.com"},

@@ -1,5 +1,25 @@
 from __future__ import annotations
-from pydantic import BaseModel, EmailStr, Field
+from typing import Annotated, Any
+
+from pydantic import BaseModel, BeforeValidator, EmailStr, Field, TypeAdapter
+
+_email_adapter = TypeAdapter(EmailStr)
+
+
+def _email_or_none(v: Any) -> Any:
+    """Model nay nhan output cua LLM, khong phai form nguoi dung nhap.
+
+    CV khong ghi email (hoac LLM khong tim thay) -> "" -> EmailStr bat buoc nem
+    ValidationError -> RuntimeError -> GET /api/cv/document tra 502. Email chi la
+    mot dong trong header CV, khong dang chan ca viec render, nen ha xuong None.
+    Template da co san guard `if model.header.email`.
+    """
+    if v is None or not str(v).strip():
+        return None
+    try:
+        return _email_adapter.validate_python(v)
+    except Exception:
+        return None
 
 
 class Link(BaseModel):
@@ -9,7 +29,7 @@ class Link(BaseModel):
 
 class Header(BaseModel):
     full_name: str
-    email: EmailStr
+    email: Annotated[EmailStr | None, BeforeValidator(_email_or_none)] = None
     phone: str | None = None
     location: str | None = None
     linkedin: str | None = None
