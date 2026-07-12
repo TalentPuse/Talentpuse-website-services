@@ -25,12 +25,16 @@ services:
       - tp-latex
     env_file: .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://metabase_ro:metabase_ro@localhost:5432/warehouse}
+      # Postgres lives on the warehouse box. No default: a fallback here would
+      # point at a host that does not exist and fail at the first query instead
+      # of at startup. Set it to the warehouse tailnet address:
+      #   postgresql://<user>:<pass>@<WAREHOUSE_TAILNET_IP>:5432/warehouse
+      DATABASE_URL: "${DATABASE_URL:?DATABASE_URL must be set - point it at the warehouse box tailnet IP}"
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8002}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set - generate with: python -c "import secrets; print(secrets.token_urlsafe(48))"}
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET must be set - generate with python -c 'import secrets; print(secrets.token_urlsafe(48))'}"
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-TalentPuseBot}
-      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?TELEGRAM_WEBHOOK_SECRET must be set}
+      TELEGRAM_WEBHOOK_SECRET: "${TELEGRAM_WEBHOOK_SECRET:?TELEGRAM_WEBHOOK_SECRET must be set}"
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
@@ -74,7 +78,7 @@ services:
       HOSTNAME: "0.0.0.0"
       API_BASE_INTERNAL: ${API_BASE_INTERNAL:-http://tp-backend:8001}
       NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8001}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set - generate with: python -c "import secrets; print(secrets.token_urlsafe(48))"}
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET must be set - generate with python -c 'import secrets; print(secrets.token_urlsafe(48))'}"
     networks:
       - talentpulse
     restart: unless-stopped
@@ -89,7 +93,9 @@ services:
     environment:
       # MCP_DATABASE_URL chu khong phai DATABASE_URL: trong monorepo, ten
       # DATABASE_URL da thuoc ve backend (schema app). MCP tro vao warehouse.
-      DATABASE_URL: ${MCP_DATABASE_URL:-postgresql://admin:password@talentpulse-postgres:5432/warehouse}
+      # Same story as the backend: `talentpulse-postgres` was a docker DNS name on
+      # the shared network and resolves to nothing from the web box.
+      DATABASE_URL: "${MCP_DATABASE_URL:?MCP_DATABASE_URL must be set - point it at the warehouse box tailnet IP}"
       DASHBOARD_API_URL: ${DASHBOARD_API_URL:-http://tp-backend:8001}
       DASHBOARD_API_SECRET: ${DASHBOARD_API_SECRET:-}
     networks:
@@ -102,5 +108,13 @@ services:
       retries: 3
 
 networks:
+  # Owned by this compose file now, not borrowed. It used to be `external: true`,
+  # created by pipeline_data's compose — which only worked because both stacks
+  # shared one host. On the web box that network does not exist and `up` fails
+  # outright. Postgres is no longer a container on this network; it is a tailnet
+  # address (see DATABASE_URL).
+  # No explicit `name:` — let compose namespace it per project. Hardcoding
+  # `talentpulse` would collide with the network pipeline_data's compose creates
+  # under the same name when both stacks run on one machine for local dev.
   talentpulse:
-    external: true
+    driver: bridge
