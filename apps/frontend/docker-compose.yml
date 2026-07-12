@@ -1,3 +1,6 @@
+# Pin compose project name (xem chu thich trong apps/backend/docker-compose.yml).
+name: talentpulse-frontend
+
 services:
   frontend:
     image: ${FRONTEND_IMAGE:-tp-frontend-local}

@@ -1,3 +1,7 @@
+# Pin compose project name: neu de mac dinh, compose lay ten thu muc (apps/backend
+# -> "backend"), khac project cu nen container dang chay se bi coi la orphan.
+name: talentpulse-backend
+
 services:
   backend:
     image: ${BACKEND_IMAGE:-tp-backend-local}

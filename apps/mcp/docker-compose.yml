@@ -1,14 +1,19 @@
+# Pin compose project name (xem chu thich trong apps/backend/docker-compose.yml).
+name: talentpulse-mcp
+
 services:
   mcp:
     image: ${MCP_IMAGE:-tp-mcp-local}
     build:
-      context: ..
-      dockerfile: mcp_server/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     container_name: tp-mcp
     ports:
       - "127.0.0.1:8080:8080"
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://admin:password@talentpulse-postgres:5432/warehouse}
+      # Doc tu MCP_DATABASE_URL: trong monorepo, ten DATABASE_URL da thuoc ve
+      # backend (schema app). MCP tro vao warehouse nen dung secret rieng.
+      DATABASE_URL: ${MCP_DATABASE_URL:-postgresql://admin:password@talentpulse-postgres:5432/warehouse}
       DASHBOARD_API_URL: ${DASHBOARD_API_URL:-http://backend:8001}
       DASHBOARD_API_SECRET: ${DASHBOARD_API_SECRET:-}
     networks:
