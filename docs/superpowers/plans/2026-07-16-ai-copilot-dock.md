@@ -142,7 +142,9 @@ import { useAuth } from "@/context/AuthContext";
 export default function DockChat() {
   const { user } = useAuth();
   if (!user) return null;
-  return <CopilotChat threadId={`dock-${user.id}`} className="h-full min-h-0" />;
+  // agentId BẮT BUỘC: runtime chỉ đăng ký agent "talentpuse_assistant" (route.ts:175);
+  // bỏ trống sẽ tìm agent 'default' và crash "Agent 'default' not found" (đã vấp ở Task 1).
+  return <CopilotChat agentId="talentpuse_assistant" threadId={`dock-${user.id}`} className="h-full min-h-0" />;
 }
 ```
 
@@ -412,6 +414,7 @@ git commit -m "feat(copilot): board context + move_application + disambiguation"
 **Files:**
 - Create: `apps/frontend/components/copilot/DockInsight.tsx`
 - Modify: `apps/frontend/app/jobs/page.tsx`, `apps/frontend/app/applications/page.tsx` (truyền `insight=`)
+- Delete: `apps/frontend/components/applications/AiInsightCard.tsx` — user yêu cầu bỏ khỏi trang (feedback 2026-07-16, đã gỡ usage); sau khi copy pattern `renderMd`/`escapeHtml` (dòng 11-25) vào DockInsight thì `git rm -f` file này (không còn ai import).
 
 **Interfaces:**
 - Consumes: `recommendationsApi.get(token)` → `CareerRecommendations` (`lib/api.ts:466-489`: `target_roles`, `market_fit{matching_jobs, matching_jobs_in_city, cities}`, `your_strengths`, `skill_gaps`, `narrative`); `applicationsApi.aiSummary(token)` → `{summary_md, generated_at}`.
@@ -427,8 +430,9 @@ git commit -m "feat(copilot): board context + move_application + disambiguation"
 
 ```bash
 cd apps/frontend && npx tsc --noEmit && npx jest components/copilot --no-coverage
+git rm -f apps/frontend/components/applications/AiInsightCard.tsx
 git add apps/frontend/components/copilot/DockInsight.tsx apps/frontend/app/jobs/page.tsx apps/frontend/app/applications/page.tsx
-git commit -m "feat(copilot): insight tab (recommendations + ai-summary) + nudge strip"
+git commit -m "feat(copilot): insight tab (recommendations + ai-summary) + nudge strip, thay AiInsightCard"
 ```
 
 ---
