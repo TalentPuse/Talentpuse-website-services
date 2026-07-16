@@ -9,3 +9,6 @@
  * biểu thức `process.env.NEXT_PUBLIC_AI_HOME` — KHÔNG destructure `process.env`.
  */
 export const AI_HOME = process.env.NEXT_PUBLIC_AI_HOME === "1";
+
+/** Bật dock AI copilot ở /jobs + /applications. Kill-switch độc lập với AI_HOME. */
+export const COPILOT_DOCK = process.env.NEXT_PUBLIC_COPILOT_DOCK === "1";
