@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Briefcase } from "@/lib/icons";
 import { getSourceBadgeClass, getSourceLabel } from "@/lib/job-sources";
 import { cn } from "@/lib/utils";
-import type { PublicJobRow } from "@/lib/api";
+import type { PublicJobRow, TrackedKey } from "@/lib/api";
 
 const VISIBLE_SKILL_COUNT = 5;
 
 type JobCardProps = {
   job: PublicJobRow;
-  tracked?: boolean;
+  tracked?: TrackedKey | null;
+  onTracked?: (entry: TrackedKey) => void;
 };
 
 /**
@@ -22,7 +23,7 @@ type JobCardProps = {
  * title/company, source badge, city/level meta row, salary badge, skill
  * chips, and an external "Xem chi tiết" CTA + "Đã apply" capture button.
  */
-export default function JobCard({ job, tracked }: JobCardProps) {
+export default function JobCard({ job, tracked, onTracked }: JobCardProps) {
   const sourceLabel = getSourceLabel(job.source);
   const sourceBadgeClass = getSourceBadgeClass(job.source);
   const postedDate = job.posted_at
@@ -116,7 +117,12 @@ export default function JobCard({ job, tracked }: JobCardProps) {
         ) : (
           <span className="text-xs text-text-muted">Chưa có link</span>
         )}
-        <CaptureButton source={job.source} sourceJobId={job.source_job_id} tracked={tracked} />
+        <CaptureButton
+          source={job.source}
+          sourceJobId={job.source_job_id}
+          tracked={tracked}
+          onTracked={onTracked}
+        />
       </div>
     </GlowCard>
   );

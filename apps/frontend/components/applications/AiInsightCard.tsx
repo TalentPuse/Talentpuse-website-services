@@ -16,7 +16,7 @@ function renderMd(md: string) {
   return md.split("\n").filter(Boolean).map((line, i) => (
     <p
       key={i}
-      className="text-sm text-text"
+      className="text-sm leading-relaxed text-text"
       dangerouslySetInnerHTML={{
         __html: escapeHtml(line).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>"),
       }}
@@ -24,6 +24,14 @@ function renderMd(md: string) {
   ));
 }
 
+/**
+ * AiInsightCard — LLM summary of the user's pipeline.
+ *
+ * Idle is a single slim row (title left, action right): a full-height card with
+ * one button in it read as a big empty box on a wide board. It only grows once
+ * there is actually content to show, and the prose is capped at a readable
+ * measure rather than running the full width of the board.
+ */
 export default function AiInsightCard() {
   const { token } = useAuth();
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
@@ -43,37 +51,45 @@ export default function AiInsightCard() {
   }
 
   return (
-    <div className="rounded-2xl border border-brand-500/30 bg-surface p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Sparkles {...ICON} className="text-brand-500" />
-          <span className="font-display font-semibold text-text">AI Insight</span>
-          <AIBadge label="AI" />
+    <div className="rounded-2xl bg-surface p-3 ring-1 ring-inset ring-brand-500/25">
+      <div className="flex items-center gap-2">
+        <Sparkles {...ICON} className="h-4 w-4 shrink-0 text-brand-500" />
+        <span className="font-display text-sm font-semibold text-text">AI Insight</span>
+        <AIBadge label="AI" />
+        <span className="hidden truncate text-xs text-text-muted sm:inline">
+          — tóm tắt tiến độ và nhắc job cần follow-up
+        </span>
+
+        <div className="ml-auto shrink-0">
+          {state === "idle" && (
+            <Button size="sm" className="ai-gradient text-white" onClick={run}>
+              <Sparkles {...ICON} className="h-4 w-4" /> Tóm tắt bằng AI
+            </Button>
+          )}
+          {state === "loading" && (
+            <span className="text-xs text-text-muted">Đang tóm tắt…</span>
+          )}
+          {state === "done" && (
+            <Button variant="ghost" size="sm" onClick={run}>
+              Cập nhật
+            </Button>
+          )}
+          {state === "error" && (
+            <Button variant="outline" size="sm" onClick={run}>
+              Thử lại
+            </Button>
+          )}
         </div>
-        {state === "done" && (
-          <Button variant="ghost" size="sm" onClick={run}>
-            Cập nhật
-          </Button>
-        )}
       </div>
-      {state === "idle" && (
-        <Button className="ai-gradient text-white" onClick={run}>
-          <Sparkles {...ICON} className="h-4 w-4" /> Tóm tắt bằng AI
-        </Button>
-      )}
+
       {state === "loading" && (
-        <div className="space-y-2 ai-glow">
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
+        <div className="ai-glow mt-3 max-w-prose space-y-2">
+          <Skeleton className="h-3.5 w-3/4" />
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-2/3" />
         </div>
       )}
-      {state === "done" && <div className="space-y-1.5">{renderMd(md)}</div>}
-      {state === "error" && (
-        <Button variant="outline" onClick={run}>
-          Thử lại
-        </Button>
-      )}
+      {state === "done" && <div className="mt-3 max-w-prose space-y-1.5">{renderMd(md)}</div>}
     </div>
   );
 }

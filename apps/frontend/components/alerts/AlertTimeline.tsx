@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 
-import type { MyAlertRow } from "@/lib/api";
+import type { MyAlertRow, TrackedKey } from "@/lib/api";
 import Monogram from "@/components/brand/Monogram";
 import CaptureButton from "@/components/applications/CaptureButton";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,8 @@ import { cn } from "@/lib/utils";
 type AlertTimelineProps = {
   alerts: MyAlertRow[];
   isLoading: boolean;
-  trackedKeys?: Set<string>;
+  trackedKeys?: Map<string, TrackedKey>;
+  onTracked?: (entry: TrackedKey) => void;
 };
 
 type DateGroup = {
@@ -86,10 +87,12 @@ function ChannelBadge({ channel }: { channel: string }) {
 function AlertTimelineItem({
   alert,
   tracked,
+  onTracked,
   isNewest,
 }: {
   alert: MyAlertRow;
-  tracked?: boolean;
+  tracked?: TrackedKey | null;
+  onTracked?: (entry: TrackedKey) => void;
   isNewest?: boolean;
 }) {
   const sentDate = new Date(alert.sent_at);
@@ -143,6 +146,7 @@ function AlertTimelineItem({
                 source={alert.source}
                 sourceJobId={alert.source_job_id}
                 tracked={tracked}
+                onTracked={onTracked}
               />
             ) : null}
           </div>
@@ -226,7 +230,7 @@ function TimelineEmptyState() {
  * previous raw `<table>`. Handles its own loading (skeleton) and empty
  * (designed) states so the page only wires data + pagination.
  */
-export default function AlertTimeline({ alerts, isLoading, trackedKeys }: AlertTimelineProps) {
+export default function AlertTimeline({ alerts, isLoading, trackedKeys, onTracked }: AlertTimelineProps) {
   if (isLoading) {
     return <TimelineLoadingSkeleton />;
   }
@@ -264,7 +268,8 @@ export default function AlertTimeline({ alerts, isLoading, trackedKeys }: AlertT
                   <AlertTimelineItem
                     key={itemKey}
                     alert={alert}
-                    tracked={trackedKeys?.has(`${alert.source ?? ""}:${alert.source_job_id}`)}
+                    tracked={trackedKeys?.get(`${alert.source ?? ""}:${alert.source_job_id}`) ?? null}
+                    onTracked={onTracked}
                     isNewest={itemKey === newestKey}
                   />
                 );

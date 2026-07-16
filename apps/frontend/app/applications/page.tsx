@@ -1,17 +1,13 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ClipboardCheck } from "@/lib/icons";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { ForceTheme } from "@/components/theme/ForceTheme";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import ApplicationCard from "@/components/applications/ApplicationCard";
+import ApplicationBoard from "@/components/applications/ApplicationBoard";
 import AddApplicationDialog from "@/components/applications/AddApplicationDialog";
-import AiInsightCard from "@/components/applications/AiInsightCard";
-import { STATUS_LABEL, STATUS_ORDER } from "@/components/applications/StatusSelect";
 import { applicationsApi, type Application, type ApplicationStats, type ApplicationStatus } from "@/lib/api";
 
 export default function ApplicationsPage() {
@@ -22,7 +18,6 @@ function Content() {
   const { token } = useAuth();
   const [apps, setApps] = useState<Application[]>([]);
   const [stats, setStats] = useState<ApplicationStats | null>(null);
-  const [filter, setFilter] = useState<ApplicationStatus | "all">("all");
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -36,8 +31,7 @@ function Content() {
   }, [token]);
   useEffect(() => { load(); }, [load]);
 
-  const shown = useMemo(() => (filter === "all" ? apps : apps.filter((a) => a.status === filter)), [apps, filter]);
-
+  /** Dropping a card on a column lands here. Optimistic, rolled back on failure. */
   async function changeStatus(id: string, status: ApplicationStatus) {
     if (!token) return;
     const prev = apps;
@@ -45,6 +39,7 @@ function Content() {
     try { await applicationsApi.update(token, id, { status }); load(); }
     catch { setApps(prev); toast.error("Không đổi được trạng thái"); }
   }
+
   async function remove(id: string) {
     if (!token) return;
     const prev = apps;
@@ -54,8 +49,13 @@ function Content() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    // Wide cap: 5 × 288px tracks + gaps need ~1500px. max-w-7xl (1280px) forced a
+    // horizontal scrollbar even on a 1920px screen that had room to spare.
+    // h-full + flex-col lets the board claim the leftover height (AppShell's
+    // <main> is flex-1 in an h-screen column), so columns scroll internally the
+    // way a board should instead of leaving a void under a stubby row of cards.
+    <div className="mx-auto flex h-full max-w-[1600px] flex-col p-6">
+      <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-text">Ứng tuyển</h1>
           {stats && <p className="text-sm text-text-muted">Đã apply {stats.by_status.applied} · Phỏng vấn {stats.by_status.interviewing} · Offer {stats.by_status.offer}</p>}
@@ -63,34 +63,20 @@ function Content() {
         <AddApplicationDialog onCreated={() => load()} />
       </div>
 
-      <div className="mb-4"><AiInsightCard /></div>
-
-      <div className="mb-4 flex flex-wrap gap-2">
-        {(["all", ...STATUS_ORDER] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-sm transition-[transform,background-color,border-color,color] duration-150",
-              "hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
-              filter === f ? "border-brand-500 bg-brand-50 text-brand-700" : "border-border text-text-muted hover:bg-surface-2"
-            )}>
-            {f === "all" ? "Tất cả" : STATUS_LABEL[f]}
-          </button>
-        ))}
-      </div>
-
       {loading ? (
-        <div className="space-y-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}</div>
-      ) : shown.length === 0 ? (
+        <div className="flex min-h-0 flex-1 gap-3">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="w-72 shrink-0 rounded-2xl 2xl:w-auto 2xl:flex-1" />)}</div>
+      ) : apps.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border p-12 text-center">
           <ClipboardCheck className="h-10 w-10 text-text-muted/50" strokeWidth={1.5} />
-          <p className="text-text-muted">Chưa có job nào. Bấm <b>&quot;Đã apply&quot;</b> ở trang Việc làm/Alerts, hoặc <b>Thêm job đã apply</b>.</p>
+          <p className="text-text-muted">Chưa có job nào. Bấm <b>&quot;Lưu&quot;</b> hoặc <b>&quot;Đã apply&quot;</b> ở trang Việc làm/Alerts, hoặc <b>Thêm job đã apply</b>.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          <AnimatePresence initial={false} mode="popLayout">
-            {shown.map((a) => <ApplicationCard key={a.id} app={a} onStatusChange={changeStatus} onDelete={remove} />)}
-          </AnimatePresence>
-        </div>
+        <>
+          <p className="mb-2 shrink-0 text-xs text-text-muted">Kéo card sang cột khác để đổi trạng thái.</p>
+          <div className="min-h-0 flex-1">
+            <ApplicationBoard apps={apps} onStatusChange={changeStatus} onDelete={remove} />
+          </div>
+        </>
       )}
     </div>
   );

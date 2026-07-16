@@ -5,7 +5,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { SearchX } from "lucide-react";
 
-import { jobsApi, applicationsApi, PublicJobList, FilterOptions } from "@/lib/api";
+import { jobsApi, applicationsApi, PublicJobList, FilterOptions, type TrackedKey } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { ForceTheme } from "@/components/theme/ForceTheme";
@@ -38,7 +38,7 @@ function JobBoardContent() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [salaryFilter, setSalaryFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [trackedKeys, setTrackedKeys] = useState<Set<string>>(new Set());
+  const [trackedKeys, setTrackedKeys] = useState<Map<string, TrackedKey>>(new Map());
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const abortRef = useRef<AbortController>();
   const shouldReduceMotion = useReducedMotion();
@@ -52,9 +52,18 @@ function JobBoardContent() {
     if (!token) return;
     applicationsApi
       .keys(token)
-      .then((keys) => setTrackedKeys(new Set(keys.map((k) => `${k.source}:${k.source_job_id}`))))
+      .then((keys) =>
+        setTrackedKeys(new Map(keys.map((k) => [`${k.source}:${k.source_job_id}`, k])))
+      )
       .catch(() => {});
   }, [token]);
+
+  /** Merge a just-captured/updated row in, so the card flips without a refetch. */
+  const handleTracked = useCallback((entry: TrackedKey) => {
+    setTrackedKeys((prev) =>
+      new Map(prev).set(`${entry.source}:${entry.source_job_id}`, entry)
+    );
+  }, []);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -190,7 +199,8 @@ function JobBoardContent() {
                   >
                     <JobCard
                       job={job}
-                      tracked={trackedKeys.has(`${job.source}:${job.source_job_id}`)}
+                      tracked={trackedKeys.get(`${job.source}:${job.source_job_id}`) ?? null}
+                      onTracked={handleTracked}
                     />
                   </motion.div>
                 ))}

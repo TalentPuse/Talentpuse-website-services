@@ -1176,7 +1176,12 @@ export type Application = {
 };
 export type ApplicationListResp = { applications: Application[]; total: number; page: number; per_page: number };
 export type ApplicationStats = { total: number; by_status: Record<ApplicationStatus, number>; applied_this_week: number };
-export type TrackedKey = { source: string; source_job_id: string };
+export type TrackedKey = {
+  id: string;
+  source: string;
+  source_job_id: string;
+  status: ApplicationStatus;
+};
 export type CreateApplicationBody =
   | { source: string; source_job_id: string; status?: ApplicationStatus }
   | { title: string; company_name?: string; city?: string; source_url?: string; salary_million?: number; status?: ApplicationStatus; applied_at?: string; notes?: string };

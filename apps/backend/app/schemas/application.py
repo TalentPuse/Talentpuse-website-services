@@ -65,8 +65,10 @@ class StatsOut(BaseModel):
 
 
 class TrackedKey(BaseModel):
+    id: uuid.UUID
     source: str
     source_job_id: str
+    status: Status
 
 
 class SummaryOut(BaseModel):

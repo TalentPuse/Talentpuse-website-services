@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { jobsApi, applicationsApi, MyAlertList } from "@/lib/api";
+import { jobsApi, applicationsApi, MyAlertList, type TrackedKey } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { ForceTheme } from "@/components/theme/ForceTheme";
@@ -16,7 +16,7 @@ export default function AlertHistoryPage() {
   const [data, setData] = useState<MyAlertList | null>(null);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [trackedKeys, setTrackedKeys] = useState<Set<string>>(new Set());
+  const [trackedKeys, setTrackedKeys] = useState<Map<string, TrackedKey>>(new Map());
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -39,9 +39,18 @@ export default function AlertHistoryPage() {
     if (!token) return;
     applicationsApi
       .keys(token)
-      .then((keys) => setTrackedKeys(new Set(keys.map((k) => `${k.source}:${k.source_job_id}`))))
+      .then((keys) =>
+        setTrackedKeys(new Map(keys.map((k) => [`${k.source}:${k.source_job_id}`, k])))
+      )
       .catch(() => {});
   }, [token]);
+
+  /** Merge a just-captured/updated row in, so the row flips without a refetch. */
+  const handleTracked = useCallback((entry: TrackedKey) => {
+    setTrackedKeys((prev) =>
+      new Map(prev).set(`${entry.source}:${entry.source_job_id}`, entry)
+    );
+  }, []);
 
   const totalPages = data ? Math.ceil(data.total / PER_PAGE) : 0;
 
@@ -56,7 +65,12 @@ export default function AlertHistoryPage() {
           </p>
         </header>
 
-        <AlertTimeline alerts={data?.alerts ?? []} isLoading={isLoading} trackedKeys={trackedKeys} />
+        <AlertTimeline
+          alerts={data?.alerts ?? []}
+          isLoading={isLoading}
+          trackedKeys={trackedKeys}
+          onTracked={handleTracked}
+        />
 
         {totalPages > 1 && (
           <div className="mt-8 flex items-center justify-between border-t border-border pt-4">

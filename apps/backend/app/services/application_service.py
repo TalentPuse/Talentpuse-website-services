@@ -102,11 +102,17 @@ async def get_stats(db, user_id) -> dict:
 
 async def tracked_keys(db, user_id) -> list[dict]:
     rows = (await db.execute(
-        select(JobApplication.source, JobApplication.source_job_id).where(
+        select(
+            JobApplication.id, JobApplication.source,
+            JobApplication.source_job_id, JobApplication.status,
+        ).where(
             JobApplication.user_id == user_id, JobApplication.source_job_id.isnot(None),
         )
     )).all()
-    return [{"source": s, "source_job_id": j} for s, j in rows]
+    return [
+        {"id": i, "source": s, "source_job_id": j, "status": st}
+        for i, s, j, st in rows
+    ]
 
 
 async def update_application(db, user_id, app_id, *, status=None, notes=None, applied_at=None):

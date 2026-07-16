@@ -1,6 +1,10 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+
+import { useState } from "react";
+import { useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { useReducedMotion } from "framer-motion";
+
 import { Trash2, ICON } from "@/lib/icons";
 import Monogram from "@/components/brand/Monogram";
 import { Badge } from "@/components/ui/badge";
@@ -8,88 +12,123 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { getSourceLabel, getSourceBadgeClass } from "@/lib/job-sources";
 import { cn } from "@/lib/utils";
-import type { Application, ApplicationStatus } from "@/lib/api";
-import StatusSelect from "./StatusSelect";
+import type { Application } from "@/lib/api";
 
-/** How long the post-status-change highlight stays visible before fading out. */
-const STATUS_FLASH_MS = 900;
+type ApplicationCardProps = {
+  app: Application;
+  onDelete: (id: string) => void;
+  /** Rendered inside DragOverlay — no drag wiring, just the visual. */
+  isOverlay?: boolean;
+};
 
-export default function ApplicationCard({ app, onStatusChange, onDelete }: {
-  app: Application; onStatusChange: (id: string, s: ApplicationStatus) => void; onDelete: (id: string) => void;
-}) {
+/**
+ * ApplicationCard — a single tracked job on the Ứng tuyển board.
+ *
+ * The card carries no status control: on a board the *column* is the status,
+ * so moving the card is what changes it. Drag is wired through dnd-kit, which
+ * also gives keyboard dragging for free (Space to lift, arrows, Space to drop).
+ */
+export default function ApplicationCard({ app, onDelete, isOverlay = false }: ApplicationCardProps) {
   const [confirming, setConfirming] = useState(false);
   const reduceMotion = useReducedMotion();
 
-  // Pure visual affordance: flash the card's surface briefly whenever `app.status`
-  // changes (from either the optimistic update or the follow-up `load()` refresh).
-  // Does not touch onStatusChange / the optimistic-update flow in the parent page.
-  const prevStatus = useRef(app.status);
-  const [justChanged, setJustChanged] = useState(false);
-  useEffect(() => {
-    if (prevStatus.current === app.status) return;
-    prevStatus.current = app.status;
-    setJustChanged(true);
-    const timer = setTimeout(() => setJustChanged(false), STATUS_FLASH_MS);
-    return () => clearTimeout(timer);
-  }, [app.status]);
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: app.id,
+    disabled: isOverlay,
+  });
 
-  const date = app.applied_at ? new Date(app.applied_at).toLocaleDateString("vi-VN", { day: "numeric", month: "short" }) : null;
+  const date = app.applied_at
+    ? new Date(app.applied_at).toLocaleDateString("vi-VN", { day: "numeric", month: "short" })
+    : null;
+
   return (
-    <motion.div
-      layout={reduceMotion ? false : "position"}
-      initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
-      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+    <div
+      ref={isOverlay ? undefined : setNodeRef}
+      style={transform && !reduceMotion ? { transform: CSS.Translate.toString(transform) } : undefined}
+      {...(isOverlay ? {} : listeners)}
+      {...(isOverlay ? {} : attributes)}
       className={cn(
-        "group relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-surface p-4",
-        "transition-[transform,border-color,box-shadow] duration-200 ease-out",
-        "hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
+        // shrink-0: inside a scrolling column, flex children would otherwise
+        // squash instead of overflowing.
+        "group relative shrink-0 rounded-xl bg-surface p-2.5",
+        "shadow-[0_1px_2px_rgba(15,23,42,0.06)] ring-1 ring-inset ring-border/70",
+        "transition-[box-shadow,transform,--tw-ring-color] duration-150 ease-out",
+        !isOverlay &&
+          "cursor-grab touch-none hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(15,23,42,0.10)] hover:ring-brand-300",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60",
+        // The original stays in place as a ghost; DragOverlay renders the mover.
+        isDragging && "opacity-40",
+        isOverlay && "cursor-grabbing rotate-2 shadow-[0_12px_28px_rgba(15,23,42,0.18)] ring-brand-300",
       )}
     >
-      <AnimatePresence>
-        {justChanged && !reduceMotion && (
-          <motion.div
-            key="status-flash"
-            initial={{ opacity: 0.28 }}
-            animate={{ opacity: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: STATUS_FLASH_MS / 1000, ease: "easeOut" }}
-            className="pointer-events-none absolute inset-0 bg-brand-400"
-          />
-        )}
-      </AnimatePresence>
-      <Monogram name={app.company_name || app.title} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          {app.source_url
-            ? <a href={app.source_url} target="_blank" rel="noopener noreferrer" className="truncate font-medium text-text hover:text-brand-600">{app.title}</a>
-            : <span className="truncate font-medium text-text">{app.title}</span>}
-          <Badge className={getSourceBadgeClass(app.source)}>{getSourceLabel(app.source)}</Badge>
+      <div className="flex items-start gap-2">
+        <Monogram name={app.company_name || app.title} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-1.5">
+            {app.source_url ? (
+              <a
+                href={app.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onPointerDown={(e) => e.stopPropagation()}
+                className="line-clamp-2 text-sm font-medium text-text hover:text-brand-600"
+              >
+                {app.title}
+              </a>
+            ) : (
+              <span className="line-clamp-2 text-sm font-medium text-text">{app.title}</span>
+            )}
+          </div>
+          <p className="mt-0.5 truncate text-xs text-text-muted">
+            {[app.company_name, app.city].filter(Boolean).join(" · ") || "—"}
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <Badge className={getSourceBadgeClass(app.source)}>{getSourceLabel(app.source)}</Badge>
+            {app.salary_million != null && (
+              <span className="font-mono text-xs text-success">~{app.salary_million}M</span>
+            )}
+            {date && <span className="text-xs text-text-muted">{date}</span>}
+          </div>
         </div>
-        <p className="truncate text-sm text-text-muted">
-          {[app.company_name, app.city].filter(Boolean).join(" · ")}
-          {app.salary_million != null && <span className="ml-2 font-mono text-success">~{app.salary_million}M</span>}
-          {date && <span className="ml-2">· {date}</span>}
-        </p>
+
+        {!isOverlay && (
+          <Dialog open={confirming} onOpenChange={setConfirming}>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Xoá ${app.title}`}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="h-7 w-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+              >
+                <Trash2 {...ICON} className="h-3.5 w-3.5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Xoá khỏi danh sách ứng tuyển?</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-text-muted">
+                &quot;{app.title}&quot; sẽ bị xoá khỏi tracker (không ảnh hưởng job gốc).
+              </p>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setConfirming(false)}>
+                  Huỷ
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setConfirming(false);
+                    onDelete(app.id);
+                  }}
+                >
+                  Xoá
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
-      <motion.div
-        animate={justChanged && !reduceMotion ? { scale: [1, 1.05, 1] } : { scale: 1 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-      >
-        <StatusSelect value={app.status} onChange={(s) => onStatusChange(app.id, s)} />
-      </motion.div>
-      <Dialog open={confirming} onOpenChange={setConfirming}>
-        <DialogTrigger asChild><Button variant="ghost" size="icon" aria-label="Xoá"><Trash2 {...ICON} className="h-4 w-4" /></Button></DialogTrigger>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Xoá khỏi danh sách ứng tuyển?</DialogTitle></DialogHeader>
-          <p className="text-sm text-text-muted">&quot;{app.title}&quot; sẽ bị xoá khỏi tracker (không ảnh hưởng job gốc).</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirming(false)}>Huỷ</Button>
-            <Button variant="destructive" onClick={() => { setConfirming(false); onDelete(app.id); }}>Xoá</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </motion.div>
+    </div>
   );
 }
