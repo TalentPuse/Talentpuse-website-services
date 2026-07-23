@@ -128,3 +128,97 @@ class TestTopCompanies:
         result = await repo.top_companies()
 
         assert result == []
+
+
+class TestSalaryBenchmark:
+
+    @pytest.mark.asyncio
+    async def test_returns_rows(self, repo, mock_db):
+        mock_db.fetch.return_value = [
+            make_record({
+                "job_category": "AI Engineer", "job_level": "senior",
+                "city_canonical": "Ho Chi Minh", "region": "South",
+                "n_visible_jobs": 12,
+                "p25_m": 20.0, "p50_m": 28.0, "p75_m": 38.0,
+                "avg_salary_m": 29.5, "min_salary_m": 15.0, "max_salary_m": 50.0,
+            }),
+        ]
+
+        result = await repo.salary_benchmark()
+
+        assert len(result) == 1
+        assert result[0].job_category == "AI Engineer"
+        assert result[0].p50_m == 28.0
+        assert result[0].n_visible_jobs == 12
+
+    @pytest.mark.asyncio
+    async def test_empty(self, repo, mock_db):
+        mock_db.fetch.return_value = []
+
+        result = await repo.salary_benchmark(job_category="AI Engineer")
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_with_all_filters_passes_params(self, repo, mock_db):
+        mock_db.fetch.return_value = []
+
+        await repo.salary_benchmark(
+            job_category="AI Engineer", job_level="senior", city="Ho Chi Minh"
+        )
+
+        call_args = mock_db.fetch.call_args
+        assert "AI Engineer" in call_args[0][1:]
+        assert "senior" in call_args[0][1:]
+        assert "Ho Chi Minh" in call_args[0][1:]
+
+    @pytest.mark.asyncio
+    async def test_no_filters_no_params(self, repo, mock_db):
+        mock_db.fetch.return_value = []
+
+        await repo.salary_benchmark()
+
+        call_args = mock_db.fetch.call_args
+        assert call_args[0][1:] == ()
+
+
+class TestCompanyHiring:
+
+    @pytest.mark.asyncio
+    async def test_returns_rows(self, repo, mock_db):
+        mock_db.fetch.return_value = [
+            make_record({
+                "company_id": 42, "company_name": "VNG Corporation",
+                "company_size": "1000+", "company_size_label": "Large",
+                "primary_city": "Ho Chi Minh", "primary_region": "South",
+                "n_jobs": 8, "avg_views": 320.5, "avg_apps": 45.2,
+                "avg_salary_m": 25.0, "min_salary_m": 12.0, "max_salary_m": 45.0,
+                "last_seen_at": None, "snapshot_date": None,
+            }),
+        ]
+
+        result = await repo.company_hiring(company_name="vng")
+
+        assert len(result) == 1
+        assert result[0].company_name == "VNG Corporation"
+        assert result[0].n_jobs == 8
+
+    @pytest.mark.asyncio
+    async def test_empty_when_no_match(self, repo, mock_db):
+        mock_db.fetch.return_value = []
+
+        result = await repo.company_hiring(company_name="nonexistent-co")
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_uses_parameterised_ilike(self, repo, mock_db):
+        mock_db.fetch.return_value = []
+
+        await repo.company_hiring(company_name="FPT")
+
+        call_args = mock_db.fetch.call_args
+        query = call_args[0][0]
+        assert "ILIKE" in query
+        assert "FPT" not in query  # value must be a bound param, not concatenated into SQL
+        assert call_args[0][1] == "FPT"

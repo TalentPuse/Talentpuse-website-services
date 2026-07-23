@@ -8,6 +8,8 @@ from mcp_server.schemas.analytics import (
     SalaryRow,
     CompanyRow,
     JobMarketOverview,
+    SalaryBenchmarkRow,
+    CompanyHiringRow,
 )
 from mcp_server.schemas.skill import SkillDemandRow, SkillTrend
 
@@ -191,6 +193,111 @@ class TestGetTopCompaniesTool:
             result = await get_top_companies()
 
         assert result == "[]"
+
+
+class TestGetSalaryBenchmarkTool:
+
+    @pytest.mark.asyncio
+    async def test_returns_rows(self):
+        from mcp_server.tools.analytics import get_salary_benchmark
+
+        rows = [
+            SalaryBenchmarkRow(
+                job_category="AI Engineer",
+                job_level="senior",
+                city_canonical="Ho Chi Minh",
+                region="South",
+                n_visible_jobs=12,
+                p25_m=20.0,
+                p50_m=28.0,
+                p75_m=38.0,
+                avg_salary_m=29.5,
+                min_salary_m=15.0,
+                max_salary_m=50.0,
+            ),
+        ]
+
+        with patch("mcp_server.tools.analytics._analytics_repo") as mock_repo:
+            mock_repo.salary_benchmark = AsyncMock(return_value=rows)
+            result = await get_salary_benchmark()
+
+        assert '"AI Engineer"' in result
+        assert '"p50_m":28.0' in result
+
+    @pytest.mark.asyncio
+    async def test_empty(self):
+        from mcp_server.tools.analytics import get_salary_benchmark
+
+        with patch("mcp_server.tools.analytics._analytics_repo") as mock_repo:
+            mock_repo.salary_benchmark = AsyncMock(return_value=[])
+            result = await get_salary_benchmark()
+
+        assert result == "[]"
+
+    @pytest.mark.asyncio
+    async def test_with_filters(self):
+        from mcp_server.tools.analytics import get_salary_benchmark
+
+        with patch("mcp_server.tools.analytics._analytics_repo") as mock_repo:
+            mock_repo.salary_benchmark = AsyncMock(return_value=[])
+            await get_salary_benchmark(
+                job_category="AI Engineer", job_level="senior", city="Ho Chi Minh"
+            )
+
+        mock_repo.salary_benchmark.assert_called_once_with(
+            job_category="AI Engineer", job_level="senior", city="Ho Chi Minh"
+        )
+
+
+class TestGetCompanyHiringTool:
+
+    @pytest.mark.asyncio
+    async def test_returns_rows(self):
+        from mcp_server.tools.analytics import get_company_hiring
+
+        rows = [
+            CompanyHiringRow(
+                company_id=42,
+                company_name="VNG Corporation",
+                company_size="1000+",
+                company_size_label="Large",
+                primary_city="Ho Chi Minh",
+                primary_region="South",
+                n_jobs=8,
+                avg_views=320.5,
+                avg_apps=45.2,
+                avg_salary_m=25.0,
+                min_salary_m=12.0,
+                max_salary_m=45.0,
+            ),
+        ]
+
+        with patch("mcp_server.tools.analytics._analytics_repo") as mock_repo:
+            mock_repo.company_hiring = AsyncMock(return_value=rows)
+            result = await get_company_hiring(company_name="vng")
+
+        assert '"VNG Corporation"' in result
+        assert '"n_jobs":8' in result
+
+    @pytest.mark.asyncio
+    async def test_no_match_returns_empty_list(self):
+        from mcp_server.tools.analytics import get_company_hiring
+
+        with patch("mcp_server.tools.analytics._analytics_repo") as mock_repo:
+            mock_repo.company_hiring = AsyncMock(return_value=[])
+            result = await get_company_hiring(company_name="nonexistent-co")
+
+        assert result == "[]"
+
+    @pytest.mark.asyncio
+    async def test_passes_company_name_through(self):
+        from mcp_server.tools.analytics import get_company_hiring
+
+        with patch("mcp_server.tools.analytics._analytics_repo") as mock_repo:
+            mock_repo.company_hiring = AsyncMock(return_value=[])
+            await get_company_hiring(company_name="FPT")
+
+        mock_repo.company_hiring.assert_called_once_with(company_name="FPT")
 
 
 class TestGetSkillTrendsTool:

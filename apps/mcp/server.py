@@ -21,6 +21,8 @@ mcp = FastMCP(
         "TalentPulse MCP Server — Vietnam IT/AI job market analytics.\n"
         "Use get_system_stats or get_job_market_overview for general queries.\n"
         "Use query_skill_gap for skill recommendations based on user profile.\n"
+        "Use get_salary_benchmark to judge whether a salary offer is competitive.\n"
+        "Use get_company_hiring to check whether a named company is actively hiring.\n"
         "Use search_jobs_realtime to search real-time jobs on LinkedIn, Indeed, Glassdoor.\n"
         "Use run_alert_dispatch to trigger job alert pipeline."
     ),
@@ -48,6 +50,8 @@ from mcp_server.tools.analytics import (  # noqa: E402
     get_salary_analysis,
     get_top_companies,
     get_skill_trends,
+    get_salary_benchmark,
+    get_company_hiring,
 )
 from mcp_server.tools.operations import run_alert_dispatch  # noqa: E402
 from mcp_server.tools.job_search import search_jobs_realtime  # noqa: E402
@@ -60,6 +64,8 @@ mcp.add_tool(get_top_skills)
 mcp.add_tool(get_salary_analysis)
 mcp.add_tool(get_top_companies)
 mcp.add_tool(get_skill_trends)
+mcp.add_tool(get_salary_benchmark)
+mcp.add_tool(get_company_hiring)
 mcp.add_tool(run_alert_dispatch)
 mcp.add_tool(search_jobs_realtime)
 

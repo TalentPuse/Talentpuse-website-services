@@ -78,6 +78,47 @@ async def get_top_companies(
 
 @tool(tags={"analytics", "readonly"})
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
+async def get_salary_benchmark(
+    job_category: Annotated[
+        str | None,
+        Field(description="Filter by job category, e.g. 'AI Engineer', 'Backend Developer'"),
+    ] = None,
+    job_level: Annotated[
+        str | None,
+        Field(description="Filter by level: intern, fresher, junior, mid, senior, lead, manager"),
+    ] = None,
+    city: Annotated[
+        str | None,
+        Field(description="Filter by city, e.g. 'Ho Chi Minh', 'Ha Noi'"),
+    ] = None,
+) -> str:
+    """Get salary benchmark percentiles (P25/P50/P75) plus avg/min/max, in millions VND per month,
+    broken down by job category, level, city and region. Use this to judge whether a salary offer
+    is competitive for a given role, level and location. Filters are optional and combinable."""
+    rows = await _analytics_repo.salary_benchmark(
+        job_category=job_category, job_level=job_level, city=city
+    )
+    return f"[{','.join(r.model_dump_json() for r in rows)}]"
+
+
+@tool(tags={"analytics", "readonly"})
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
+async def get_company_hiring(
+    company_name: Annotated[
+        str,
+        Field(description="Company name to search for, e.g. 'FPT Software', 'VNG'"),
+    ],
+) -> str:
+    """Check whether a company is actively hiring: number of open jobs, average views/applicants
+    per job, salary range, and primary city/region. Matches company_name case-insensitively and by
+    partial substring, since company names are typed inconsistently across job sources. Returns an
+    empty list if no matching company is found in the warehouse — do not assume zero hiring activity."""
+    rows = await _analytics_repo.company_hiring(company_name=company_name)
+    return f"[{','.join(r.model_dump_json() for r in rows)}]"
+
+
+@tool(tags={"analytics", "readonly"})
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
 async def get_skill_trends(
     weeks: Annotated[int, Field(description="Recent weeks to analyze", ge=1, le=12)] = 4,
     limit: Annotated[int, Field(description="Top N trending skills", ge=1, le=30)] = 15,
