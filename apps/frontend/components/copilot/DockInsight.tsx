@@ -18,13 +18,26 @@ export default function DockInsight({ board }: { board: BoardData }) {
   // nudge rồi tắt.
   const [dismissed, setDismissed] = useState(true);
   const [summary, setSummary] = useState<string | null>(null);
+  // Đánh dấu đã fetch xong (kể cả kết quả rỗng) — tách biệt với `summary`
+  // để tránh nhầm "chưa fetch" (null) với "đã fetch ra chuỗi rỗng" (""),
+  // xem C1 trong review.
+  const [hasFetched, setHasFetched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Chỉ true sau khi effect đọc sessionStorage đã chạy xong, để effect
+  // auto-fetch bên dưới đợi đọc cache trước — tránh race C2 (fetch thừa
+  // dù đã có cache) mà không cần đụng tới localStorage/sessionStorage
+  // trong lazy initializer của useState (điều đó sẽ crash SSR).
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setDismissed(localStorage.getItem(DISMISS_KEY) === todayKey());
     const cached = sessionStorage.getItem(SUMMARY_KEY);
-    if (cached) setSummary(cached);
+    if (cached) {
+      setSummary(cached);
+      setHasFetched(true);
+    }
+    setHydrated(true);
   }, []);
 
   const loadSummary = useCallback(async () => {
@@ -34,6 +47,7 @@ export default function DockInsight({ board }: { board: BoardData }) {
     try {
       const res = await applicationsApi.aiSummary(token);
       setSummary(res.summary_md);
+      setHasFetched(true);
       sessionStorage.setItem(SUMMARY_KEY, res.summary_md);
     } catch {
       setFailed(true);
@@ -44,9 +58,13 @@ export default function DockInsight({ board }: { board: BoardData }) {
 
   // Tự chạy MỘT lần mỗi session; sau đó user tự bấm làm mới. Mỗi lần gọi là
   // một lượt LLM có tính phí, không đáng chạy lại mỗi khi tab được mount lại.
+  // Gate bằng `hasFetched` (không phải `!summary`) vì summary_md rỗng ("")
+  // vẫn là falsy — dùng `!summary` sẽ khiến effect bắn lại vô hạn (C1).
+  // Đợi `hydrated` để chắc effect đọc sessionStorage ở trên đã chạy xong,
+  // nếu không mỗi lần remount tab sẽ fetch thừa dù đã có cache (C2).
   useEffect(() => {
-    if (!summary && !loading && !failed && apps.length > 0) void loadSummary();
-  }, [summary, loading, failed, apps.length, loadSummary]);
+    if (hydrated && !hasFetched && !loading && !failed && apps.length > 0) void loadSummary();
+  }, [hydrated, hasFetched, loading, failed, apps.length, loadSummary]);
 
   if (apps.length === 0) {
     return <p className="p-4 text-sm text-text-muted">Chưa có job nào được track. Thêm job đầu tiên rồi mình tóm tắt cho.</p>;
@@ -107,7 +125,14 @@ export default function DockInsight({ board }: { board: BoardData }) {
           </button>
         </div>
         {failed ? (
-          <button type="button" onClick={() => void loadSummary()} className="text-sm text-brand-600 underline">
+          // disabled={loading} để double-click không bắn 2 lượt LLM tính phí
+          // chạy đua cùng ghi sessionStorage (I3).
+          <button
+            type="button"
+            onClick={() => void loadSummary()}
+            disabled={loading}
+            className="text-sm text-brand-600 underline disabled:opacity-50"
+          >
             Không tóm tắt được. Thử lại
           </button>
         ) : summary ? (

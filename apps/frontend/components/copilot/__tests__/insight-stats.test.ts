@@ -29,6 +29,18 @@ describe("findStaleApplied", () => {
     const apps = [app({ id: "a", applied_at: "2026-07-10" }), app({ id: "b", applied_at: "2026-07-01" })];
     expect(findStaleApplied(apps, TODAY).map((s) => s.id)).toEqual(["b", "a"]);
   });
+
+  it("đúng 7 ngày thì KHÔNG tính là stale (biên dưới)", () => {
+    // TODAY = 2026-07-23 → applied_at 2026-07-16 = đúng 7 ngày
+    const apps = [app({ id: "boundary-7", applied_at: "2026-07-16" })];
+    expect(findStaleApplied(apps, TODAY)).toEqual([]);
+  });
+
+  it("đúng 8 ngày thì tính là stale (biên trên)", () => {
+    // TODAY = 2026-07-23 → applied_at 2026-07-15 = đúng 8 ngày
+    const apps = [app({ id: "boundary-8", applied_at: "2026-07-15" })];
+    expect(findStaleApplied(apps, TODAY).map((s) => s.id)).toEqual(["boundary-8"]);
+  });
 });
 
 describe("sourceBreakdown", () => {
@@ -58,5 +70,15 @@ describe("funnelDiagnosis", () => {
 
   it("im lặng khi còn ít job", () => {
     expect(funnelDiagnosis([app({}), app({ id: "b" })])).toBeNull();
+  });
+
+  it("đúng 7 applied thì im lặng (biên dưới)", () => {
+    const apps = Array.from({ length: 7 }, (_, i) => app({ id: `a${i}`, status: "applied" }));
+    expect(funnelDiagnosis(apps)).toBeNull();
+  });
+
+  it("đúng 8 applied thì cảnh báo (biên trên)", () => {
+    const apps = Array.from({ length: 8 }, (_, i) => app({ id: `a${i}`, status: "applied" }));
+    expect(funnelDiagnosis(apps)).toContain("CV");
   });
 });
