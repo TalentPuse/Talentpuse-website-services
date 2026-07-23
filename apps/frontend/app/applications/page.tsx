@@ -7,6 +7,7 @@ import ApplicationBoard from "@/components/applications/ApplicationBoard";
 import AddApplicationDialog from "@/components/applications/AddApplicationDialog";
 import CopilotDockProvider from "@/components/copilot/CopilotDockProvider";
 import BoardCopilot from "@/components/copilot/BoardCopilot";
+import DockInsight from "@/components/copilot/DockInsight";
 import { COPILOT_DOCK } from "@/lib/flags";
 import type { ApplicationStatus } from "@/lib/api";
 import { useBoardData, type BoardData } from "./use-board-data";
@@ -16,7 +17,7 @@ export default function ApplicationsPage() {
   return (
     <DashboardLayout>
       <ForceTheme theme="light" />
-      <CopilotDockProvider page="applications">
+      <CopilotDockProvider page="applications" insight={<DockInsight board={board} />}>
         <Content board={board} />
       </CopilotDockProvider>
     </DashboardLayout>
