@@ -13,6 +13,7 @@ from app.services.agent.tools.application_tools import (
 from app.services.agent.tools.cv_coach_tool import get_cv_writing_guide
 from app.services.agent.tools.cv_edit_tool import edit_cv
 from app.services.agent.tools.job_search_tools import search_jobs_realtime
+from app.services.agent.tools.market_tools import company_hiring, salary_benchmark
 from app.services.agent.tools.skill_tools import query_skill_gap
 
 _BASE_TOOLS = [
@@ -22,6 +23,8 @@ _BASE_TOOLS = [
     list_my_applications,
     get_application_stats,
     edit_cv,
+    salary_benchmark,
+    company_hiring,
 ]
 _agent = None
 _llm = None
