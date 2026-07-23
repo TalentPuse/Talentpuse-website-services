@@ -68,6 +68,10 @@ services:
       args:
         NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8001}
         NEXT_PUBLIC_DOMAIN: ${NEXT_PUBLIC_DOMAIN:-http://localhost:8002}
+        # Kill-switch AI: phai truyen luc BUILD (Next inline hoa NEXT_PUBLIC_*),
+        # dat o `environment:` khong co tac dung. Mac dinh rong = tat.
+        NEXT_PUBLIC_AI_HOME: ${NEXT_PUBLIC_AI_HOME:-}
+        NEXT_PUBLIC_COPILOT_DOCK: ${NEXT_PUBLIC_COPILOT_DOCK:-}
     container_name: tp-frontend-standalone
     ports:
       - "127.0.0.1:8002:8002"

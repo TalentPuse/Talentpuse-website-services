@@ -10,8 +10,15 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_BASE=""
 ARG NEXT_PUBLIC_DOMAIN=""
+# Next.js inline hoa NEXT_PUBLIC_* luc build, nen 2 kill-switch nay phai co mat
+# o build stage — dat chung o runtime environment thi khong co tac dung.
+# Mac dinh rong = tat (lib/flags.ts chi bat khi === "1"), nen CI/CD khong doi.
+ARG NEXT_PUBLIC_AI_HOME=""
+ARG NEXT_PUBLIC_COPILOT_DOCK=""
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 ENV NEXT_PUBLIC_DOMAIN=$NEXT_PUBLIC_DOMAIN
+ENV NEXT_PUBLIC_AI_HOME=$NEXT_PUBLIC_AI_HOME
+ENV NEXT_PUBLIC_COPILOT_DOCK=$NEXT_PUBLIC_COPILOT_DOCK
 ENV NODE_OPTIONS="--max-old-space-size=1024"
 RUN npm run build
 

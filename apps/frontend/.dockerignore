@@ -1,0 +1,25 @@
+# Khong co file nay thi `COPY . .` (Dockerfile) keo ca node_modules cua host DE LEN
+# node_modules da cai o `deps` stage — tren host Windows/macOS do la binary sai
+# platform (@next/swc-win32-*) va build se hong hoac phinh context len hang GB.
+node_modules
+.next
+out
+
+# Artifact local, khong lien quan toi build
+docs/ui-audit
+tsconfig.tsbuildinfo
+npm-debug.log*
+.DS_Store
+
+# Secrets: khong bao gio di vao image layer
+.env
+.env.*
+!.env.example
+
+# Chi can luc dev, khong can trong image
+.agents
+jest.config.js
+jest.setup.ts
+Dockerfile
+.dockerignore
+.gitignore
