@@ -48,10 +48,20 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
     description:
       "Move one job application card to a different status column on the board. " +
       "Use when the user says a job moved forward or backward in their pipeline " +
-      "(e.g. got an interview, got an offer, was rejected).",
+      "(e.g. got an interview, got an offer, was rejected). " +
+      "IMPORTANT: pass the `card` argument exactly as the user phrased it — do not " +
+      "resolve it to a specific title yourself, even if the board context makes one " +
+      "candidate seem likely. This tool matches `card` against the board and returns " +
+      "a list of candidates if more than one card matches. Calling the tool with the " +
+      "user's ambiguous wording is correct; it is the tool's job to detect ambiguity " +
+      "and yours to relay the resulting question to the user, not to guess for them.",
     parameters: [
       { name: "card", type: "string", required: true,
-        description: "Job title of the card to move, or its exact id from context." },
+        description: "The user's own wording for which card they mean — copy it " +
+          "verbatim (a word, phrase, or the exact id from context). Do not upgrade it " +
+          "to a full or corrected job title based on what you see on the board: if the " +
+          "wording could match several cards, passing it unresolved is what lets this " +
+          "tool return the candidates so the user can be asked which one." },
       { name: "status", type: "string", required: true, enum: STATUSES,
         description: "Target column." },
     ],
@@ -136,9 +146,20 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
     name: "append_note",
     description:
       "Append a short note to a job application card — interview dates, recruiter " +
-      "names, next steps. Notes are appended, never replaced.",
+      "names, next steps. Notes are appended, never replaced. " +
+      "IMPORTANT: pass the `card` argument exactly as the user phrased it — do not " +
+      "resolve it to a specific title yourself. This tool matches `card` against the " +
+      "board and returns a list of candidates if more than one card matches. Calling " +
+      "the tool with the user's ambiguous wording is correct; it is the tool's job to " +
+      "detect ambiguity and yours to relay the resulting question to the user, not to " +
+      "guess for them.",
     parameters: [
-      { name: "card", type: "string", required: true, description: "Job title of the card, or its id." },
+      { name: "card", type: "string", required: true,
+        description: "The user's own wording for which card they mean — copy it " +
+          "verbatim (a word, phrase, or the exact id from context). Do not upgrade it " +
+          "to a full or corrected job title based on what you see on the board: if the " +
+          "wording could match several cards, passing it unresolved is what lets this " +
+          "tool return the candidates so the user can be asked which one." },
       { name: "note", type: "string", required: true, description: "The note text to append." },
     ],
     handler: async (args) => {
