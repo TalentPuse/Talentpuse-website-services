@@ -22,6 +22,8 @@ jest.mock("@/lib/api", () => ({
 const { applicationsApi } = require("@/lib/api") as {
   applicationsApi: { create: jest.Mock; update: jest.Mock; remove: jest.Mock };
 };
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { toastWithUndo } = require("../undo-toast") as { toastWithUndo: jest.Mock };
 
 function app(over: Partial<Application>): Application {
   return {
@@ -97,6 +99,42 @@ describe("BoardCopilot / add_application", () => {
     expect(applicationsApi.create).not.toHaveBeenCalled();
     expect(out.toLowerCase()).toContain("tên job");
   });
+
+  it("KHÔNG gửi source / source_job_id lên applicationsApi.create", async () => {
+    const b = board();
+    render(<BoardCopilot board={b} />);
+    await registered.get("add_application")!({ title: "AI Engineer", company: "VNG", status: "applied" });
+    const body = applicationsApi.create.mock.calls[0][1];
+    expect(body).not.toHaveProperty("source");
+    expect(body).not.toHaveProperty("source_job_id");
+  });
+
+  it("KHÔNG gọi API khi chưa đăng nhập (token null)", async () => {
+    const b = board({ token: null });
+    render(<BoardCopilot board={b} />);
+    const out = await registered.get("add_application")!({ title: "AI Engineer" });
+    expect(applicationsApi.create).not.toHaveBeenCalled();
+    expect(out.toLowerCase()).toContain("chưa đăng nhập");
+  });
+
+  it("trả lỗi khi applicationsApi.create thất bại", async () => {
+    applicationsApi.create.mockRejectedValueOnce(new Error("network down"));
+    const b = board();
+    render(<BoardCopilot board={b} />);
+    const out = await registered.get("add_application")!({ title: "AI Engineer" });
+    expect(out.toLowerCase()).not.toContain("đã thêm");
+    expect(out.toLowerCase()).toContain("lỗi");
+  });
+
+  it("undo của add_application gọi applicationsApi.remove với đúng id card vừa tạo", async () => {
+    applicationsApi.create.mockResolvedValueOnce({ id: "new-99", title: "AI Engineer" });
+    const b = board();
+    render(<BoardCopilot board={b} />);
+    await registered.get("add_application")!({ title: "AI Engineer" });
+    const undo = toastWithUndo.mock.calls[0][1] as () => Promise<void>;
+    await undo();
+    expect(applicationsApi.remove).toHaveBeenCalledWith("tok", "new-99");
+  });
 });
 
 describe("BoardCopilot / append_note", () => {
@@ -123,5 +161,31 @@ describe("BoardCopilot / append_note", () => {
     render(<BoardCopilot board={b} />);
     await registered.get("append_note")!({ card: "data", note: "x" });
     expect(applicationsApi.update).not.toHaveBeenCalled();
+  });
+
+  it("KHÔNG gọi API khi chưa đăng nhập (token null)", async () => {
+    const b = board({ apps: [app({ id: "a", title: "Data Analyst" })], token: null });
+    render(<BoardCopilot board={b} />);
+    const out = await registered.get("append_note")!({ card: "Data Analyst", note: "x" });
+    expect(applicationsApi.update).not.toHaveBeenCalled();
+    expect(out.toLowerCase()).toContain("chưa đăng nhập");
+  });
+
+  it("trả lỗi khi applicationsApi.update thất bại", async () => {
+    applicationsApi.update.mockRejectedValueOnce(new Error("network down"));
+    const b = board({ apps: [app({ id: "a", title: "Data Analyst" })] });
+    render(<BoardCopilot board={b} />);
+    const out = await registered.get("append_note")!({ card: "Data Analyst", note: "x" });
+    expect(out.toLowerCase()).not.toContain("đã thêm ghi chú");
+    expect(out.toLowerCase()).toContain("lỗi");
+  });
+
+  it("undo của append_note gọi applicationsApi.update trả lại notes cũ", async () => {
+    const b = board({ apps: [app({ id: "a", title: "Data Analyst", notes: "ghi chú cũ" })] });
+    render(<BoardCopilot board={b} />);
+    await registered.get("append_note")!({ card: "Data Analyst", note: "HR hẹn vòng 2" });
+    const undo = toastWithUndo.mock.calls[0][1] as () => Promise<void>;
+    await undo();
+    expect(applicationsApi.update).toHaveBeenCalledWith("tok", "a", { notes: "ghi chú cũ" });
   });
 });
