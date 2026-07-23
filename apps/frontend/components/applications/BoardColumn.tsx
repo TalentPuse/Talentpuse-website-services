@@ -37,7 +37,7 @@ export default function BoardColumn({ status, label, apps, onDelete }: BoardColu
   return (
     <section
       aria-label={`${label} (${apps.length})`}
-      className="flex w-72 shrink-0 snap-start flex-col 2xl:w-auto 2xl:min-w-0 2xl:flex-1 2xl:shrink"
+      className="flex w-72 shrink-0 snap-start flex-col 2xl:w-auto 2xl:min-w-[260px] 2xl:flex-1 2xl:shrink"
     >
       <header className="mb-2 flex items-center gap-2 px-1.5">
         <span className={cn("h-1.5 w-1.5 rounded-full", STAGE_DOT[status])} aria-hidden="true" />

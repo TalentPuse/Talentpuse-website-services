@@ -80,12 +80,14 @@ export default function ApplicationBoard({ apps, onStatusChange, onDelete }: App
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      {/* Fixed-width tracks + horizontal scroll below 2xl; from 2xl the columns
-          flex to fill, so a wide desktop shows no scrollbar at all. The bar that
-          does appear on narrower screens is slimmed down rather than left default. */}
+      {/* Fixed-width tracks + horizontal scroll; from 2xl the columns flex to fill
+          but never below 260px. `2xl:overflow-x-visible` bị bỏ vì với dock 380px
+          mở ra, ngay cả màn 1920 cũng chỉ còn ~1250px cho 5 cột — flex tự do sẽ
+          bóp cột xuống ~236px, tên job xuống 3 dòng. Giữ min-width rồi cho cuộn
+          là đánh đổi đúng: thà cuộn ngang còn hơn vỡ card. */}
       <div
         className={cn(
-          "flex h-full snap-x snap-mandatory items-stretch gap-3 overflow-x-auto pb-2 2xl:overflow-x-visible",
+          "flex h-full snap-x snap-mandatory items-stretch gap-3 overflow-x-auto pb-2",
           "[&::-webkit-scrollbar]:h-1.5",
           "[&::-webkit-scrollbar-track]:bg-transparent",
           "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border",
