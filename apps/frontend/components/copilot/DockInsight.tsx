@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import type { BoardData } from "@/app/applications/use-board-data";
+import { useAuth } from "@/context/AuthContext";
 import { applicationsApi } from "@/lib/api";
 import { findStaleApplied, funnelDiagnosis, sourceBreakdown } from "./insight-stats";
 
@@ -12,8 +13,19 @@ function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Gắn theo user.id để cache không bị đọc chéo tài khoản: user A logout, user B
+// login cùng tab thì sessionStorage vẫn còn nhưng key khác nên bị coi là miss.
+// Khi user chưa sẵn sàng (đang hydrate AuthContext) trả về null thay vì rơi về
+// một chuỗi cố định — nếu không "tp_dock_summary:undefined" sẽ lại là key
+// dùng chung cho mọi tài khoản, tái lập đúng lỗi rò rỉ ban đầu.
+function summaryKeyFor(userId: string | null | undefined): string | null {
+  return userId ? `${SUMMARY_KEY}:${userId}` : null;
+}
+
 export default function DockInsight({ board }: { board: BoardData }) {
   const { apps, token } = board;
+  const { user } = useAuth();
+  const summaryKey = summaryKeyFor(user?.id);
   // Mặc định true để lần render đầu (trước khi đọc localStorage) không loé
   // nudge rồi tắt.
   const [dismissed, setDismissed] = useState(true);
@@ -32,13 +44,13 @@ export default function DockInsight({ board }: { board: BoardData }) {
 
   useEffect(() => {
     setDismissed(localStorage.getItem(DISMISS_KEY) === todayKey());
-    const cached = sessionStorage.getItem(SUMMARY_KEY);
+    const cached = summaryKey ? sessionStorage.getItem(summaryKey) : null;
     if (cached) {
       setSummary(cached);
       setHasFetched(true);
     }
     setHydrated(true);
-  }, []);
+  }, [summaryKey]);
 
   const loadSummary = useCallback(async () => {
     if (!token || apps.length === 0) return;
@@ -48,13 +60,13 @@ export default function DockInsight({ board }: { board: BoardData }) {
       const res = await applicationsApi.aiSummary(token);
       setSummary(res.summary_md);
       setHasFetched(true);
-      sessionStorage.setItem(SUMMARY_KEY, res.summary_md);
+      if (summaryKey) sessionStorage.setItem(summaryKey, res.summary_md);
     } catch {
       setFailed(true);
     } finally {
       setLoading(false);
     }
-  }, [token, apps.length]);
+  }, [token, apps.length, summaryKey]);
 
   // Tự chạy MỘT lần mỗi session; sau đó user tự bấm làm mới. Mỗi lần gọi là
   // một lượt LLM có tính phí, không đáng chạy lại mỗi khi tab được mount lại.
