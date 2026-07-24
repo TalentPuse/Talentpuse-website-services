@@ -85,7 +85,17 @@ export default function CopilotDock({
       <>
         {renderTabs(closeButtonRef)}
         <div className={cn("min-h-0 flex-1", tab !== "chat" && "hidden")}><DockChat /></div>
-        {tab === "insight" && <div className="min-h-0 flex-1 overflow-y-auto p-3">{insight}</div>}
+        {/*
+         * PHẢI giữ mounted (ẩn bằng `hidden`) giống pane Chat ở trên — KHÔNG
+         * được quay lại `{tab === "insight" && <div>...}`. DockInsight tự
+         * quản lý state `hydrated`/`hasFetched`/`failed`/`loading` cho một
+         * lượt tóm tắt AI có tính phí; unmount nó khi đổi tab xoá sạch state
+         * đó, khiến: (1) một lượt fetch đang chạy dở bị huỷ nửa chừng rồi
+         * mount lại bắn lượt fetch thứ hai (tốn phí LLM gấp đôi), và (2) một
+         * lượt fetch đã fail sẽ tự động refetch ở lần đổi tab kế tiếp thay vì
+         * đợi người dùng bấm nút "Thử lại". Xem comment trong DockInsight.tsx.
+         */}
+        <div className={cn("min-h-0 flex-1 overflow-y-auto p-3", tab !== "insight" && "hidden")}>{insight}</div>
       </>
     );
   }
