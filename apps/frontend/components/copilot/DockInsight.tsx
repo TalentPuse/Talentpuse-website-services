@@ -8,6 +8,11 @@ import { findStaleApplied, funnelDiagnosis, sourceBreakdown } from "./insight-st
 
 const DISMISS_KEY = "tp_dock_nudge_dismissed";
 const SUMMARY_KEY = "tp_dock_summary";
+// Key riêng cho trạng thái "đã fetch nhưng fail" — không thể tái dùng
+// SUMMARY_KEY vì summary_md rỗng ("") là một kết quả THÀNH CÔNG hợp lệ, còn
+// đây là đánh dấu THẤT BẠI; gộp chung hai ý nghĩa vào một giá trị sẽ không
+// phân biệt được "" (thành công, rỗng) với "chưa từng fetch được".
+const SUMMARY_FAILED_KEY = "tp_dock_summary_failed";
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
@@ -22,10 +27,17 @@ function summaryKeyFor(userId: string | null | undefined): string | null {
   return userId ? `${SUMMARY_KEY}:${userId}` : null;
 }
 
+// Cùng cách scoping với summaryKeyFor ở trên — cùng lý do (không rò rỉ/đụng
+// chéo tài khoản, không đọc/ghi khi userId chưa sẵn sàng).
+function failedKeyFor(userId: string | null | undefined): string | null {
+  return userId ? `${SUMMARY_FAILED_KEY}:${userId}` : null;
+}
+
 export default function DockInsight({ board }: { board: BoardData }) {
   const { apps, token } = board;
   const { user } = useAuth();
   const summaryKey = summaryKeyFor(user?.id);
+  const failedKey = failedKeyFor(user?.id);
   // Mặc định true để lần render đầu (trước khi đọc localStorage) không loé
   // nudge rồi tắt.
   const [dismissed, setDismissed] = useState(true);
@@ -48,9 +60,18 @@ export default function DockInsight({ board }: { board: BoardData }) {
     if (cached) {
       setSummary(cached);
       setHasFetched(true);
+    } else if (failedKey && sessionStorage.getItem(failedKey)) {
+      // Nhớ lại lượt fetch đã fail của session này — mỗi lần collapse/mở lại
+      // dock (desktop) hoặc đóng/mở sheet (mobile) unmount hẳn component này,
+      // xoá sạch state `failed` trong bộ nhớ. Nếu không đánh dấu lại từ
+      // sessionStorage, effect auto-fetch bên dưới sẽ tưởng đây là lần đầu và
+      // bắn lại một lượt gọi LLM CÓ TÍNH PHÍ mỗi lần user mở dock ra, dù
+      // không hề bấm nút "Thử lại". Nút "Thử lại" tường minh vẫn hoạt động
+      // bình thường vì nó gọi loadSummary() trực tiếp, không đi qua effect này.
+      setFailed(true);
     }
     setHydrated(true);
-  }, [summaryKey]);
+  }, [summaryKey, failedKey]);
 
   const loadSummary = useCallback(async () => {
     if (!token || apps.length === 0) return;
@@ -61,12 +82,14 @@ export default function DockInsight({ board }: { board: BoardData }) {
       setSummary(res.summary_md);
       setHasFetched(true);
       if (summaryKey) sessionStorage.setItem(summaryKey, res.summary_md);
+      if (failedKey) sessionStorage.removeItem(failedKey);
     } catch {
       setFailed(true);
+      if (failedKey) sessionStorage.setItem(failedKey, "1");
     } finally {
       setLoading(false);
     }
-  }, [token, apps.length, summaryKey]);
+  }, [token, apps.length, summaryKey, failedKey]);
 
   // Tự chạy MỘT lần mỗi session; sau đó user tự bấm làm mới. Mỗi lần gọi là
   // một lượt LLM có tính phí, không đáng chạy lại mỗi khi tab được mount lại.

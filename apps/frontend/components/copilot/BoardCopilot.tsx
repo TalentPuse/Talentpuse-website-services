@@ -116,7 +116,10 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
       const status = String(args.status ?? "") as ApplicationStatus;
       if (!STATUSES.includes(status)) return `Trạng thái "${status}" không hợp lệ.`;
 
-      const found = resolveCard(apps, query);
+      // Dùng appsRef (không phải `apps` chụp lúc render) — cùng lý do với
+      // append_note: handler này có thể chạy ở lượt render sau, đọc `apps`
+      // đóng gói lúc tạo sẽ ra dữ liệu cũ.
+      const found = resolveCard(appsRef.current, query);
       if (!found.ok) {
         return found.reason === "not_found"
           ? `Không tìm thấy card nào khớp "${query}". Hỏi user xem họ muốn nói job nào.`

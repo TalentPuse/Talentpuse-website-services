@@ -1,10 +1,12 @@
-import { render, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DockInsight from "../DockInsight";
 import type { BoardData } from "@/app/applications/use-board-data";
 import type { Application, UserResponse } from "@/lib/api";
 
 const SUMMARY_KEY_PREFIX = "tp_dock_summary";
 const SUMMARY_KEY = `${SUMMARY_KEY_PREFIX}:user-1`;
+const FAILED_KEY_PREFIX = "tp_dock_summary_failed";
+const FAILED_KEY = `${FAILED_KEY_PREFIX}:user-1`;
 
 jest.mock("@/lib/api", () => ({
   applicationsApi: {
@@ -122,5 +124,56 @@ describe("DockInsight / cache tóm tắt không được đọc chéo giữa cá
     expect(sessionStorage.getItem(`${SUMMARY_KEY_PREFIX}:undefined`)).toBe(
       "Không nên đọc chuỗi này",
     );
+  });
+});
+
+describe("DockInsight / lượt fetch fail được nhớ qua session, không tự động gọi lại khi remount", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    localStorage.clear();
+    sessionStorage.clear();
+    mockUseAuth.mockReturnValue(mockUser("user-1"));
+  });
+
+  it("fail rồi unmount/remount (đóng mở dock) không gọi lại aiSummary lần hai", async () => {
+    applicationsApi.aiSummary.mockRejectedValue(new Error("LLM lỗi"));
+    const { unmount } = render(<DockInsight board={board()} />);
+
+    await waitFor(() => expect(applicationsApi.aiSummary).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(sessionStorage.getItem(FAILED_KEY)).toBe("1"));
+
+    // Mô phỏng CopilotDock unmount hẳn component (thu gọn desktop / đóng sheet
+    // mobile) rồi mount lại (mở lại) — state cục bộ `failed` bị xoá sạch.
+    unmount();
+    render(<DockInsight board={board()} />);
+
+    // Đợi một nhịp để nếu có bug tự động refetch thì nó đã kịp bắn.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(applicationsApi.aiSummary).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("Không tóm tắt được. Thử lại")).toBeInTheDocument();
+  });
+
+  it("nút Thử lại tường minh vẫn gọi lại aiSummary sau khi đã fail", async () => {
+    applicationsApi.aiSummary.mockRejectedValueOnce(new Error("LLM lỗi"));
+    applicationsApi.aiSummary.mockResolvedValueOnce({ summary_md: "Tóm tắt lần hai" });
+    render(<DockInsight board={board()} />);
+
+    const retryButton = await screen.findByText("Không tóm tắt được. Thử lại");
+    fireEvent.click(retryButton);
+
+    await waitFor(() => expect(applicationsApi.aiSummary).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("Tóm tắt lần hai")).toBeInTheDocument();
+  });
+
+  it("dấu fail của user A không chặn lượt fetch đầu tiên của user B", async () => {
+    sessionStorage.setItem(`${FAILED_KEY_PREFIX}:user-A`, "1");
+    applicationsApi.aiSummary.mockResolvedValue({ summary_md: "Tóm tắt của user B" });
+
+    mockUseAuth.mockReturnValue(mockUser("user-B"));
+    render(<DockInsight board={board()} />);
+
+    await waitFor(() => expect(applicationsApi.aiSummary).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("Tóm tắt của user B")).toBeInTheDocument();
+    expect(sessionStorage.getItem(`${FAILED_KEY_PREFIX}:user-A`)).toBe("1");
   });
 });
