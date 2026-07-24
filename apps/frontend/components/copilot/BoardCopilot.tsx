@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef } from "react";
 import type { BoardData } from "@/app/applications/use-board-data";
 import { applicationsApi } from "@/lib/api";
 import type { ApplicationStatus } from "@/lib/api";
@@ -20,6 +21,23 @@ function noteStamp(): string {
 }
 
 /**
+ * Gỡ đúng MỘT dòng `line` khỏi `text` nếu dòng đó còn nguyên vẹn trong đó,
+ * dù nó nằm ở đầu, giữa, hay cuối chuỗi ghi chú. Trả về `null` khi không tìm
+ * thấy — gọi nơi dùng phải hiểu `null` là "không đoán, không ghi gì cả",
+ * KHÔNG được coi null như chuỗi rỗng.
+ */
+function removeNoteLine(text: string | null, line: string): string | null {
+  const current = text ?? "";
+  if (current === line) return "";
+  if (current.startsWith(`${line}\n`)) return current.slice(line.length + 1);
+  if (current.endsWith(`\n${line}`)) return current.slice(0, current.length - line.length - 1);
+  const marker = `\n${line}\n`;
+  const idx = current.indexOf(marker);
+  if (idx !== -1) return current.slice(0, idx) + "\n" + current.slice(idx + marker.length);
+  return null;
+}
+
+/**
  * Null-render: chỉ đăng ký context + tool cho agent, không vẽ gì.
  *
  * CHỈ được render khi `COPILOT_DOCK` bật — nó gọi hook của CopilotKit nên
@@ -27,6 +45,34 @@ function noteStamp(): string {
  */
 export default function BoardCopilot({ board }: { board: BoardData }): null {
   const { apps, changeStatus } = board;
+
+  // Ref luôn trỏ tới `apps` mới nhất. Handler của tool và callback undo được
+  // tạo ra ở MỘT lần render nhưng có thể chạy ở nhiều render sau đó (undo có
+  // thể bấm sau vài giây, hoặc sau khi agent đã gọi tool khác) — nếu đọc biến
+  // `apps` bắt từ closure của render lúc tạo, đó là dữ liệu cũ. Đọc qua ref là
+  // cách để luôn thấy bản mới nhất tại đúng thời điểm handler thực thi.
+  const appsRef = useRef(apps);
+  // Ghi đè cục bộ notes theo card id: `board.reload()` chỉ đưa dữ liệu mới về
+  // qua prop `apps` ở lần render kế — trong lúc đó (ví dụ: append lần 2 chạy
+  // ngay sau append lần 1, hoặc user bấm Hoàn tác trước khi reload tới), đọc
+  // thẳng `apps` vẫn ra bản CŨ. Bản ghi đè này là nguồn "mới nhất" thực sự
+  // ngay sau mỗi lần chính component này tự ghi thành công.
+  const notesOverrideRef = useRef(new Map<string, string | null>());
+
+  useEffect(() => {
+    appsRef.current = apps;
+    // `apps` đổi nghĩa là board đã có dữ liệu thật mới (reload thật sự chạy
+    // xong, hoặc user sửa notes bằng tay ở nơi khác) — dữ liệu đó luôn đáng
+    // tin hơn phỏng đoán cục bộ, nên xoá sạch override để dùng lại `apps`.
+    notesOverrideRef.current.clear();
+  }, [apps]);
+
+  /** Notes mới nhất biết được cho một card: ưu tiên override cục bộ, sau đó mới tới `apps`. */
+  function latestNotes(cardId: string, fallback: string | null): string | null {
+    if (notesOverrideRef.current.has(cardId)) return notesOverrideRef.current.get(cardId) ?? null;
+    const fresh = appsRef.current.find((a) => a.id === cardId);
+    return fresh ? fresh.notes : fallback;
+  }
 
   useDockContext(
     "Bảng ứng tuyển của user trên trang /applications: đếm theo cột và danh sách card đang hiển thị.",
@@ -115,6 +161,22 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
         ? (String(args.status) as ApplicationStatus)
         : "applied";
 
+      // Model có thể gửi salary dạng chuỗi ("25" thay vì 25) — ép kiểu bằng
+      // Number() thay vì chỉ chấp nhận typeof number, để không âm thầm làm
+      // rớt lương mà vẫn báo "thêm thành công" cho user. Nếu có giá trị
+      // nhưng không ép được thành số hữu hạn, báo rõ trong message trả về
+      // cho agent để agent còn biết đường nói lại cho user.
+      let salaryValue: number | undefined;
+      let salaryWarning = "";
+      if (args.salary_million !== undefined && args.salary_million !== null && args.salary_million !== "") {
+        const coerced = Number(args.salary_million);
+        if (Number.isFinite(coerced)) {
+          salaryValue = coerced;
+        } else {
+          salaryWarning = ` (không lưu được mức lương "${String(args.salary_million)}" — giá trị không hợp lệ, báo user nhập lại)`;
+        }
+      }
+
       // Không truyền source/source_job_id ⇒ backend đặt source = "manual" và
       // source_job_id = NULL. Partial unique index (user_id, source,
       // source_job_id) WHERE source_job_id IS NOT NULL nên card thêm bằng lời
@@ -124,7 +186,7 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
           title,
           company_name: args.company ? String(args.company) : undefined,
           city: args.city ? String(args.city) : undefined,
-          salary_million: typeof args.salary_million === "number" ? args.salary_million : undefined,
+          salary_million: salaryValue,
           source_url: args.source_url ? String(args.source_url) : undefined,
           applied_at: args.applied_at ? String(args.applied_at) : undefined,
           status,
@@ -135,7 +197,7 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
           await applicationsApi.remove(board.token, created.id);
           await board.reload();
         });
-        return `Đã thêm "${title}" vào cột ${status}.`;
+        return `Đã thêm "${title}" vào cột ${status}.${salaryWarning}`;
       } catch {
         return `Không thêm được "${title}" — API lỗi. Báo user thử lại.`;
       }
@@ -168,7 +230,10 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
       if (!note) return "Ghi chú rỗng, không có gì để lưu.";
       if (!board.token) return "Chưa đăng nhập, không ghi được.";
 
-      const found = resolveCard(apps, query);
+      // Dùng appsRef (không phải biến `apps` chụp lúc render) để khớp card
+      // trên dữ liệu mới nhất có thể — giảm rủi ro đọc phải bản cũ khi có
+      // nhiều lệnh append_note gọi liên tiếp trong cùng một lượt của agent.
+      const found = resolveCard(appsRef.current, query);
       if (!found.ok) {
         return found.reason === "not_found"
           ? `Không tìm thấy card nào khớp "${query}".`
@@ -176,18 +241,36 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
       }
 
       const card = found.card;
-      const previous = card.notes;
+      const line = `${noteStamp()} ${note}`;
       // NỐI THÊM, không đè: ghi chú user tự viết là dữ liệu không tái tạo được.
-      const next = previous ? `${previous}\n${noteStamp()} ${note}` : `${noteStamp()} ${note}`;
+      // `before` đọc qua latestNotes() — ưu tiên override cục bộ nếu có — chứ
+      // không phải card.notes chụp lúc resolveCard, vì card.notes vẫn có thể
+      // là bản cũ nếu một append_note khác vừa chạy xong ngay trước đó.
+      const before = latestNotes(card.id, card.notes);
+      const next = before ? `${before}\n${line}` : line;
       try {
         await applicationsApi.update(board.token, card.id, { notes: next });
         await board.reload();
       } catch {
         return `Không lưu được ghi chú cho "${card.title}" — API lỗi.`;
       }
+      notesOverrideRef.current.set(card.id, next);
+
       toastWithUndo(`Đã ghi chú vào "${card.title}"`, async () => {
         if (!board.token) return;
-        await applicationsApi.update(board.token, card.id, { notes: previous ?? "" });
+        // QUAN TRỌNG — đây là chỗ sửa lỗi mất ghi chú: không phục hồi nguyên
+        // field `notes` về snapshot `before` chụp lúc tạo toast này (closure
+        // có thể chạy vài giây/nhiều lượt append sau, lúc đó `before` đã lỗi
+        // thời). Thay vào đó đọc notes MỚI NHẤT ngay tại thời điểm bấm Hoàn
+        // tác rồi chỉ gỡ đúng DÒNG mà lần append này đã thêm. Nếu dòng đó
+        // không còn nguyên vẹn trong đó nữa (đã bị đổi/gỡ bằng cách khác) thì
+        // không làm gì cả — thà không hoàn tác còn hơn đoán bừa và xoá nhầm
+        // ghi chú của lần append khác.
+        const current = latestNotes(card.id, next);
+        const restored = removeNoteLine(current, line);
+        if (restored === null) return;
+        await applicationsApi.update(board.token, card.id, { notes: restored });
+        notesOverrideRef.current.set(card.id, restored);
         await board.reload();
       });
       return `Đã thêm ghi chú vào "${card.title}".`;

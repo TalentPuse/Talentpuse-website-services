@@ -126,6 +126,24 @@ describe("BoardCopilot / add_application", () => {
     expect(out.toLowerCase()).toContain("lỗi");
   });
 
+  it("khi applicationsApi.create thất bại thì KHÔNG reload và KHÔNG hiện toast hoàn tác", async () => {
+    applicationsApi.create.mockRejectedValueOnce(new Error("network down"));
+    const b = board();
+    render(<BoardCopilot board={b} />);
+    await registered.get("add_application")!({ title: "AI Engineer" });
+    expect(b.reload).not.toHaveBeenCalled();
+    expect(toastWithUndo).not.toHaveBeenCalled();
+  });
+
+  it("nhận salary_million dạng chuỗi số và ép thành number trước khi gửi create", async () => {
+    const b = board();
+    render(<BoardCopilot board={b} />);
+    await registered.get("add_application")!({ title: "AI Engineer", salary_million: "25" });
+    const body = applicationsApi.create.mock.calls[0][1];
+    expect(body.salary_million).toBe(25);
+    expect(typeof body.salary_million).toBe("number");
+  });
+
   it("undo của add_application gọi applicationsApi.remove với đúng id card vừa tạo", async () => {
     applicationsApi.create.mockResolvedValueOnce({ id: "new-99", title: "AI Engineer" });
     const b = board();
@@ -180,6 +198,15 @@ describe("BoardCopilot / append_note", () => {
     expect(out.toLowerCase()).toContain("lỗi");
   });
 
+  it("khi applicationsApi.update thất bại thì KHÔNG reload và KHÔNG hiện toast hoàn tác", async () => {
+    applicationsApi.update.mockRejectedValueOnce(new Error("network down"));
+    const b = board({ apps: [app({ id: "a", title: "Data Analyst" })] });
+    render(<BoardCopilot board={b} />);
+    await registered.get("append_note")!({ card: "Data Analyst", note: "x" });
+    expect(b.reload).not.toHaveBeenCalled();
+    expect(toastWithUndo).not.toHaveBeenCalled();
+  });
+
   it("undo của append_note gọi applicationsApi.update trả lại notes cũ", async () => {
     const b = board({ apps: [app({ id: "a", title: "Data Analyst", notes: "ghi chú cũ" })] });
     render(<BoardCopilot board={b} />);
@@ -187,5 +214,49 @@ describe("BoardCopilot / append_note", () => {
     const undo = toastWithUndo.mock.calls[0][1] as () => Promise<void>;
     await undo();
     expect(applicationsApi.update).toHaveBeenCalledWith("tok", "a", { notes: "ghi chú cũ" });
+  });
+
+  it("undo của append_note khi card trước đó chưa có ghi chú (notes null) khôi phục về notes rỗng", async () => {
+    const b = board({ apps: [app({ id: "a", title: "Data Analyst", notes: null })] });
+    render(<BoardCopilot board={b} />);
+    await registered.get("append_note")!({ card: "Data Analyst", note: "note A" });
+    const undo = toastWithUndo.mock.calls[0][1] as () => Promise<void>;
+    await undo();
+    expect(applicationsApi.update).toHaveBeenLastCalledWith("tok", "a", { notes: "" });
+  });
+
+  it("undo của lần append_note ĐẦU TIÊN chỉ xoá dòng của nó, giữ nguyên ghi chú thêm SAU đó (regression Finding 1)", async () => {
+    const b = board({ apps: [app({ id: "a", title: "Data Analyst", notes: null })] });
+    render(<BoardCopilot board={b} />);
+    await registered.get("append_note")!({ card: "Data Analyst", note: "note A" });
+    await registered.get("append_note")!({ card: "Data Analyst", note: "note B" });
+
+    // Toast của lần append đầu (note A) vẫn còn hiển thị khi user bấm Hoàn tác,
+    // dù note B đã được thêm sau đó — undo A không được phép xoá mất note B.
+    const undoA = toastWithUndo.mock.calls[0][1] as () => Promise<void>;
+    await undoA();
+
+    const lastPatch = applicationsApi.update.mock.calls[applicationsApi.update.mock.calls.length - 1][2];
+    expect(lastPatch.notes).not.toContain("note A");
+    expect(lastPatch.notes).toContain("note B");
+  });
+
+  it("undo của append_note không làm gì (không gọi API) nếu dòng đã thêm không còn nguyên vẹn trong notes hiện tại", async () => {
+    const b = board({ apps: [app({ id: "a", title: "Data Analyst", notes: null })] });
+    const { rerender } = render(<BoardCopilot board={b} />);
+    await registered.get("append_note")!({ card: "Data Analyst", note: "note A" });
+    const undo = toastWithUndo.mock.calls[0][1] as () => Promise<void>;
+
+    // Dữ liệu thật đổi khác hẳn (vd: user tự sửa notes ở nơi khác) — không
+    // còn chứa dòng mà lần append này đã thêm.
+    rerender(
+      <BoardCopilot
+        board={board({ apps: [app({ id: "a", title: "Data Analyst", notes: "đã bị sửa bởi nơi khác" })] })}
+      />,
+    );
+    applicationsApi.update.mockClear();
+
+    await undo();
+    expect(applicationsApi.update).not.toHaveBeenCalled();
   });
 });

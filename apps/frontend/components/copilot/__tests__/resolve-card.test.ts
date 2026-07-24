@@ -44,6 +44,15 @@ describe("resolveCard", () => {
     expect(r.candidates.map((c) => c.id)).toEqual(["a", "b"]);
   });
 
+  it("hai card cùng tên chính xác trả ambiguous với cả hai làm candidates", () => {
+    const apps = [app({ id: "a", title: "Data Analyst" }), app({ id: "b", title: "Data Analyst" })];
+    const r = resolveCard(apps, "Data Analyst");
+    expect(r.ok).toBe(false);
+    if (r.ok) throw new Error("unreachable");
+    expect(r.reason).toBe("ambiguous");
+    expect(r.candidates.map((c) => c.id)).toEqual(["a", "b"]);
+  });
+
   it("trả not_found khi không khớp gì", () => {
     const r = resolveCard([app({})], "kubernetes");
     expect(r).toEqual({ ok: false, reason: "not_found", candidates: [] });
