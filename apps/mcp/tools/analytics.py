@@ -106,7 +106,10 @@ async def get_salary_benchmark(
 async def get_company_hiring(
     company_name: Annotated[
         str,
-        Field(description="Company name to search for, e.g. 'FPT Software', 'VNG'"),
+        Field(
+            description="Company name to search for, e.g. 'FPT Software', 'VNG'",
+            min_length=1,
+        ),
     ],
 ) -> str:
     """Check whether a company is actively hiring: number of open jobs, average views/applicants

@@ -163,6 +163,11 @@ class AnalyticsRepository(BaseRepository):
         return [SalaryBenchmarkRow(**dict(r)) for r in rows]
 
     async def company_hiring(self, company_name: str) -> list[CompanyHiringRow]:
+        # Escape LIKE metacharacters so user text can't widen the match beyond a
+        # literal substring search (e.g. "100%" or "a_b" acting as wildcards).
+        escaped = (
+            company_name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
         rows = await self._fetch(
             """
             SELECT company_id, company_name, company_size, company_size_label,
@@ -172,9 +177,9 @@ class AnalyticsRepository(BaseRepository):
                 ROUND(max_salary_vnd / 1000000.0, 1) AS max_salary_m,
                 last_seen_at, snapshot_date
             FROM dbt_dev_gold.mart_company_hiring
-            WHERE company_name ILIKE '%' || $1 || '%'
+            WHERE company_name ILIKE '%' || $1 || '%' ESCAPE '\\'
             ORDER BY n_jobs DESC LIMIT 20
             """,
-            company_name,
+            escaped,
         )
         return [CompanyHiringRow(**dict(r)) for r in rows]

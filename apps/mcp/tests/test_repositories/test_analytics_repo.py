@@ -181,6 +181,34 @@ class TestSalaryBenchmark:
         call_args = mock_db.fetch.call_args
         assert call_args[0][1:] == ()
 
+    @pytest.mark.asyncio
+    async def test_single_filter_binds_to_dollar_one(self, repo, mock_db):
+        mock_db.fetch.return_value = []
+
+        await repo.salary_benchmark(job_level="senior")
+
+        call_args = mock_db.fetch.call_args
+        query = call_args[0][0]
+        assert "job_level = $1" in query
+        assert "job_category = $1" not in query
+        assert "city_canonical = $1" not in query
+        assert call_args[0][1:] == ("senior",)
+
+    @pytest.mark.asyncio
+    async def test_partial_filters_bind_in_declaration_order(self, repo, mock_db):
+        mock_db.fetch.return_value = []
+
+        # job_category and city set, job_level omitted: numbering must not drift
+        # to reserve a slot for the skipped job_level filter.
+        await repo.salary_benchmark(job_category="AI Engineer", city="Ho Chi Minh")
+
+        call_args = mock_db.fetch.call_args
+        query = call_args[0][0]
+        assert "job_category = $1" in query
+        assert "city_canonical = $2" in query
+        assert "job_level = $" not in query
+        assert call_args[0][1:] == ("AI Engineer", "Ho Chi Minh")
+
 
 class TestCompanyHiring:
 
@@ -222,3 +250,39 @@ class TestCompanyHiring:
         assert "ILIKE" in query
         assert "FPT" not in query  # value must be a bound param, not concatenated into SQL
         assert call_args[0][1] == "FPT"
+
+    @pytest.mark.asyncio
+    async def test_escapes_percent_wildcard(self, repo, mock_db):
+        mock_db.fetch.return_value = []
+
+        await repo.company_hiring(company_name="100%")
+
+        call_args = mock_db.fetch.call_args
+        assert call_args[0][1] == "100\\%"  # literal percent, not a LIKE wildcard
+
+    @pytest.mark.asyncio
+    async def test_escapes_underscore_wildcard(self, repo, mock_db):
+        mock_db.fetch.return_value = []
+
+        await repo.company_hiring(company_name="a_b")
+
+        call_args = mock_db.fetch.call_args
+        assert call_args[0][1] == "a\\_b"  # literal underscore, not a single-char wildcard
+
+    @pytest.mark.asyncio
+    async def test_escapes_backslash_itself(self, repo, mock_db):
+        mock_db.fetch.return_value = []
+
+        await repo.company_hiring(company_name="a\\b")
+
+        call_args = mock_db.fetch.call_args
+        assert call_args[0][1] == "a\\\\b"  # backslash escaped before % / _ escaping
+
+    @pytest.mark.asyncio
+    async def test_query_declares_escape_char(self, repo, mock_db):
+        mock_db.fetch.return_value = []
+
+        await repo.company_hiring(company_name="FPT")
+
+        query = mock_db.fetch.call_args[0][0]
+        assert "ESCAPE" in query
