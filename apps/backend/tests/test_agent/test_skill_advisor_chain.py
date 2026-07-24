@@ -50,5 +50,7 @@ class TestGetAgent:
         assert "query_skill_gap" in tool_names
         assert "get_cv_writing_guide" in tool_names
         assert "search_jobs_realtime" in tool_names
+        assert "salary_benchmark" in tool_names
+        assert "company_hiring" in tool_names
 
         mod._agent = None
