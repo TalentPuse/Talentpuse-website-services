@@ -118,6 +118,26 @@ describe("Signup — upload CV", () => {
     await waitFor(() => expect(login).toHaveBeenCalledWith("tok-1", expect.anything()));
   });
 
+  it("CV lỗi thì lời giải thích VẪN HIỆN sau khi tự chuyển sang tab điền tay", async () => {
+    // Regression: thông báo từng render bên trong TabsContent "cv", mà chính
+    // handler đó gọi setStep2Mode("manual") nên Radix unmount panel đó — user bị
+    // đẩy sang tab điền tay mà không thấy lý do, cũng không biết tài khoản đã tạo.
+    const user = userEvent.setup();
+    uploadCv.mockRejectedValue(new Error("Không thể đọc file PDF."));
+    render(<SignUpPage />);
+    await gotoStep2(user);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, pdfFile());
+
+    // Đã sang tab điền tay...
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: /điền tay/i })).toHaveAttribute("aria-selected", "true"),
+    );
+    // ...và lời giải thích vẫn còn trên màn hình, nói rõ tài khoản đã tạo xong.
+    expect(screen.getByRole("status")).toHaveTextContent(/tài khoản đã tạo xong/i);
+  });
+
   it("từ chối file quá 5MB TRƯỚC khi tạo tài khoản", async () => {
     const user = userEvent.setup();
     render(<SignUpPage />);

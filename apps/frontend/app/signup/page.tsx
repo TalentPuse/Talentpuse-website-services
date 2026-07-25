@@ -105,6 +105,16 @@ function SignUpWizard() {
   // CV upload
   const [cvStep, setCvStep] = useState<CvStep>("idle");
   const [cvError, setCvError] = useState("");
+  // Thông báo TRUNG TÍNH, render NGOÀI <Tabs> nên sống sót khi đổi tab.
+  //
+  // Không dùng chung ô `error` đỏ ở trên: ở tình huống này tài khoản đã tạo
+  // THÀNH CÔNG, chỉ mỗi CV không đọc được — tô đỏ sẽ khiến user tưởng đăng ký
+  // hỏng, đúng cái hiểu nhầm mà thay đổi này sinh ra để xoá.
+  //
+  // Cũng không dùng `cvError`: nó render bên trong TabsContent "cv", mà chính
+  // handler đó gọi setStep2Mode("manual") nên Radix unmount panel đó, cuốn theo
+  // luôn thông báo — user bị đẩy sang tab điền tay mà không biết vì sao.
+  const [notice, setNotice] = useState("");
   const [cvFileName, setCvFileName] = useState("");
   const [dragOver, setDragOver] = useState(false);
 
@@ -150,6 +160,9 @@ function SignUpWizard() {
 
   async function handleCvUpload(file: File) {
     setCvError("");
+    // Dọn thông báo của lần thử trước, nếu không lần upload lại thành công vẫn
+    // còn treo câu "chưa đọc được CV" cũ trên màn hình.
+    setNotice("");
 
     // Chặn sớm, TRƯỚC khi tạo tài khoản — hỏng ở đây thì chưa có gì để dọn.
     if (file.size > MAX_CV_BYTES) {
@@ -197,8 +210,12 @@ function SignUpWizard() {
       } catch {
         // Bỏ qua — vẫn còn cvError bên dưới để user biết cần làm gì tiếp.
       }
-      setCvError(
-        `${(err as ApiError).message || "Không đọc được CV"} Tài khoản đã tạo xong — bạn điền thông tin tay giúp nhé.`,
+      // cvError: lý do kỹ thuật, chỉ thấy nếu user quay lại tab "Upload CV".
+      setCvError((err as ApiError).message || "Không đọc được CV");
+      // notice: thứ user thực sự đọc, vì nó nằm ngoài <Tabs> nên không bị
+      // unmount cùng panel CV ở dòng setStep2Mode("manual") ngay dưới đây.
+      setNotice(
+        "Mình chưa đọc được CV của bạn, nhưng tài khoản đã tạo xong rồi. Bạn điền giúp vài thông tin bên dưới nhé.",
       );
       setCvStep("error");
       setStep2Mode("manual");
@@ -385,6 +402,18 @@ function SignUpWizard() {
               >
                 <AlertCircle {...ICON} size={16} className="mt-0.5 shrink-0" />
                 {error}
+              </motion.div>
+            )}
+
+            {notice && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                role="status"
+                className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-surface-2 px-4 py-3 text-sm text-text"
+              >
+                <FileText {...ICON} size={16} className="mt-0.5 shrink-0 text-text-muted" />
+                {notice}
               </motion.div>
             )}
 
