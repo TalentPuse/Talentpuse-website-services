@@ -3,9 +3,17 @@ import BoardCopilot from "../BoardCopilot";
 import type { BoardData } from "@/app/applications/use-board-data";
 import type { Application } from "@/lib/api";
 
-const registered = new Map<string, (a: Record<string, unknown>) => Promise<string>>();
+// Task 3: handler giờ có thể trả object (card giàu) thay vì chỉ chuỗi — Map
+// phải nới theo union này để lưu được handler mới của append_note.
+const registered = new Map<
+  string,
+  (a: Record<string, unknown>) => Promise<string | Record<string, unknown>>
+>();
 jest.mock("../copilot-bridge", () => ({
-  useDockTool: (tool: { name: string; handler: (a: Record<string, unknown>) => Promise<string> }) => {
+  useDockTool: (tool: {
+    name: string;
+    handler: (a: Record<string, unknown>) => Promise<string | Record<string, unknown>>;
+  }) => {
     registered.set(tool.name, tool.handler);
   },
   useDockContext: () => undefined,
@@ -30,6 +38,19 @@ const { applicationsApi } = require("@/lib/api") as {
 };
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { toastWithUndo } = require("../undo-toast") as { toastWithUndo: jest.Mock };
+
+/**
+ * move_application / add_application / start_interview_prep vẫn LUÔN trả
+ * chuỗi sau Task 3 — chỉ nhánh thành công của append_note đổi thành object.
+ * `registered` giờ là Map dùng chung một kiểu union cho mọi handler, nên các
+ * test còn lại của những tool đó cần thu hẹp `out` về string trước khi gọi
+ * các method chỉ string mới có (`.toLowerCase()`...). Dùng typeof-narrow
+ * (không ép kiểu `as string`) để tsc tự xác nhận, không phải tin lời hứa.
+ */
+function expectStringResult(out: string | Record<string, unknown>): string {
+  if (typeof out !== "string") throw new Error("expected string result, got object");
+  return out;
+}
 
 function app(over: Partial<Application>): Application {
   return {
@@ -74,7 +95,7 @@ describe("BoardCopilot / move_application", () => {
   it("KHÔNG gọi changeStatus khi không tìm thấy card", async () => {
     const b = board();
     render(<BoardCopilot board={b} />);
-    const out = await registered.get("move_application")!({ card: "kubernetes", status: "offer" });
+    const out = expectStringResult(await registered.get("move_application")!({ card: "kubernetes", status: "offer" }));
     expect(b.changeStatus).not.toHaveBeenCalled();
     expect(out.toLowerCase()).toContain("không tìm thấy");
   });
@@ -101,7 +122,7 @@ describe("BoardCopilot / add_application", () => {
 
   it("từ chối khi thiếu title", async () => {
     render(<BoardCopilot board={board()} />);
-    const out = await registered.get("add_application")!({ status: "applied" });
+    const out = expectStringResult(await registered.get("add_application")!({ status: "applied" }));
     expect(applicationsApi.create).not.toHaveBeenCalled();
     expect(out.toLowerCase()).toContain("tên job");
   });
@@ -118,7 +139,7 @@ describe("BoardCopilot / add_application", () => {
   it("KHÔNG gọi API khi chưa đăng nhập (token null)", async () => {
     const b = board({ token: null });
     render(<BoardCopilot board={b} />);
-    const out = await registered.get("add_application")!({ title: "AI Engineer" });
+    const out = expectStringResult(await registered.get("add_application")!({ title: "AI Engineer" }));
     expect(applicationsApi.create).not.toHaveBeenCalled();
     expect(out.toLowerCase()).toContain("chưa đăng nhập");
   });
@@ -127,7 +148,7 @@ describe("BoardCopilot / add_application", () => {
     applicationsApi.create.mockRejectedValueOnce(new Error("network down"));
     const b = board();
     render(<BoardCopilot board={b} />);
-    const out = await registered.get("add_application")!({ title: "AI Engineer" });
+    const out = expectStringResult(await registered.get("add_application")!({ title: "AI Engineer" }));
     expect(out.toLowerCase()).not.toContain("đã thêm");
     expect(out.toLowerCase()).toContain("lỗi");
   });
@@ -187,10 +208,25 @@ describe("BoardCopilot / append_note", () => {
     expect(applicationsApi.update).not.toHaveBeenCalled();
   });
 
+  it("Task 3: khi thành công trả về OBJECT với message, card và line đã đóng dấu ngày", async () => {
+    const b = board({ apps: [app({ id: "a", title: "Data Analyst", notes: null })] });
+    render(<BoardCopilot board={b} />);
+    const out = await registered.get("append_note")!({ card: "Data Analyst", note: "HR hẹn vòng 2" });
+
+    if (typeof out === "string") throw new Error("kỳ vọng object, handler vẫn trả chuỗi");
+    expect(out.message).toBe('Đã thêm ghi chú vào "Data Analyst".');
+    expect(out.card).toBe("Data Analyst");
+
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, "0");
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    expect(out.line).toBe(`[${dd}/${mm}] HR hẹn vòng 2`);
+  });
+
   it("KHÔNG gọi API khi chưa đăng nhập (token null)", async () => {
     const b = board({ apps: [app({ id: "a", title: "Data Analyst" })], token: null });
     render(<BoardCopilot board={b} />);
-    const out = await registered.get("append_note")!({ card: "Data Analyst", note: "x" });
+    const out = expectStringResult(await registered.get("append_note")!({ card: "Data Analyst", note: "x" }));
     expect(applicationsApi.update).not.toHaveBeenCalled();
     expect(out.toLowerCase()).toContain("chưa đăng nhập");
   });
@@ -199,7 +235,7 @@ describe("BoardCopilot / append_note", () => {
     applicationsApi.update.mockRejectedValueOnce(new Error("network down"));
     const b = board({ apps: [app({ id: "a", title: "Data Analyst" })] });
     render(<BoardCopilot board={b} />);
-    const out = await registered.get("append_note")!({ card: "Data Analyst", note: "x" });
+    const out = expectStringResult(await registered.get("append_note")!({ card: "Data Analyst", note: "x" }));
     expect(out.toLowerCase()).not.toContain("đã thêm ghi chú");
     expect(out.toLowerCase()).toContain("lỗi");
   });
@@ -282,7 +318,7 @@ describe("BoardCopilot / start_interview_prep", () => {
 
   it("KHÔNG điều hướng khi không tìm thấy card", async () => {
     render(<BoardCopilot board={board()} />);
-    const out = await registered.get("start_interview_prep")!({ card: "kubernetes" });
+    const out = expectStringResult(await registered.get("start_interview_prep")!({ card: "kubernetes" }));
     expect(mockPush).not.toHaveBeenCalled();
     expect(out.toLowerCase()).toContain("không tìm thấy");
   });

@@ -110,8 +110,15 @@ export type DockTool = {
   /** tiếng Anh, nói rõ khi nào dùng */
   description: string;
   parameters: DockToolParam[];
-  /** string = kết quả LLM đọc */
-  handler: (args: Record<string, unknown>) => Promise<string>;
+  /**
+   * string = câu để LLM đọc. Object = dữ liệu giàu cho card; runtime tự
+   * JSON.stringify nên card JSON.parse(result) được, còn agent nhận JSON đó.
+   *
+   * QUY ƯỚC BẮT BUỘC khi trả object: phải có field `message: string` chứa đúng
+   * câu agent nên nói lại. Thiếu nó, agent sẽ dán JSON thô vào mặt user —
+   * SYSTEM_PROMPT có một dòng dặn dùng `message`, hai chỗ phải khớp nhau.
+   */
+  handler: (args: Record<string, unknown>) => Promise<string | Record<string, unknown>>;
 };
 
 /** The exact shape `FrontendTool.parameters` requires — a Standard Schema V1. */

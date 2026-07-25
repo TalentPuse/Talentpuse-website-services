@@ -6,6 +6,7 @@ import { applicationsApi } from "@/lib/api";
 import type { ApplicationStatus } from "@/lib/api";
 import { useDockContext, useDockTool, useDockToolCard } from "./copilot-bridge";
 import MoveApplicationCard from "./cards/MoveApplicationCard";
+import AppendNoteCard from "./cards/AppendNoteCard";
 import { describeCandidates, resolveCard } from "./resolve-card";
 import { toastWithUndo } from "./undo-toast";
 
@@ -289,8 +290,25 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
         notesOverrideRef.current.set(card.id, restored);
         await board.reload();
       });
-      return `Đã thêm ghi chú vào "${card.title}".`;
+      // Nhánh thành công duy nhất trả OBJECT (Task 3) để card AppendNoteCard
+      // hiện dòng note vừa thêm — mọi nhánh lỗi/nhập nhằng/chưa đăng nhập ở
+      // trên vẫn trả CHUỖI như cũ, không cần card giàu.
+      return {
+        message: `Đã thêm ghi chú vào "${card.title}".`,
+        card: card.title,
+        line,
+      };
     },
+  });
+
+  // Card cho append_note. Dùng ĐÚNG bộ parameters của tool để schema khớp.
+  useDockToolCard({
+    name: "append_note",
+    parameters: [
+      { name: "card", type: "string", required: true, description: "Job title of the card, or its id." },
+      { name: "note", type: "string", required: true, description: "The note text to append." },
+    ],
+    render: (props) => <AppendNoteCard {...props} />,
   });
 
   useDockTool({
