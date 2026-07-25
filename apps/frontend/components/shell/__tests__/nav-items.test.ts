@@ -11,4 +11,8 @@ describe("NAV_ITEMS", () => {
       expect.arrayContaining(["/dashboard", "/jobs", "/assistant", "/alerts", "/applications", "/profile"]),
     );
   });
+
+  it("Trợ lý AI đứng ĐẦU danh sách", () => {
+    expect(NAV_ITEMS[0].href).toBe("/assistant");
+  });
 });

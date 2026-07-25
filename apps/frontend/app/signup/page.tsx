@@ -8,6 +8,7 @@ import { Loader2, Upload, PenLine, ChevronLeft } from "lucide-react";
 
 import { authApi, cvApi, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { AI_HOME } from "@/lib/flags";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthBrandPanel from "@/components/auth/AuthBrandPanel";
 import SkillPillSelect from "@/components/auth/SkillPillSelect";
@@ -28,6 +29,10 @@ import {
 } from "@/components/ui/select";
 import { Sparkles, FileText, CheckCircle2, AlertCircle, ICON } from "@/lib/icons";
 import { cn } from "@/lib/utils";
+
+/** Đích sau khi đăng ký xong — khớp đúng biểu thức mà /signin đang dùng,
+ *  để hai đường đăng nhập và đăng ký không dẫn đi hai nơi khác nhau. */
+const POST_AUTH_HOME = AI_HOME ? "/assistant" : "/dashboard";
 
 type Step2Mode = "cv" | "manual";
 type CvStep = "idle" | "reading" | "analyzing" | "done" | "error";
@@ -171,7 +176,7 @@ function SignUpWizard() {
       const user = await authApi.getMe(access_token);
       login(access_token, user);
       toast.success("Chào mừng bạn đến TalentPuse!");
-      router.push("/dashboard");
+      router.push(POST_AUTH_HOME);
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "Đăng ký thất bại");
@@ -197,7 +202,7 @@ function SignUpWizard() {
       const user = await authApi.getMe(access_token);
       login(access_token, user);
       toast.success("Chào mừng bạn đến TalentPuse!");
-      router.push("/dashboard");
+      router.push(POST_AUTH_HOME);
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.message || "Đăng ký thất bại");

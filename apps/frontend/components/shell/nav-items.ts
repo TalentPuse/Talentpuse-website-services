@@ -19,9 +19,9 @@ export type NavItem = {
  *  `chat/AssistantRail` (icons-only, on the immersive /assistant surface).
  *  Adding a route here surfaces it in both. */
 export const NAV_ITEMS: NavItem[] = [
+  { href: "/assistant", label: "Trợ lý AI", icon: Sparkles },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/jobs", label: "Việc làm", icon: Briefcase },
-  { href: "/assistant", label: "Trợ lý AI", icon: Sparkles },
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/applications", label: "Ứng tuyển", icon: ClipboardCheck },
   { href: "/profile", label: "Hồ sơ", icon: User },
