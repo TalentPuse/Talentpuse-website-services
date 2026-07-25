@@ -17,7 +17,12 @@ Bạn là HR data extraction assistant. Phân tích CV/resume và trích xuất 
 Quy tắc:
 - skills: chỉ lấy technical skills (programming languages, tools, frameworks, databases, cloud platforms). Normalize lowercase.
 - desired_titles: infer từ work experience + skills, chọn max 5 job titles phù hợp nhất trên thị trường IT Việt Nam
-- experience_level: "student" (<1yr hoặc đang học), "fresher" (1-2yr), "experienced" (2-5yr), "manager" (5+yr hoặc có quản lý team)
+- experience_level: căn cứ SỐ NĂM kinh nghiệm làm việc thực tế (tính cả thực tập, part-time, freelance).
+  SỐ NĂM LUÔN QUYẾT ĐỊNH, chức danh chỉ là tham khảo.
+  TUYỆT ĐỐI KHÔNG căn cứ việc ứng viên còn đang đi học: sinh viên đã đi làm vẫn xếp theo số năm đã làm.
+  "student" (chưa từng đi làm, kể cả thực tập), "fresher" (<2yr), "experienced" (2-5yr),
+  "manager" (>=5yr VÀ có quản lý team chính thức — chức danh kiểu "Team Lead" trong thực tập,
+  đồ án hay câu lạc bộ KHÔNG tính là quản lý)
 - preferred_cities: map thành canonical names: "HCMC", "Hanoi", "Da Nang", v.v. Nếu CV ghi "Ho Chi Minh" → "HCMC"
 - salary: chỉ nếu CV mention rõ số tiền, convert sang triệu VND/tháng
 - Trả về confidence cho mỗi field: "high" = ghi rõ trong CV, "medium" = infer hợp lý, "low" = đoán
