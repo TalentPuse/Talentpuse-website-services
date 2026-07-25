@@ -159,6 +159,33 @@ class TestParseCv:
 
     @patch("app.services.cv_parser.OPENAI_API_KEY", "sk-test")
     @patch("app.services.cv_parser.OPENAI_BASE_URL", "https://api.test.com/v1")
+    @patch("app.services.cv_parser.OPENAI_MODEL", "gpt-4o")
+    def test_market_vocab_reaches_prompt_and_is_opt_in(self):
+        """Tu vung thi truong phai di vao system prompt, va KHONG tu xuat hien khi khong truyen.
+
+        Do tren mot CV that: co tu vung nay thi so ky nang khop duoc voi kho tang
+        tu 13 len 26. Neu no am tham bien mat khoi prompt thi viec khop job te di
+        ma khong co dau hieu nao bao.
+        """
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content=json.dumps(MOCK_EXTRACTED)))]
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_response
+
+        with patch("openai.OpenAI", return_value=mock_client):
+            parse_cv("CV text", market_skills=["llm", "etl", "power bi"])
+        sent = mock_client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
+        assert "llm, etl, power bi" in sent
+        assert "GIỮ NGUYÊN" in sent
+
+        mock_client.reset_mock()
+        with patch("openai.OpenAI", return_value=mock_client):
+            parse_cv("CV text")
+        plain = mock_client.chat.completions.create.call_args.kwargs["messages"][0]["content"]
+        assert "TỪ VỰNG KỸ NĂNG THỊ TRƯỜNG" not in plain
+
+    @patch("app.services.cv_parser.OPENAI_API_KEY", "sk-test")
+    @patch("app.services.cv_parser.OPENAI_BASE_URL", "https://api.test.com/v1")
     def test_llm_returns_invalid_json(self):
         mock_response = MagicMock()
         mock_response.choices = [

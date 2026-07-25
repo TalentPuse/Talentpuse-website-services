@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, status
-from sqlalchemy import delete
+from sqlalchemy import delete, text as sa_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -81,9 +81,33 @@ async def upload_cv(
     if s3_url or text:
         await db.commit()
 
+    # Từ vựng kỹ năng mà tin tuyển dụng THỰC SỰ đang dùng, đưa vào prompt để CV
+    # và job nói cùng một thứ tiếng. Đo trên một CV thật: số kỹ năng khớp được
+    # với kho tăng từ 13 lên 26, không mất kỹ năng nào của ứng viên.
+    #
+    # Bọc try/except là BẮT BUỘC: mart_skill_demand thuộc kho dbt, không phải
+    # schema app. Kho lỗi hoặc chưa build thì upload CV vẫn phải chạy — thiếu
+    # từ vựng chỉ làm khớp job kém đi, còn ném lỗi là hỏng cả tính năng.
+    market_skills: list[str] | None = None
+    try:
+        rows = await db.execute(
+            sa_text("select skill from dbt_dev_gold.mart_skill_demand order by n_jobs desc limit 200")
+        )
+        market_skills = [r[0].strip().lower() for r in rows.all() if r[0] and r[0].strip()] or None
+    except Exception:
+        logger.warning("mart_skill_demand unavailable; parsing CV without market vocabulary", exc_info=True)
+        # Postgres abort cả transaction khi một câu lệnh lỗi: mọi truy vấn sau
+        # đó trên cùng session sẽ chết với "current transaction is aborted".
+        # Hiện endpoint không còn dùng `db` phía dưới, nhưng để nguyên session
+        # hỏng là đặt bẫy cho người thêm truy vấn sau này.
+        try:
+            await db.rollback()
+        except Exception:
+            logger.warning("rollback after market-vocab lookup failed", exc_info=True)
+
     # Parse with the LLM. The OpenAI client is synchronous with a 120s timeout —
     # offload so it never blocks the single-worker event loop.
-    result = await asyncio.to_thread(parse_cv, text)
+    result = await asyncio.to_thread(parse_cv, text, market_skills)
     if result.error:
         return CvExtractResponse(
             extracted={},

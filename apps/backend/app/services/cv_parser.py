@@ -101,7 +101,35 @@ def extract_text(pdf_bytes: bytes) -> str:
     return "\n\n".join(pages)
 
 
-def parse_cv(text: str) -> CvExtractResult:
+def _market_vocab_instruction(market_skills: list[str] | None) -> str:
+    """Ghép thêm từ vựng kỹ năng mà tin tuyển dụng THỰC SỰ đang dùng.
+
+    Lý do tồn tại: phía job và phía CV đều là văn bản tự do do LLM sinh ra, từ
+    hai prompt khác nhau, nên trước đây chỉ trùng nhau do may — đo trên một CV
+    thật: 69 kỹ năng trích ra thì chỉ 12 cái có mặt trong kho job, tức 83% vô
+    dụng cho việc chấm điểm. Chuẩn hoá qua bảng synonym KHÔNG cứu được (đo thử
+    chỉ thêm đúng 1 kỹ năng) vì 58/91 kỹ năng phía job cũng nằm ngoài bảng đó.
+
+    Cách chữa là BỔ SUNG chứ không thay thế: vẫn giữ nguyên stack thật của ứng
+    viên để hiển thị, đồng thời thêm thuật ngữ thị trường tương ứng để khớp
+    được. Người dùng LangGraph/LangChain vẫn giữ hai cái đó, nhưng có thêm
+    "llm"/"ai" là những từ mà tin tuyển dụng dùng.
+    """
+    if not market_skills:
+        return ""
+    vocab = ", ".join(market_skills)
+    return (
+        "\n\nTỪ VỰNG KỸ NĂNG THỊ TRƯỜNG (trích từ tin tuyển dụng có thật):\n"
+        f"{vocab}\n"
+        "- Với trường `skills`: GIỮ NGUYÊN mọi kỹ năng thật của ứng viên, KHÔNG được bỏ bớt.\n"
+        "- NGOÀI RA, bổ sung thêm những từ trong danh sách trên mà CV chứng minh được năng lực,\n"
+        "  kể cả khi CV không viết đúng chữ đó. Ví dụ: dùng LangGraph/LangChain ⇒ thêm 'llm' và 'ai';\n"
+        "  xây pipeline Spark/Airflow ⇒ thêm 'etl', 'big data'.\n"
+        "- TUYỆT ĐỐI không thêm từ nào mà CV không có căn cứ — thà thiếu còn hơn bịa."
+    )
+
+
+def parse_cv(text: str, market_skills: list[str] | None = None) -> CvExtractResult:
     if not OPENAI_API_KEY:
         return CvExtractResult(error="OPENAI_API_KEY not configured")
 
@@ -115,7 +143,7 @@ def parse_cv(text: str) -> CvExtractResult:
         response = client.chat.completions.create(
             model=OPENAI_MODEL,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": SYSTEM_PROMPT + _market_vocab_instruction(market_skills)},
                 {"role": "user", "content": f"Phân tích CV sau:\n\n{text}"},
             ],
             temperature=0,
