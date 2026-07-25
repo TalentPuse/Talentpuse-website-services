@@ -8,7 +8,6 @@ import { SearchX } from "lucide-react";
 import { jobsApi, applicationsApi, PublicJobList, FilterOptions, type TrackedKey } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { ForceTheme } from "@/components/theme/ForceTheme";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import JobCard from "@/components/jobs/JobCard";
@@ -20,7 +19,6 @@ const SKELETON_COUNT = 6;
 export default function JobBoardPage() {
   return (
     <DashboardLayout>
-      <ForceTheme theme="light" />
       <JobBoardContent />
     </DashboardLayout>
   );

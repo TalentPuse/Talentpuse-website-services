@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { authApi, ApiError } from "@/lib/api";
 import { AI_HOME } from "@/lib/flags";
 import { useAuth } from "@/context/AuthContext";
-import { ForceTheme } from "@/components/theme/ForceTheme";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthBrandPanel from "@/components/auth/AuthBrandPanel";
 import Aurora from "@/components/brand/Aurora";
@@ -19,12 +18,9 @@ import { Sparkles, AlertCircle, ICON } from "@/lib/icons";
 
 export default function SignInPage() {
   return (
-    <>
-      <ForceTheme theme="dark" />
-      <Suspense>
-        <SignInForm />
-      </Suspense>
-    </>
+    <Suspense>
+      <SignInForm />
+    </Suspense>
   );
 }
 

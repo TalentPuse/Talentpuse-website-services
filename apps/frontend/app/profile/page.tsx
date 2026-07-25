@@ -7,7 +7,6 @@ import type { LucideIcon } from "lucide-react";
 import { authApi, ApiError, CvExtractResponse } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { ForceTheme } from "@/components/theme/ForceTheme";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ConnectionsSection from "@/components/profile/ConnectionsSection";
 import PersonalInfoForm from "@/components/profile/PersonalInfoForm";
@@ -55,7 +54,6 @@ const NAV_SECTIONS: { id: SectionId; label: string; icon: LucideIcon }[] = [
 export default function ProfilePage() {
   return (
     <DashboardLayout>
-      <ForceTheme theme="light" />
       <ProfileContent />
     </DashboardLayout>
   );

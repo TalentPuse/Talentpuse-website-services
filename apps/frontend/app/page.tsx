@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import { ForceTheme } from "@/components/theme/ForceTheme";
 import ScrollProgress from "@/components/landing/ScrollProgress";
 import Nav from "@/components/landing/sections/Nav";
 import Hero from "@/components/landing/sections/Hero";
@@ -23,7 +22,6 @@ export default function LandingPage() {
 
   return (
     <div className="landing-shell landing-mesh relative min-h-screen overflow-x-hidden bg-bg font-sans text-text">
-      <ForceTheme theme="light" />
       <ScrollProgress />
       <Nav t={t} lang={lang} setLang={setLang} />
       <main className="relative z-10">

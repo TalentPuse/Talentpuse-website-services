@@ -1,7 +1,6 @@
 "use client";
 import { ClipboardCheck } from "@/lib/icons";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { ForceTheme } from "@/components/theme/ForceTheme";
 import { Skeleton } from "@/components/ui/skeleton";
 import ApplicationBoard from "@/components/applications/ApplicationBoard";
 import AddApplicationDialog from "@/components/applications/AddApplicationDialog";
@@ -16,7 +15,6 @@ export default function ApplicationsPage() {
   const board = useBoardData();
   return (
     <DashboardLayout>
-      <ForceTheme theme="light" />
       <CopilotDockProvider page="applications" insight={<DockInsight board={board} />}>
         <Content board={board} />
       </CopilotDockProvider>

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { ForceTheme } from "@/components/theme/ForceTheme";
 import KpiCard from "@/components/KpiCard";
 import SkillsBar from "@/components/SkillsBar";
 import HighestPayingSkills from "@/components/HighestPayingSkills";
@@ -118,7 +117,6 @@ export default function DashboardClient({
 
   return (
     <DashboardLayout>
-      <ForceTheme theme="light" />
       <div className="mx-auto max-w-7xl px-6 py-8">
         <ScrollReveal>
           <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

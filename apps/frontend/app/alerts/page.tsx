@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import { jobsApi, applicationsApi, MyAlertList, type TrackedKey } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { ForceTheme } from "@/components/theme/ForceTheme";
 import AlertTimeline from "@/components/alerts/AlertTimeline";
 import { Button } from "@/components/ui/button";
 
@@ -56,7 +55,6 @@ export default function AlertHistoryPage() {
 
   return (
     <DashboardLayout>
-      <ForceTheme theme="light" />
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8">
           <h1 className="font-display text-2xl font-semibold text-text">Lịch sử Alert</h1>

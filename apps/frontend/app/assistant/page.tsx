@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import { ForceTheme } from "@/components/theme/ForceTheme";
 import AssistantShell from "@/components/chat/AssistantShell";
 import { AI_HOME } from "@/lib/flags";
 
@@ -18,7 +17,6 @@ import { AI_HOME } from "@/lib/flags";
 export default function AssistantPage() {
   return (
     <ProtectedRoute>
-      <ForceTheme theme="light" />
       {AI_HOME ? <NewCopilotChat /> : <AssistantShell roomId={null} />}
     </ProtectedRoute>
   );

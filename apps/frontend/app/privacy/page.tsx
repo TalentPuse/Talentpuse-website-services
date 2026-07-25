@@ -1,7 +1,5 @@
 import Link from "next/link";
 
-import { ForceTheme } from "@/components/theme/ForceTheme";
-
 export const metadata = {
   title: "Chính sách bảo mật — TalentPuse",
 };
@@ -36,7 +34,6 @@ const SECTIONS = [
 export default function PrivacyPage() {
   return (
     <main className="min-h-screen bg-bg px-6 py-16 text-text">
-      <ForceTheme theme="light" />
       <article className="mx-auto max-w-2xl">
         <Link href="/" className="text-sm font-medium text-brand-600 hover:underline">
           ← TalentPuse

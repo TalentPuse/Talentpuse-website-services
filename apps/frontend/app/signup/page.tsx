@@ -8,7 +8,6 @@ import { Loader2, Upload, PenLine, ChevronLeft } from "lucide-react";
 
 import { authApi, cvApi, ApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { ForceTheme } from "@/components/theme/ForceTheme";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthBrandPanel from "@/components/auth/AuthBrandPanel";
 import SkillPillSelect from "@/components/auth/SkillPillSelect";
@@ -36,12 +35,7 @@ type CvStep = "idle" | "reading" | "analyzing" | "done" | "error";
 const NO_YEAR = "__none__";
 
 export default function SignUpPage() {
-  return (
-    <>
-      <ForceTheme theme="dark" />
-      <SignUpWizard />
-    </>
-  );
+  return <SignUpWizard />;
 }
 
 function isValidEmail(value: string) {

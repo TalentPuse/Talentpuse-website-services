@@ -1,7 +1,6 @@
 "use client";
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import { ForceTheme } from "@/components/theme/ForceTheme";
 import AssistantShell from "@/components/chat/AssistantShell";
 
 /** A specific chat room, addressable at /assistant/<roomId> — deep-linkable,
@@ -10,7 +9,6 @@ import AssistantShell from "@/components/chat/AssistantShell";
 export default function AssistantRoomPage({ params }: { params: { roomId: string } }) {
   return (
     <ProtectedRoute>
-      <ForceTheme theme="light" />
       <AssistantShell roomId={params.roomId} />
     </ProtectedRoute>
   );

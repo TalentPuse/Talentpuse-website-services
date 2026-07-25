@@ -13,7 +13,6 @@ import InterviewModeSelect from "@/components/interview/InterviewModeSelect";
 import InterviewChat from "@/components/interview/InterviewChat";
 import InterviewSummary from "@/components/interview/InterviewSummary";
 import SessionHistory from "@/components/interview/SessionHistory";
-import { ForceTheme } from "@/components/theme/ForceTheme";
 import Aurora from "@/components/brand/Aurora";
 import {
   interviewAgentApi,
@@ -27,7 +26,6 @@ type Phase = "mode_select" | "chat" | "summary";
 export default function InterviewPage() {
   return (
     <ProtectedRoute>
-      <ForceTheme theme="dark" />
       {/* Suspense là BẮT BUỘC: Next 14 yêu cầu useSearchParams nằm trong một
           Suspense boundary, thiếu nó thì build cảnh báo và cả trang bị deopt
           sang client-side rendering. */}
