@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TextEncoder as NodeTextEncoder, TextDecoder as NodeTextDecoder } from "node:util";
 
@@ -145,12 +145,58 @@ describe("Signup — upload CV", () => {
     expect(uploadCv).not.toHaveBeenCalled();
   });
 
-  it("bấm 'Bỏ qua' trong lúc CV đang tạo tài khoản KHÔNG gọi signup lần thứ hai (race condition)", async () => {
+  it("hai lần chọn file CV đua nhau ngay trước khi cvStep chuyển sang 'đang phân tích' vẫn chỉ tạo tài khoản một lần (race condition thật)", async () => {
     const user = userEvent.setup();
 
     // Điều khiển thời điểm signup() resolve theo ý test, thay vì để nó
     // resolve ngay lập tức — để có một khoảng "đang treo" thật sự, đúng
     // khoảng hở mà bug gốc (và createdTokenRef-only fix không đủ) lọt qua.
+    let resolveSignup: (value: { access_token: string }) => void;
+    const pendingSignup = new Promise<{ access_token: string }>((resolve) => {
+      resolveSignup = resolve;
+    });
+    signup.mockReturnValueOnce(pendingSignup);
+    uploadCv.mockResolvedValue({});
+
+    render(<SignUpPage />);
+    await gotoStep2(user);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+
+    // handleCvUpload() gọi `await looksLikePdf(file)` TRƯỚC KHI setCvStep("analyzing")
+    // — trong suốt khoảng chờ FileReader đọc 5 byte đầu, input file vẫn còn
+    // mounted và isBusy vẫn là false, nên chẳng có gì bị khoá cả. Đây mới là
+    // cửa sổ đua thật sự chưa được test nào che phủ. Bắn hai sự kiện change
+    // liên tiếp bằng fireEvent — KHÔNG dùng userEvent, vì userEvent tự await
+    // và nhường lượt (yield) giữa các thao tác, để lần upload đầu kịp vượt
+    // qua cửa sổ đua trước khi lần hai bắt đầu, xoá sạch tình huống cần kiểm.
+    fireEvent.change(input, { target: { files: [pdfFile("cv-1.pdf")] } });
+    fireEvent.change(input, { target: { files: [pdfFile("cv-2.pdf")] } });
+
+    // Cả hai handleCvUpload() đều cần đọc xong file qua FileReader (async
+    // thật, không chỉ là microtask) rồi cùng thử gọi ensureAccount() TRƯỚC
+    // KHI ta resolve signup() — nếu không đợi đủ, bug (gọi signup 2 lần)
+    // không có cơ hội bộc lộ. KHÔNG dùng text "đang phân tích cv" để đồng bộ
+    // ở đây: khi bug tái xuất hiện, lần gọi ensureAccount() thứ hai KHÔNG hề
+    // bị treo (nó rơi vào mock signup() mặc định resolve ngay), nên chạy
+    // thẳng tới "done"/điều hướng trước khi ta kịp resolve — cái text
+    // transient đó không đáng tin để chờ trong cả hai nhánh đúng/sai.
+    await waitFor(() => expect(signup).toHaveBeenCalled());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    });
+
+    resolveSignup!({ access_token: "tok-race" });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    });
+
+    expect(signup).toHaveBeenCalledTimes(1);
+  });
+
+  it("nút 'Bỏ qua' bị khoá trong lúc CV đang được phân tích (cvStep === \"analyzing\")", async () => {
+    const user = userEvent.setup();
+
     let resolveSignup: (value: { access_token: string }) => void;
     const pendingSignup = new Promise<{ access_token: string }>((resolve) => {
       resolveSignup = resolve;
@@ -169,20 +215,11 @@ describe("Signup — upload CV", () => {
     await waitFor(() => expect(signup).toHaveBeenCalledTimes(1));
     await screen.findByText(/đang phân tích cv/i);
 
+    // Cờ isBusy (loading || cvStep === "analyzing") phải khoá nút này lại.
     const skipButton = screen.getByRole("button", { name: /bỏ qua/i });
-
-    // Cờ isBusy (loading || cvStep === "analyzing") phải khoá nút này lại —
-    // đây là nửa (b) của fix. Giữ assertion signup call-count NGAY SAU đây
-    // (thay vì dừng ở mỗi toBeDisabled) để nếu sau này có refactor lỡ mở
-    // khoá lại nút, test này vẫn bắt được việc ensureAccount gọi signup lần
-    // hai — tức là vẫn kiểm chứng cơ chế cache Promise (nửa (a) của fix),
-    // không chỉ dừng ở thuộc tính disabled trên DOM.
     expect(skipButton).toBeDisabled();
-    await user.click(skipButton);
 
-    resolveSignup!({ access_token: "tok-race" });
+    resolveSignup!({ access_token: "tok-1" });
     await waitFor(() => expect(uploadCv).toHaveBeenCalledTimes(1));
-
-    expect(signup).toHaveBeenCalledTimes(1);
   });
 });
