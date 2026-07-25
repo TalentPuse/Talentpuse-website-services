@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,8 @@ from app.schemas.jobs import (
     PublicJobList,
     PublicJobRow,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -70,6 +74,35 @@ async def list_jobs(
     params["limit"] = per_page
     params["offset"] = offset
 
+    # `silver_skill_long` nằm ở kho dbt, không phải schema app, nên nó có thể CHƯA
+    # được build (dbt chạy thiếu model) trong khi `fct_jobs_daily` đã đầy dữ liệu.
+    # LEFT JOIN vào một bảng không tồn tại làm hỏng CẢ câu lệnh ⇒ trang Việc làm
+    # trả 500 và trắng trơn, dù 900+ job vẫn nằm sẵn trong kho.
+    #
+    # Ở đây skill chỉ là phần làm giàu — LEFT JOIN kèm COALESCE về mảng rỗng đã tự
+    # tuyên bố nó là tùy chọn. Nên thiếu bảng thì hiện job KHÔNG có tag skill, đúng
+    # như khi job không có skill nào, chứ không phải sập cả trang.
+    #
+    # `to_regclass` chỉ tra catalog nên rẻ, và CỐ Ý không cache: dbt build bảng đó
+    # giữa chừng thì request kế tiếp tự có skill trở lại, không cần restart.
+    has_skill_table = bool(
+        (
+            await db.execute(text("SELECT to_regclass('dbt_dev_silver.silver_skill_long') IS NOT NULL"))
+        ).scalar()
+    )
+    if has_skill_table:
+        skills_select = """COALESCE(
+                array_agg(DISTINCT sk.skill_name_norm)
+                    FILTER (WHERE sk.skill_name_norm IS NOT NULL),
+                ARRAY[]::text[]
+            ) AS skills"""
+        skills_join = """LEFT JOIN dbt_dev_silver.silver_skill_long sk
+            ON sk.source = f.source AND sk.source_job_id = f.source_job_id"""
+    else:
+        logger.warning("silver_skill_long missing; serving jobs without skill tags")
+        skills_select = "ARRAY[]::text[] AS skills"
+        skills_join = ""
+
     result = await db.execute(text(f"""
         SELECT
             f.source,
@@ -82,16 +115,11 @@ async def list_jobs(
             round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
             sd.source_url,
             f.posted_at,
-            COALESCE(
-                array_agg(DISTINCT sk.skill_name_norm)
-                    FILTER (WHERE sk.skill_name_norm IS NOT NULL),
-                ARRAY[]::text[]
-            ) AS skills
+            {skills_select}
         FROM dbt_dev_gold.fct_jobs_daily f
         LEFT JOIN dbt_dev_silver.silver_job_detail sd
             ON sd.source = f.source AND sd.source_job_id = f.source_job_id
-        LEFT JOIN dbt_dev_silver.silver_skill_long sk
-            ON sk.source = f.source AND sk.source_job_id = f.source_job_id
+        {skills_join}
         WHERE f.is_active {where_extra}
         GROUP BY f.source, f.source_job_id, f.title, f.company_name,
                  f.city_canonical, f.job_level, f.job_category,
