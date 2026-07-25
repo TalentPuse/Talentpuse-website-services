@@ -25,8 +25,6 @@ jest.mock("../copilot-bridge", () => ({
   useDockToolCard: () => undefined,
 }));
 jest.mock("../undo-toast", () => ({ toastWithUndo: jest.fn() }));
-const mockPush = jest.fn();
-jest.mock("next/navigation", () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock("@/lib/api", () => ({
   applicationsApi: {
     create: jest.fn().mockResolvedValue({ id: "new-1", title: "AI Engineer" }),
@@ -42,7 +40,7 @@ const { applicationsApi } = require("@/lib/api") as {
 const { toastWithUndo } = require("../undo-toast") as { toastWithUndo: jest.Mock };
 
 /**
- * add_application / start_interview_prep vẫn LUÔN trả chuỗi. Nhánh THÀNH
+ * add_application vẫn LUÔN trả chuỗi. Nhánh THÀNH
  * CÔNG của move_application (đồng bộ quy ước với append_note, xem
  * defect-cards-report) và append_note đổi thành object; MỌI nhánh còn lại
  * của move_application (không hợp lệ, không tìm thấy, nhập nhằng, đã ở đúng
@@ -318,50 +316,5 @@ describe("BoardCopilot / append_note", () => {
 
     await undo();
     expect(applicationsApi.update).not.toHaveBeenCalled();
-  });
-});
-
-describe("BoardCopilot / start_interview_prep", () => {
-  beforeEach(() => { registered.clear(); jest.clearAllMocks(); });
-
-  it("điều hướng tới /interview với role đã encode", async () => {
-    const b = board({ apps: [app({ id: "a", title: "AI ＆DATA Scientist/Databricks" })] });
-    render(<BoardCopilot board={b} />);
-    const out = await registered.get("start_interview_prep")!({ card: "databricks" });
-    expect(mockPush).toHaveBeenCalledWith(
-      `/interview?role=${encodeURIComponent("AI ＆DATA Scientist/Databricks")}`,
-    );
-    expect(out).toContain("AI ＆DATA Scientist/Databricks");
-  });
-
-  it("KHÔNG điều hướng khi không tìm thấy card", async () => {
-    render(<BoardCopilot board={board()} />);
-    const out = expectStringResult(await registered.get("start_interview_prep")!({ card: "kubernetes" }));
-    expect(mockPush).not.toHaveBeenCalled();
-    expect(out.toLowerCase()).toContain("không tìm thấy");
-  });
-
-  it("KHÔNG điều hướng khi nhập nhằng, trả candidates", async () => {
-    const b = board({
-      apps: [
-        app({ id: "a", title: "Data Analyst", company_name: "X" }),
-        app({ id: "b", title: "Data Engineer", company_name: "Y" }),
-      ],
-    });
-    render(<BoardCopilot board={b} />);
-    const out = await registered.get("start_interview_prep")!({ card: "data" });
-    expect(mockPush).not.toHaveBeenCalled();
-    expect(out).toContain("Data Analyst");
-    expect(out).toContain("Data Engineer");
-  });
-
-  it("KHÔNG gọi API ghi nào", async () => {
-    const b = board();
-    render(<BoardCopilot board={b} />);
-    await registered.get("start_interview_prep")!({ card: "Data Analyst" });
-    expect(applicationsApi.update).not.toHaveBeenCalled();
-    expect(applicationsApi.create).not.toHaveBeenCalled();
-    expect(applicationsApi.remove).not.toHaveBeenCalled();
-    expect(b.changeStatus).not.toHaveBeenCalled();
   });
 });

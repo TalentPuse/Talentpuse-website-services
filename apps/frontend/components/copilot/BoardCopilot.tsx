@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import type { BoardData } from "@/app/applications/use-board-data";
 import { applicationsApi } from "@/lib/api";
 import type { ApplicationStatus } from "@/lib/api";
@@ -48,7 +47,6 @@ function removeNoteLine(text: string | null, line: string): string | null {
  */
 export default function BoardCopilot({ board }: { board: BoardData }): null {
   const { apps, changeStatus } = board;
-  const router = useRouter();
 
   // Ref luôn trỏ tới `apps` mới nhất. Handler của tool và callback undo được
   // tạo ra ở MỘT lần render nhưng có thể chạy ở nhiều render sau đó (undo có
@@ -319,38 +317,6 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
       { name: "note", type: "string", required: true, description: "The note text to append." },
     ],
     render: (props) => <AppendNoteCard {...props} />,
-  });
-
-  useDockTool({
-    name: "start_interview_prep",
-    description:
-      "Open the mock-interview page pre-filled for one job on the user's board. Use when the " +
-      "user wants to practise or prepare for an interview for a specific job they are tracking. " +
-      "This only navigates and pre-fills the target role — it does NOT start the interview; " +
-      "the user still picks technical or behavioural on that page.",
-    parameters: [
-      { name: "card", type: "string", required: true,
-        description: "The user's own wording for which card they mean — copy it verbatim " +
-          "(a word, phrase, company name, abbreviation, or the exact id from context). Do not " +
-          "upgrade it to a full or corrected job title based on what you see on the board: if " +
-          "the wording could match more than one card, calling this tool with that exact " +
-          "wording is correct, because the tool returns the candidate list to ask the user with." },
-    ],
-    handler: async (args) => {
-      const query = String(args.card ?? "");
-      const found = resolveCard(appsRef.current, query);
-      if (!found.ok) {
-        return found.reason === "not_found"
-          ? `Không tìm thấy card nào khớp "${query}". Hỏi user xem họ muốn nói job nào.`
-          : `Có nhiều card khớp "${query}", hỏi lại user chọn cái nào:\n${describeCandidates(found.candidates)}`;
-      }
-      // Chỉ điều hướng, KHÔNG tạo session: API cần `mode` (technical|behavioral)
-      // mà dock không biết user muốn gì. Tạo session ở đây sẽ phải đoán hộ và
-      // để lại session mồ côi mỗi lần user đổi ý.
-      const card = found.card;
-      router.push(`/interview?role=${encodeURIComponent(card.title)}`);
-      return `Đã mở trang luyện phỏng vấn cho "${card.title}". User chọn chế độ technical hoặc behavioral ở đó.`;
-    },
   });
 
   return null;

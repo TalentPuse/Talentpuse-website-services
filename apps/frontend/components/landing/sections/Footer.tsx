@@ -44,9 +44,6 @@ export default function Footer({ t }: { t: LandingCopy }) {
               <Link href="/assistant" className="transition-colors hover:text-text">
                 {t.footer.links.assistant}
               </Link>
-              <Link href="/interview" className="transition-colors hover:text-text">
-                {t.footer.links.interview}
-              </Link>
               <Link href="/applications" className="transition-colors hover:text-text">
                 {t.footer.links.tracker}
               </Link>
