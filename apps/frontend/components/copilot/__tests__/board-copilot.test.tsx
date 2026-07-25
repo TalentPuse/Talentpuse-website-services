@@ -3,8 +3,10 @@ import BoardCopilot from "../BoardCopilot";
 import type { BoardData } from "@/app/applications/use-board-data";
 import type { Application } from "@/lib/api";
 
-// Task 3: handler giờ có thể trả object (card giàu) thay vì chỉ chuỗi — Map
-// phải nới theo union này để lưu được handler mới của append_note.
+// Task 3 + defect-fix: handler giờ có thể trả object (card giàu) thay vì chỉ
+// chuỗi — Map phải nới theo union này để lưu được handler mới của append_note
+// VÀ nhánh thành công của move_application (đồng bộ quy ước object=thành
+// công, string=chưa làm được).
 const registered = new Map<
   string,
   (a: Record<string, unknown>) => Promise<string | Record<string, unknown>>
@@ -40,12 +42,15 @@ const { applicationsApi } = require("@/lib/api") as {
 const { toastWithUndo } = require("../undo-toast") as { toastWithUndo: jest.Mock };
 
 /**
- * move_application / add_application / start_interview_prep vẫn LUÔN trả
- * chuỗi sau Task 3 — chỉ nhánh thành công của append_note đổi thành object.
- * `registered` giờ là Map dùng chung một kiểu union cho mọi handler, nên các
- * test còn lại của những tool đó cần thu hẹp `out` về string trước khi gọi
- * các method chỉ string mới có (`.toLowerCase()`...). Dùng typeof-narrow
- * (không ép kiểu `as string`) để tsc tự xác nhận, không phải tin lời hứa.
+ * add_application / start_interview_prep vẫn LUÔN trả chuỗi. Nhánh THÀNH
+ * CÔNG của move_application (đồng bộ quy ước với append_note, xem
+ * defect-cards-report) và append_note đổi thành object; MỌI nhánh còn lại
+ * của move_application (không hợp lệ, không tìm thấy, nhập nhằng, đã ở đúng
+ * cột, API lỗi) vẫn trả chuỗi như cũ. `registered` giờ là Map dùng chung một
+ * kiểu union cho mọi handler, nên các test của nhánh trả chuỗi cần thu hẹp
+ * `out` về string trước khi gọi các method chỉ string mới có
+ * (`.toLowerCase()`...). Dùng typeof-narrow (không ép kiểu `as string`) để
+ * tsc tự xác nhận, không phải tin lời hứa.
  */
 function expectStringResult(out: string | Record<string, unknown>): string {
   if (typeof out !== "string") throw new Error("expected string result, got object");
@@ -80,13 +85,26 @@ describe("BoardCopilot / move_application", () => {
     render(<BoardCopilot board={b} />);
     const out = await registered.get("move_application")!({ card: "AI Engineer", status: "interviewing" });
     expect(b.changeStatus).toHaveBeenCalledWith("b", "interviewing");
-    expect(out).toContain("AI Engineer");
+    if (typeof out === "string") throw new Error("kỳ vọng object, handler vẫn trả chuỗi");
+    expect(out.card).toBe("AI Engineer");
   });
 
-  it("KHÔNG gọi changeStatus khi tên nhập nhằng, trả candidates", async () => {
+  it("khi thành công trả về OBJECT với message, card, from và to (đồng bộ quy ước với append_note)", async () => {
+    const b = board();
+    render(<BoardCopilot board={b} />);
+    const out = await registered.get("move_application")!({ card: "AI Engineer", status: "interviewing" });
+
+    if (typeof out === "string") throw new Error("kỳ vọng object, handler vẫn trả chuỗi");
+    expect(out.message).toBe('Đã chuyển "AI Engineer" từ applied sang interviewing.');
+    expect(out.card).toBe("AI Engineer");
+    expect(out.from).toBe("applied");
+    expect(out.to).toBe("interviewing");
+  });
+
+  it("KHÔNG gọi changeStatus khi tên nhập nhằng, trả candidates (vẫn là chuỗi, KHÔNG phải object)", async () => {
     const b = board({ apps: [app({ id: "a", title: "Data Analyst" }), app({ id: "b", title: "Data Engineer" })] });
     render(<BoardCopilot board={b} />);
-    const out = await registered.get("move_application")!({ card: "data", status: "offer" });
+    const out = expectStringResult(await registered.get("move_application")!({ card: "data", status: "offer" }));
     expect(b.changeStatus).not.toHaveBeenCalled();
     expect(out).toContain("Data Analyst");
     expect(out).toContain("Data Engineer");

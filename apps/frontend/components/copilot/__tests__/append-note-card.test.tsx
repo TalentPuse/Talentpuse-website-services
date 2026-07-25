@@ -20,13 +20,41 @@ describe("AppendNoteCard", () => {
     expect(screen.getByText("Data Analyst")).toBeInTheDocument();
   });
 
-  it("không crash khi result KHÔNG phải JSON (handler cũ trả chuỗi)", () => {
-    render(
+  it("hiện thông báo trung lập, KHÔNG hiện tên card, khi result không phải JSON (không tìm thấy card ⇒ CHƯA ghi được gì)", () => {
+    const leakyResult = 'Không tìm thấy card nào khớp "Tester QA".';
+    const { container } = render(
       <AppendNoteCard name="append_note" toolCallId="t1"
-        parameters={{ card: "Data Analyst", note: "x" }}
-        status="complete" result="Đã thêm ghi chú vào Data Analyst." />,
+        parameters={{ card: "Tester QA", note: "gọi lại" }}
+        status="complete" result={leakyResult} />,
     );
-    expect(screen.getByText("Đã thêm ghi chú vào Data Analyst.")).toBeInTheDocument();
+    expect(screen.getByText("Chưa ghi được ghi chú — xem trả lời bên dưới.")).toBeInTheDocument();
+    expect(screen.queryByText("Tester QA")).not.toBeInTheDocument();
+    expect(container.textContent).not.toContain(leakyResult);
+  });
+
+  it("không rò UUID nội bộ của candidate ra card khi result nhập nhằng (nhiều card khớp)", () => {
+    // Chuỗi thật quan sát được ở browser thật khi gõ 'ghi chú vào data: gọi HR
+    // lại' — result này viết cho AGENT đọc (kèm id nội bộ), KHÔNG phải để
+    // hiện thẳng lên card, và trước bản vá "data" còn bị vẽ đậm như tên card
+    // thật dù chưa ghi được gì.
+    const leakyResult =
+      'Có nhiều card khớp "data", hỏi lại user:\n' +
+      '- "Data Engineer" tại Apollo Solutions VN (rejected, id=35dce134-345d-4f69-8a61-3e00687098cb)\n' +
+      '- "Data Analyst" tại SUNJIN (applied, id=8f14e45f-ceea-467e-bd7e-1a234f5c6d7e)';
+    const { container } = render(
+      <AppendNoteCard
+        name="append_note"
+        toolCallId="t1"
+        parameters={{ card: "data", note: "gọi HR lại" }}
+        status="complete"
+        result={leakyResult}
+      />,
+    );
+    expect(screen.getByText("Chưa ghi được ghi chú — xem trả lời bên dưới.")).toBeInTheDocument();
+    expect(screen.queryByText("data")).not.toBeInTheDocument();
+    expect(container.textContent).not.toContain("35dce134-345d-4f69-8a61-3e00687098cb");
+    expect(container.textContent).not.toContain("8f14e45f-ceea-467e-bd7e-1a234f5c6d7e");
+    expect(container.textContent).not.toContain(leakyResult);
   });
 
   it("không crash khi parameters rỗng lúc đang stream", () => {

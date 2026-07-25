@@ -140,7 +140,17 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
         return `Không đổi được trạng thái của "${card.title}" — API lỗi. Báo user thử lại.`;
       }
       toastWithUndo(`Đã chuyển "${card.title}" sang ${status}`, () => changeStatus(card.id, previous));
-      return `Đã chuyển "${card.title}" từ ${previous} sang ${status}.`;
+      // Nhánh thành công DUY NHẤT trả OBJECT (đồng bộ quy ước với append_note):
+      // card ở lớp UI phải vẽ theo KẾT QUẢ THẬT (payload này), không phải theo
+      // `parameters` (thứ model YÊU CẦU) — nếu không, mọi nhánh KHÔNG làm gì ở
+      // trên (không hợp lệ, không tìm thấy, nhập nhằng, đã ở đúng cột, API
+      // lỗi) vẫn trả chuỗi, nên vẫn bị card cũ vẽ nhầm thành "đã chuyển".
+      return {
+        message: `Đã chuyển "${card.title}" từ ${previous} sang ${status}.`,
+        card: card.title,
+        from: previous,
+        to: status,
+      };
     },
   });
 
