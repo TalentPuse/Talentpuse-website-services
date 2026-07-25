@@ -1,12 +1,13 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { Loader2, Upload, PenLine, ChevronLeft } from "lucide-react";
 
 import { authApi, cvApi, ApiError } from "@/lib/api";
+import type { SignupPayload } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { AI_HOME } from "@/lib/flags";
 import AuthInput from "@/components/auth/AuthInput";
@@ -35,9 +36,33 @@ import { cn } from "@/lib/utils";
 const POST_AUTH_HOME = AI_HOME ? "/assistant" : "/dashboard";
 
 type Step2Mode = "cv" | "manual";
-type CvStep = "idle" | "reading" | "analyzing" | "done" | "error";
+type CvStep = "idle" | "analyzing" | "done" | "error";
 
 const NO_YEAR = "__none__";
+
+const MAX_CV_BYTES = 5 * 1024 * 1024;
+
+/** Đọc 5 byte đầu để xác nhận đúng là PDF. Chỉ tin đuôi tên file thì đổi tên
+ *  `bat-ky.exe` thành `cv.pdf` là lọt thẳng tới server. */
+async function looksLikePdf(file: File): Promise<boolean> {
+  const head = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+  return new TextDecoder().decode(head) === "%PDF-";
+}
+
+/** Các field hồ sơ mà `ensureAccount` chấp nhận: đúng tập field mà cả
+ *  `authApi.signup` lẫn `authApi.updateMe` cùng hiểu — không bao gồm
+ *  email/password/full_name, vì hai field đó chỉ thuộc về lần signup đầu
+ *  tiên và updateMe (PUT /api/auth/me) không nhận chúng. */
+type EnsureAccountProfile = Pick<
+  SignupPayload,
+  "skills" | "preferred_cities" | "desired_titles"
+> &
+  Partial<
+    Omit<
+      SignupPayload,
+      "email" | "password" | "full_name" | "skills" | "preferred_cities" | "desired_titles"
+    >
+  >;
 
 export default function SignUpPage() {
   return <SignUpWizard />;
@@ -83,45 +108,69 @@ function SignUpWizard() {
   const [cvFileName, setCvFileName] = useState("");
   const [dragOver, setDragOver] = useState(false);
 
+  // Token của lần signup THÀNH CÔNG đầu tiên trong phiên đăng ký này.
+  //
+  // Đây là chỗ sửa bug: trước đây mỗi đường đi (upload CV / nhập tay / bỏ qua)
+  // đều tự gọi authApi.signup, nên khi CV phân tích lỗi thì tài khoản ĐÃ được
+  // tạo mà user chưa đăng nhập, và mọi lần thử lại đều đâm vào
+  // 409 "Email đã được đăng ký" — email đó coi như hỏng vĩnh viễn.
+  const createdTokenRef = useRef<string | null>(null);
+
+  /** Tạo tài khoản đúng MỘT lần. Lần sau chỉ cập nhật hồ sơ trên tài khoản đã có. */
+  async function ensureAccount(profile: EnsureAccountProfile): Promise<string> {
+    if (createdTokenRef.current) {
+      await authApi.updateMe(createdTokenRef.current, profile);
+      return createdTokenRef.current;
+    }
+    const { access_token } = await authApi.signup({ email, password, full_name: fullName, ...profile });
+    createdTokenRef.current = access_token;
+    return access_token;
+  }
+
   async function handleCvUpload(file: File) {
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setCvError("Chỉ hỗ trợ file PDF");
+    setCvError("");
+
+    // Chặn sớm, TRƯỚC khi tạo tài khoản — hỏng ở đây thì chưa có gì để dọn.
+    if (file.size > MAX_CV_BYTES) {
+      setCvError("File vượt quá 5MB, bạn chọn file nhỏ hơn nhé.");
       setCvStep("error");
       return;
     }
-    setCvFileName(file.name);
-    setCvError("");
-    setCvStep("reading");
+    if (!(await looksLikePdf(file))) {
+      setCvError("File này không phải PDF hợp lệ.");
+      setCvStep("error");
+      return;
+    }
 
-    // Brief "reading" state then move to analyzing
-    await new Promise((r) => setTimeout(r, 600));
+    setCvFileName(file.name);
     setCvStep("analyzing");
 
+    let token: string;
     try {
-      const { access_token } = await authApi.signup({
-        email,
-        password,
-        full_name: fullName,
-        skills: [],
-        preferred_cities: [],
-        desired_titles: [],
-      });
-      const res = await cvApi.upload(access_token, file);
-      if (res.error) {
-        setCvError(res.error);
-        setCvStep("error");
-        return;
-      }
+      token = await ensureAccount({ skills: [], preferred_cities: [], desired_titles: [] });
+    } catch (err) {
+      setCvError((err as ApiError).message || "Không tạo được tài khoản");
+      setCvStep("error");
+      return;
+    }
+
+    try {
+      await cvApi.upload(token, file);
       setCvStep("done");
-      // Auto-login and redirect
-      const user = await authApi.getMe(access_token);
-      login(access_token, user);
+      const user = await authApi.getMe(token);
+      login(token, user);
       toast.success("CV đã được phân tích! Kiểm tra và cập nhật profile.");
       router.push("/profile");
     } catch (err) {
-      const apiErr = err as ApiError;
-      setCvError(apiErr.message || "Không thể phân tích CV");
+      // Tài khoản ĐÃ tạo xong — đăng nhập user vào rồi mời điền tay, thay vì
+      // bỏ mặc họ ở màn hình lỗi với một tài khoản họ không biết là đã có.
+      const user = await authApi.getMe(token);
+      login(token, user);
+      setCvError(
+        `${(err as ApiError).message || "Không đọc được CV"} Tài khoản đã tạo xong — bạn điền thông tin tay giúp nhé.`,
+      );
       setCvStep("error");
+      setStep2Mode("manual");
     }
   }
 
@@ -157,10 +206,7 @@ function SignUpWizard() {
     setLoading(true);
 
     try {
-      const payload = {
-        email,
-        password,
-        full_name: fullName,
+      const profileFields: EnsureAccountProfile = {
         skills,
         desired_salary_min: salaryMin ? Number(salaryMin) * 1_000_000 : undefined,
         desired_salary_max: salaryMax ? Number(salaryMax) * 1_000_000 : undefined,
@@ -172,7 +218,7 @@ function SignUpWizard() {
         open_to_internship: openToInternship || undefined,
         part_time_ok: partTimeOk || undefined,
       };
-      const { access_token } = await authApi.signup(payload);
+      const access_token = await ensureAccount(profileFields);
       const user = await authApi.getMe(access_token);
       login(access_token, user);
       toast.success("Chào mừng bạn đến TalentPuse!");
@@ -190,15 +236,7 @@ function SignUpWizard() {
     setLoading(true);
 
     try {
-      const payload = {
-        email,
-        password,
-        full_name: fullName,
-        skills: [],
-        preferred_cities: [],
-        desired_titles: [],
-      };
-      const { access_token } = await authApi.signup(payload);
+      const access_token = await ensureAccount({ skills: [], preferred_cities: [], desired_titles: [] });
       const user = await authApi.getMe(access_token);
       login(access_token, user);
       toast.success("Chào mừng bạn đến TalentPuse!");
@@ -435,14 +473,8 @@ function SignUpWizard() {
                         </div>
                       )}
 
-                      {(cvStep === "reading" || cvStep === "analyzing" || cvStep === "done") && (
+                      {(cvStep === "analyzing" || cvStep === "done") && (
                         <GlowCard className="space-y-4 p-6">
-                          <ProcessStep
-                            label="Đang đọc file PDF..."
-                            doneLabel="Đã đọc file PDF"
-                            active={cvStep === "reading"}
-                            done={cvStep === "analyzing" || cvStep === "done"}
-                          />
                           <ProcessStep
                             label="Đang phân tích CV bằng AI..."
                             doneLabel="Phân tích CV hoàn tất"
