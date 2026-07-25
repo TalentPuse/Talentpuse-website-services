@@ -57,12 +57,15 @@ const MODES: ModeConfig[] = [
 export default function InterviewModeSelect({
   loading,
   onStart,
+  initialTargetRole,
 }: {
   loading: boolean;
   onStart: (mode: InterviewAgentMode, opts: { target_role?: string }) => void;
+  /** Điền sẵn vị trí mong muốn khi vào từ dock (`/interview?role=...`). */
+  initialTargetRole?: string;
 }) {
   const [selectedMode, setSelectedMode] = useState<InterviewAgentMode | null>(null);
-  const [targetRole, setTargetRole] = useState("");
+  const [targetRole, setTargetRole] = useState(initialTargetRole ?? "");
 
   const selected = MODES.find((m) => m.id === selectedMode);
 

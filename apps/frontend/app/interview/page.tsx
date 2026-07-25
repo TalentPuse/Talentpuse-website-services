@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 // ArrowLeft is not in the curated @/lib/icons set — imported directly per shared contract.
 import { ArrowLeft } from "lucide-react";
@@ -27,13 +28,20 @@ export default function InterviewPage() {
   return (
     <ProtectedRoute>
       <ForceTheme theme="dark" />
-      <InterviewContent />
+      {/* Suspense là BẮT BUỘC: Next 14 yêu cầu useSearchParams nằm trong một
+          Suspense boundary, thiếu nó thì build cảnh báo và cả trang bị deopt
+          sang client-side rendering. */}
+      <Suspense fallback={null}>
+        <InterviewContent />
+      </Suspense>
     </ProtectedRoute>
   );
 }
 
 function InterviewContent() {
   const { token } = useAuth();
+  // Vào từ dock: /interview?role=<job title> → điền sẵn vị trí mong muốn.
+  const roleFromUrl = useSearchParams().get("role") ?? undefined;
 
   const [phase, setPhase] = useState<Phase>("mode_select");
   const [session, setSession] = useState<InterviewAgentSession | null>(null);
@@ -143,7 +151,11 @@ function InterviewContent() {
 
               {/* Mode selector */}
               <div className="mt-6">
-                <InterviewModeSelect loading={loading} onStart={handleStartSession} />
+                <InterviewModeSelect
+                  loading={loading}
+                  onStart={handleStartSession}
+                  initialTargetRole={roleFromUrl}
+                />
               </div>
             </div>
           </div>
