@@ -91,9 +91,23 @@ export type DockToolCardProps = {
 };
 export function useDockToolCard(card: {
   name: string;
-  render: (props: DockToolCardProps) => React.ReactNode;
+  parameters: DockToolParam[];                              // cùng descriptor useDockTool đang dùng
+  render: (props: DockToolCardProps) => React.ReactElement;  // KHÔNG phải ReactNode — xem dưới
 }): void;
 ```
+
+**Ba chi tiết lấy từ type thật của `useRenderTool` (`copilotkit-Bp6BD8xe.d.mts:2286`, `:2229`):**
+
+- Chữ ký thật là `useRenderTool<S extends StandardSchemaV1>({ name, parameters: S, render, agentId? }, deps?)`
+  — `parameters` là **Standard Schema** (zod), đúng thứ `buildParameterSchema()` trong bridge đã dựng cho
+  `useDockTool`. **Dùng lại hàm đó**, không viết mới.
+- `render` phải trả `React.ReactElement`, **không** phải `ReactNode` — nên không được `return null`;
+  muốn không vẽ gì thì `return <></>`.
+- Props là **union phân biệt theo `status`** với **string literal**, không phải enum:
+  `"inProgress"` (`parameters` là `Partial<T>`, `result: undefined`) · `"executing"` (`parameters` đủ,
+  `result: undefined`) · `"complete"` (`parameters` đủ, `result: string`).
+  Enum `ToolCallStatus` chỉ xuất hiện ở `ReactToolCallRenderer` **cũ** (đường `useFrontendTool.render`) —
+  không liên quan tới wrapper này.
 
 `status` khai báo bằng **string literal**, không import `ToolCallStatus` — enum đó không được export
 từ `react-core/v2` (grep = 0), chỉ có ở `@copilotkit/core` là phantom dependency.
