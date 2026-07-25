@@ -114,17 +114,38 @@ function SignUpWizard() {
   // đều tự gọi authApi.signup, nên khi CV phân tích lỗi thì tài khoản ĐÃ được
   // tạo mà user chưa đăng nhập, và mọi lần thử lại đều đâm vào
   // 409 "Email đã được đăng ký" — email đó coi như hỏng vĩnh viễn.
+  //
+  // Chỉ mình `createdTokenRef` là CHƯA đủ: nó chỉ được gán SAU KHI request
+  // signup hoàn tất, nên trong suốt khoảng chờ mạng nó vẫn là null — một cú
+  // bấm thứ hai (skip / submit tay / đổi tab) rơi đúng vào khoảng đó vẫn gọi
+  // authApi.signup lần nữa. `signupPromiseRef` bên dưới mới là thứ chặn thật:
+  // cache CHÍNH Promise đang chạy, để lần gọi thứ hai (dù đến từ đâu) chờ
+  // chung kết quả của lần đầu thay vì tạo request mới.
   const createdTokenRef = useRef<string | null>(null);
+  const signupPromiseRef = useRef<Promise<string> | null>(null);
 
-  /** Tạo tài khoản đúng MỘT lần. Lần sau chỉ cập nhật hồ sơ trên tài khoản đã có. */
+  /** Tạo tài khoản đúng MỘT lần — an toàn cả khi bị bấm đồng thời (concurrent).
+   *  Lần sau (đã có token) chỉ cập nhật hồ sơ trên tài khoản đã có. */
   async function ensureAccount(profile: EnsureAccountProfile): Promise<string> {
     if (createdTokenRef.current) {
       await authApi.updateMe(createdTokenRef.current, profile);
       return createdTokenRef.current;
     }
-    const { access_token } = await authApi.signup({ email, password, full_name: fullName, ...profile });
-    createdTokenRef.current = access_token;
-    return access_token;
+    if (!signupPromiseRef.current) {
+      signupPromiseRef.current = authApi
+        .signup({ email, password, full_name: fullName, ...profile })
+        .then(({ access_token }) => {
+          createdTokenRef.current = access_token;
+          return access_token;
+        })
+        .catch((err) => {
+          // Request lỗi (vd. mạng chập chờn) — xoá cache Promise để lần thử
+          // lại sau là một request MỚI, không phải kẹt mãi vào lỗi cũ.
+          signupPromiseRef.current = null;
+          throw err;
+        });
+    }
+    return signupPromiseRef.current;
   }
 
   async function handleCvUpload(file: File) {
@@ -164,8 +185,18 @@ function SignUpWizard() {
     } catch (err) {
       // Tài khoản ĐÃ tạo xong — đăng nhập user vào rồi mời điền tay, thay vì
       // bỏ mặc họ ở màn hình lỗi với một tài khoản họ không biết là đã có.
-      const user = await authApi.getMe(token);
-      login(token, user);
+      //
+      // getMe/login ở đây có try/catch RIÊNG: nếu getMe (lần gọi thứ hai này)
+      // cũng lỗi, ta vẫn PHẢI rơi xuống setCvError/setCvStep/setStep2Mode bên
+      // dưới — nếu không, lỗi sẽ thoát khỏi catch-block ngoài, cvStep kẹt ở
+      // "done" mãi mãi: spinner trên màn hình, không redirect, không báo lỗi,
+      // dù tài khoản và CV đều đã tạo xong.
+      try {
+        const user = await authApi.getMe(token);
+        login(token, user);
+      } catch {
+        // Bỏ qua — vẫn còn cvError bên dưới để user biết cần làm gì tiếp.
+      }
       setCvError(
         `${(err as ApiError).message || "Không đọc được CV"} Tài khoản đã tạo xong — bạn điền thông tin tay giúp nhé.`,
       );
@@ -266,6 +297,14 @@ function SignUpWizard() {
     center: { x: 0, opacity: 1 },
     exit: (dir: number) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
   };
+
+  // Một cờ "đang bận" dùng chung: `loading` phủ onSubmit/skipAndSubmit, còn
+  // `cvStep === "analyzing"` phủ khoảng thời gian handleCvUpload đang chờ
+  // ensureAccount/cvApi.upload (đường này KHÔNG set `loading`). Trước đây
+  // các nút thoát khác (Bỏ qua, submit tay, đổi tab) chỉ gate theo `loading`
+  // nên vẫn bấm được trong lúc CV đang xử lý — đúng khoảng hở khiến
+  // ensureAccount bị gọi lần hai trong lúc signup đầu tiên còn đang treo.
+  const isBusy = loading || cvStep === "analyzing";
 
   return (
     <div className="flex min-h-screen bg-bg">
@@ -417,11 +456,11 @@ function SignUpWizard() {
                 >
                   <Tabs value={step2Mode} onValueChange={onTabChange}>
                     <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="cv" className="gap-1.5">
+                      <TabsTrigger value="cv" disabled={isBusy} className="gap-1.5">
                         <FileText size={15} strokeWidth={1.75} />
                         Upload CV
                       </TabsTrigger>
-                      <TabsTrigger value="manual" className="gap-1.5">
+                      <TabsTrigger value="manual" disabled={isBusy} className="gap-1.5">
                         <PenLine size={15} strokeWidth={1.75} />
                         Điền tay
                       </TabsTrigger>
@@ -636,7 +675,7 @@ function SignUpWizard() {
 
                         <CityPillSelect value={cities} onChange={setCities} />
 
-                        <Button type="submit" disabled={loading} size="lg" className="w-full">
+                        <Button type="submit" disabled={isBusy} size="lg" className="w-full">
                           {loading ? (
                             <span className="flex items-center justify-center gap-2">
                               <Loader2 size={16} strokeWidth={2} className="animate-spin" />
@@ -662,7 +701,7 @@ function SignUpWizard() {
                     <button
                       type="button"
                       onClick={skipAndSubmit}
-                      disabled={loading}
+                      disabled={isBusy}
                       className="text-xs text-text-muted transition-colors hover:text-text disabled:opacity-50"
                     >
                       Bỏ qua, tôi sẽ cập nhật sau

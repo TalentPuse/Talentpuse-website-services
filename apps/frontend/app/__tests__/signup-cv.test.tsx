@@ -142,5 +142,47 @@ describe("Signup — upload CV", () => {
 
     await waitFor(() => expect(screen.getByText(/không phải (file )?PDF/i)).toBeInTheDocument());
     expect(signup).not.toHaveBeenCalled();
+    expect(uploadCv).not.toHaveBeenCalled();
+  });
+
+  it("bấm 'Bỏ qua' trong lúc CV đang tạo tài khoản KHÔNG gọi signup lần thứ hai (race condition)", async () => {
+    const user = userEvent.setup();
+
+    // Điều khiển thời điểm signup() resolve theo ý test, thay vì để nó
+    // resolve ngay lập tức — để có một khoảng "đang treo" thật sự, đúng
+    // khoảng hở mà bug gốc (và createdTokenRef-only fix không đủ) lọt qua.
+    let resolveSignup: (value: { access_token: string }) => void;
+    const pendingSignup = new Promise<{ access_token: string }>((resolve) => {
+      resolveSignup = resolve;
+    });
+    signup.mockReturnValueOnce(pendingSignup);
+    uploadCv.mockResolvedValue({});
+
+    render(<SignUpPage />);
+    await gotoStep2(user);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, pdfFile());
+
+    // Đợi đúng lúc ensureAccount() đã gọi signup() và đang chờ mạng —
+    // cvStep lúc này phải là "analyzing" (UI hiện "Đang phân tích CV...").
+    await waitFor(() => expect(signup).toHaveBeenCalledTimes(1));
+    await screen.findByText(/đang phân tích cv/i);
+
+    const skipButton = screen.getByRole("button", { name: /bỏ qua/i });
+
+    // Cờ isBusy (loading || cvStep === "analyzing") phải khoá nút này lại —
+    // đây là nửa (b) của fix. Giữ assertion signup call-count NGAY SAU đây
+    // (thay vì dừng ở mỗi toBeDisabled) để nếu sau này có refactor lỡ mở
+    // khoá lại nút, test này vẫn bắt được việc ensureAccount gọi signup lần
+    // hai — tức là vẫn kiểm chứng cơ chế cache Promise (nửa (a) của fix),
+    // không chỉ dừng ở thuộc tính disabled trên DOM.
+    expect(skipButton).toBeDisabled();
+    await user.click(skipButton);
+
+    resolveSignup!({ access_token: "tok-race" });
+    await waitFor(() => expect(uploadCv).toHaveBeenCalledTimes(1));
+
+    expect(signup).toHaveBeenCalledTimes(1);
   });
 });
