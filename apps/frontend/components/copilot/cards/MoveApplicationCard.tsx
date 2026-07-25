@@ -1,14 +1,7 @@
 "use client";
 import type { DockToolCardProps } from "../copilot-bridge";
-
-/** Nhãn tiếng Việt của từng cột, khớp bảng Kanban. */
-const STATUS_LABEL: Record<string, string> = {
-  saved: "Đã lưu",
-  applied: "Đã apply",
-  interviewing: "Phỏng vấn",
-  offer: "Offer",
-  rejected: "Từ chối",
-};
+import { STATUS_LABEL } from "@/components/applications/StatusSelect";
+import type { ApplicationStatus } from "@/lib/api";
 
 /**
  * Card cho tool `move_application`.
@@ -32,7 +25,11 @@ export default function MoveApplicationCard({
 }: DockToolCardProps) {
   const cardName = typeof parameters.card === "string" ? parameters.card : null;
   const target = typeof parameters.status === "string" ? parameters.status : null;
-  const targetLabel = target ? (STATUS_LABEL[target] ?? target) : null;
+  const targetLabel = target
+    ? target in STATUS_LABEL
+      ? STATUS_LABEL[target as ApplicationStatus]
+      : target
+    : null;
 
   // Chỉ 2 trạng thái thị giác, không 3: "executing" có thể trôi qua nhanh hơn
   // một lần paint nên thiết kế riêng cho nó là công cốc.
