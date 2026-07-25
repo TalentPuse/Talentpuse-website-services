@@ -54,4 +54,21 @@ describe("MoveApplicationCard", () => {
     );
     expect(screen.getByText(/đang chuyển/i)).toBeInTheDocument();
   });
+
+  it("trả về chuỗi thô cho status là khóa prototype thay vì crash", () => {
+    // "__proto__" khiến `in` và bracket access đi lạc lên prototype chain
+    // (STATUS_LABEL["__proto__"] === Object.prototype) thay vì undefined —
+    // phải degrade về chuỗi thô như mọi status lạ khác, không throw.
+    render(
+      <MoveApplicationCard
+        name="move_application"
+        toolCallId="t1"
+        parameters={{ card: "Business Analyst", status: "__proto__" }}
+        status="complete"
+        result='Đã chuyển "Business Analyst" sang __proto__.'
+      />,
+    );
+    expect(screen.getByText("Business Analyst")).toBeInTheDocument();
+    expect(screen.getByText("__proto__")).toBeInTheDocument();
+  });
 });

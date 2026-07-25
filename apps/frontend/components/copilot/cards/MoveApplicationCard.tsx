@@ -1,6 +1,6 @@
 "use client";
 import type { DockToolCardProps } from "../copilot-bridge";
-import { STATUS_LABEL } from "@/components/applications/StatusSelect";
+import { STATUS_LABEL, STATUS_ORDER } from "@/components/applications/StatusSelect";
 import type { ApplicationStatus } from "@/lib/api";
 
 /**
@@ -25,11 +25,16 @@ export default function MoveApplicationCard({
 }: DockToolCardProps) {
   const cardName = typeof parameters.card === "string" ? parameters.card : null;
   const target = typeof parameters.status === "string" ? parameters.status : null;
-  const targetLabel = target
-    ? target in STATUS_LABEL
-      ? STATUS_LABEL[target as ApplicationStatus]
-      : target
-    : null;
+  // Dùng `.includes` trên STATUS_ORDER (own-key membership) thay vì `target in
+  // STATUS_LABEL`: `in` và bracket access đi qua CẢ prototype chain, không chỉ
+  // 5 key riêng của object — nên target="__proto__" khiến `in` trả true và
+  // STATUS_LABEL["__proto__"] trả về Object.prototype (một object, React sẽ
+  // throw khi render). "toString"/"constructor"/... cũng vậy (trả về function).
+  // Đừng "đơn giản hoá" lại thành `in` — nhánh else chỉ còn đúng ý nghĩa an
+  // toàn khi kiểm tra own-key.
+  const targetLabel = target && (STATUS_ORDER as readonly string[]).includes(target)
+    ? STATUS_LABEL[target as ApplicationStatus]
+    : target;
 
   // Chỉ 2 trạng thái thị giác, không 3: "executing" có thể trôi qua nhanh hơn
   // một lần paint nên thiết kế riêng cho nó là công cốc.
