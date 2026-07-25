@@ -91,6 +91,7 @@ import { z } from "zod";
 import {
   useFrontendTool,
   useAgentContext,
+  useRenderTool,
   type FrontendTool,
   type JsonSerializable,
 } from "@copilotkit/react-core/v2";
@@ -186,4 +187,88 @@ function toJsonSerializable(value: unknown): JsonSerializable {
  */
 export function useDockContext(description: string, value: unknown): void {
   useAgentContext({ description, value: toJsonSerializable(value) });
+}
+
+/**
+ * Props mà một card của dock nhận. Bridge tự định nghĩa (không re-export type
+ * của CopilotKit) để component card KHÔNG phải import CopilotKit — giữ nguyên
+ * bất biến "chỉ file này biết CopilotKit".
+ *
+ * `status` là string literal, KHÔNG dùng enum `ToolCallStatus`: enum đó không
+ * được export từ "@copilotkit/react-core/v2" (chỉ có ở @copilotkit/core, là
+ * phantom dependency của package này).
+ *
+ * `parameters` để lỏng `Record<string, unknown>`: runtime chỉ partialJSONParse
+ * chứ KHÔNG validate bằng zod, nên kiểu chặt sẽ là một lời hứa sai. Card phải
+ * guard từng field, kể cả ở nhánh complete.
+ */
+export type DockToolCardProps = {
+  name: string;
+  toolCallId: string;
+  parameters: Record<string, unknown>;
+  status: "inProgress" | "executing" | "complete";
+  result?: string;
+};
+
+export type DockToolCard = {
+  /** Trùng đúng `name` của tool tương ứng. */
+  name: string;
+  parameters: DockToolParam[];
+  /** Phải trả ReactElement — `useRenderTool` không nhận null; muốn trống thì <></>. */
+  render: (props: DockToolCardProps) => React.ReactElement;
+};
+
+/**
+ * Đăng ký card UI cho kết quả của một tool. TÁCH RIÊNG khỏi `useDockTool`:
+ * `useFrontendTool` và `useRenderTool` ghi vào CÙNG một key registry (":name"),
+ * nên nhồi cả hai vào một hook sẽ đá nhau với thứ tự không xác định.
+ *
+ * `render` là lớp BỔ SUNG — chuỗi handler vẫn tới agent qua ToolMessage như cũ.
+ */
+export function useDockToolCard(card: DockToolCard): void {
+  // Y hệt bài học handlerRef: renderer bị chốt lúc register, không tự làm mới
+  // theo render sau.
+  const renderRef = useRef(card.render);
+  renderRef.current = card.render;
+
+  const parametersKey = JSON.stringify(card.parameters);
+  const parameterSchema = useMemo(
+    () => buildParameterSchema(card.parameters),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- parametersKey là dep theo nội dung, cố ý
+    [parametersKey],
+  );
+
+  // Component identity phải ỔN ĐỊNH. Nếu type component đổi mỗi lần re-register,
+  // React unmount card và mất hết useState bên trong nó.
+  const Component = useMemo(
+    () => (props: DockToolCardProps) => renderRef.current(props),
+    [],
+  );
+
+  useRenderTool(
+    {
+      name: card.name,
+      parameters: parameterSchema,
+      // `useRenderTool`'s named-renderer overload types `render` as
+      // `(props: RenderToolProps<S>) => React.ReactElement`, inferred from
+      // `parameters: S`. `Component` is typed against our own loose
+      // `DockToolCardProps`, not the library's inferred `RenderToolProps<S>`,
+      // so a direct assignment doesn't structurally match. A `(props: never)
+      // => ...` cast (function contravariance: a param type must be a
+      // SUPERtype of the target's declared param type for the assignment to
+      // be valid, and `never` is a subtype of everything, so it satisfies
+      // nothing) does NOT fix this — confirmed by tsc still erroring with
+      // that cast. `any` is the correct escape hatch here: a function typed
+      // `(props: any) => X` is assignable to any `(props: T) => X`.
+      render: Component as unknown as (props: any) => React.ReactElement,
+    },
+    [card.name, parametersKey],
+  );
+
+  // CỐ Ý KHÔNG dọn renderer khi unmount. `useRenderTool` giữ lại entry theo
+  // thiết kế — doc của chính hook ghi "keeps renderer entries on cleanup so
+  // historical chat tool calls can still render". Dock mount toàn cục còn
+  // BoardCopilot chỉ mount ở /applications, nên dọn đi sẽ làm card cũ trong
+  // lịch sử chat rơi về render mặc định. Card này thuần (chỉ đọc props, không
+  // giữ ref tới state trang) nên phần giữ lại là bounded và vô hại.
 }

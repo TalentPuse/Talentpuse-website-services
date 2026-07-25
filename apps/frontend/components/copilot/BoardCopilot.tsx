@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import type { BoardData } from "@/app/applications/use-board-data";
 import { applicationsApi } from "@/lib/api";
 import type { ApplicationStatus } from "@/lib/api";
-import { useDockContext, useDockTool } from "./copilot-bridge";
+import { useDockContext, useDockTool, useDockToolCard } from "./copilot-bridge";
+import MoveApplicationCard from "./cards/MoveApplicationCard";
 import { describeCandidates, resolveCard } from "./resolve-card";
 import { toastWithUndo } from "./undo-toast";
 
@@ -140,6 +141,16 @@ export default function BoardCopilot({ board }: { board: BoardData }): null {
       toastWithUndo(`Đã chuyển "${card.title}" sang ${status}`, () => changeStatus(card.id, previous));
       return `Đã chuyển "${card.title}" từ ${previous} sang ${status}.`;
     },
+  });
+
+  // Card cho move_application. Dùng ĐÚNG bộ parameters của tool để schema khớp.
+  useDockToolCard({
+    name: "move_application",
+    parameters: [
+      { name: "card", type: "string", required: true, description: "Job title of the card." },
+      { name: "status", type: "string", required: true, enum: STATUSES, description: "Target column." },
+    ],
+    render: (props) => <MoveApplicationCard {...props} />,
   });
 
   useDockTool({

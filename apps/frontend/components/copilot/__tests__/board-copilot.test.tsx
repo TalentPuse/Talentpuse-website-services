@@ -9,6 +9,10 @@ jest.mock("../copilot-bridge", () => ({
     registered.set(tool.name, tool.handler);
   },
   useDockContext: () => undefined,
+  // Task 2: BoardCopilot giờ còn gọi useDockToolCard để đăng ký card cho
+  // move_application. Test file này chỉ quan tâm hành vi của tool handler,
+  // không quan tâm card UI, nên stub thành no-op.
+  useDockToolCard: () => undefined,
 }));
 jest.mock("../undo-toast", () => ({ toastWithUndo: jest.fn() }));
 const mockPush = jest.fn();
