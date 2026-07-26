@@ -1,0 +1,92 @@
+name: Infra (nginx + redis)
+
+# Vi sao can workflow rieng:
+#
+# Ba workflow kia deu loc theo `paths: apps/<ten>/**`, nen sua docker-compose.yml
+# hay deploy/nginx/nginx.conf KHONG kich hoat gi ca — thay doi ha tang nam yen
+# trong repo ma khong bao gio toi duoc box.
+#
+# Ngoai ra `docker compose up -d <service>` chi dung dung service duoc goi ten,
+# nen nginx khong bao gio duoc khoi dong boi workflow backend/frontend/mcp.
+# Redis thi co (no nam trong depends_on cua backend), nhung van goi ten o day cho
+# ro rang thay vi phu thuoc vao tac dung phu.
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "docker-compose.yml"
+      - "deploy/**"
+      - ".github/workflows/infra.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: talentpulse-infra-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy nginx + redis
+    runs-on: [self-hosted, Linux, X64, talentpulse_backend]
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Bat buoc du nginx/redis khong dung bien nao trong so nay: compose doc CA
+      # file truoc khi chay, ma backend khai bao `DATABASE_URL:?` / `JWT_SECRET:?`
+      # (cu phap bat-buoc-phai-co). Thieu .env thi `docker compose` bao loi ngay
+      # ca khi ta chi dinh dung nginx.
+      - name: Create runtime .env
+        run: |
+          rm -f .env
+          cat > .env <<'EOF'
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_USERNAME=${{ secrets.TELEGRAM_BOT_USERNAME }}
+          TELEGRAM_WEBHOOK_SECRET=${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          MCP_DATABASE_URL=${{ secrets.MCP_DATABASE_URL }}
+          REDIS_URL=${{ secrets.REDIS_URL }}
+          EOF
+          sed -i 's/^[[:space:]]*//' .env
+          test -f .env || { echo "Failed to create .env"; exit 1; }
+
+      - name: Validate compose file
+        run: docker compose config --quiet
+
+      # Kiem cu phap TRUOC khi thay container dang chay. Config nginx sai ma cu
+      # `up` thi container moi crash-loop va site chet — kiem trong mot container
+      # dung mot lan thi sai cu phap chi lam do CI, khong cham vao cai dang phuc vu.
+      - name: Validate nginx config
+        run: |
+          docker run --rm -v "$PWD/deploy/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:1.27-alpine nginx -t
+
+      - name: Deploy nginx + redis
+        run: |
+          # `--no-deps` la CO Y: nginx khai bao depends_on frontend+backend, nen
+          # thieu co nay thi moi lan sua nginx.conf se keo theo viec tao lai ca hai
+          # service kia — downtime khong can thiet, va co the gay neu tag image cua
+          # chung khong con trong local cache.
+          docker compose up -d --no-build --no-deps redis nginx
+          docker image prune -f
+          docker compose ps redis nginx
+
+      # Nginx "Up" khong co nghia la no dinh tuyen dung. Goi that vao endpoint
+      # health de biet no thuc su phuc vu duoc.
+      - name: Smoke check
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS http://localhost/nginx-health >/dev/null; then
+              echo "nginx serving OK"
+              exit 0
+            fi
+            echo "waiting for nginx ($i/10)..."
+            sleep 3
+          done
+          echo "nginx did not become healthy"
+          docker compose logs --tail 50 nginx
+          exit 1

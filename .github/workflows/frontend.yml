@@ -42,6 +42,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Jest KHONG duoc chay o day tu truoc: job nay chi `npm run build`, ma
+      # `next build` khong chay test. Ket qua la ca bo test (hien 13 suite /
+      # 101 test) chua bao gio gac cho mot lan deploy nao — sua lam do test van
+      # di thang len production.
+      - name: Run tests
+        run: npm test -- --ci
+
       - name: Build (type check + compile)
         run: npm run build
 
