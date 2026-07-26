@@ -73,7 +73,16 @@ services:
     build:
       context: ./apps/frontend
       args:
-        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8001}
+        # Mac dinh RONG = goi API cung origin (`/api/...`) de di qua nginx.
+        #
+        # Truoc day mac dinh la http://localhost:8001, ma Next INLINE HOA
+        # NEXT_PUBLIC_* luc BUILD, nen dia chi do bi nuong cung vao bundle: trinh
+        # duyet goi thang backend, bo qua nginx hoan toan. Hau qua la moi thu
+        # nginx dang lo — client_max_body_size 10m cho upload CV, tat buffer cho
+        # SSE, timeout dai cho luot LLM — deu KHONG co tac dung voi nguoi dung.
+        #
+        # Dev cuc bo khong chay nginx thi dat lai bien nay ve http://localhost:8001.
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE-}
         NEXT_PUBLIC_DOMAIN: ${NEXT_PUBLIC_DOMAIN:-http://localhost:8002}
         # Kill-switch AI: phai truyen luc BUILD (Next inline hoa NEXT_PUBLIC_*),
         # dat o `environment:` khong co tac dung. Mac dinh rong = tat.
