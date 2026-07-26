@@ -172,7 +172,11 @@ services:
       - talentpulse
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/nginx-health"]
+      # 127.0.0.1 chu KHONG phai localhost: trong container, `localhost` phan giai
+      # ra ::1 (IPv6) truoc, ma `listen 80` cua nginx chi bind IPv4 -> healthcheck
+      # bao "Connection refused" va container bi danh dau unhealthy trong khi no
+      # dang phuc vu binh thuong. Da vap dung loi nay luc test.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/nginx-health"]
       interval: 30s
       timeout: 5s
       retries: 3
