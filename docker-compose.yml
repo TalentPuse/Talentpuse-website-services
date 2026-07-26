@@ -51,18 +51,6 @@ services:
       # duoc khi no chet, nen tro sai hoac khong co redis chi lam mat cache chu
       # khong gay tinh nang. Xem app/core/cache.py.
       REDIS_URL: ${REDIS_URL:-redis://tp-redis:6379/0}
-      # Duong doc kho phan tich tren box warehouse, qua Tailscale:
-      #   postgresql://admin:<mat khau>@100.124.115.124:5432/warehouse
-      #
-      # KHONG dat thi tu dong bang DATABASE_URL (xem app/core/config.py), tuc moi
-      # thu chay y nhu truoc — nho vay chuyen dan tung module doc kho sang
-      # get_warehouse_db() duoc, khong phai mot cu big-bang.
-      #
-      # Da xac minh 2026-07-26 tu mot node tailnet: ket noi OK, warehouse chay
-      # PostgreSQL 15.18, co du dbt_dev_bronze/silver/gold/feature/seeds +
-      # normalization + raw. Kho nay KHONG chua schema `app` — du lieu nguoi dung
-      # thuoc ve tp-postgres, hai thu tach bach hoan toan.
-      WAREHOUSE_DATABASE_URL: ${WAREHOUSE_DATABASE_URL-}
     networks:
       - talentpulse
     restart: unless-stopped
@@ -153,7 +141,7 @@ services:
     container_name: tp-postgres
     # Khong publish ra host: chi cac service trong mang talentpulse ket noi duoc.
     environment:
-      POSTGRES_USER: ${APP_POSTGRES_USER:-talentpuse}
+      POSTGRES_USER: ${APP_POSTGRES_USER:-talentpulse}
       # CO default, KHONG dung cu phap `:?` bat buoc nhu DATABASE_URL.
       #
       # Ly do: compose PARSE CA FILE ke ca khi chi `up -d backend`, nen mot bien
@@ -166,14 +154,14 @@ services:
       #   python -c "import secrets; print(secrets.token_urlsafe(32))"
       # Service nay khong publish cong ra host, chi cac container cung mang thay.
       POSTGRES_PASSWORD: ${APP_POSTGRES_PASSWORD:-change-me-before-migration}
-      POSTGRES_DB: ${APP_POSTGRES_DB:-talentpuse}
+      POSTGRES_DB: ${APP_POSTGRES_DB:-talentpulse}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - talentpulse
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${APP_POSTGRES_USER:-talentpuse} -d ${APP_POSTGRES_DB:-talentpuse}"]
+      test: ["CMD-SHELL", "pg_isready -U ${APP_POSTGRES_USER:-talentpulse} -d ${APP_POSTGRES_DB:-talentpulse}"]
       interval: 10s
       timeout: 5s
       retries: 5

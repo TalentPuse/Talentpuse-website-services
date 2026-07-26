@@ -69,9 +69,6 @@ async def _alert_loop() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await db_module.init_db()
-    # Ket noi doc kho tren box warehouse. Chua dat WAREHOUSE_DATABASE_URL thi no
-    # tro cung mot noi voi DATABASE_URL, nen buoc nay khong doi hanh vi gi.
-    await db_module.init_warehouse_db()
     if AGUI_ENABLED:
         from app.api.agui import init_agui
 
@@ -83,7 +80,6 @@ async def lifespan(app: FastAPI):
         from app.api.agui import close_agui
 
         await close_agui()
-    await db_module.close_warehouse_db()
     await db_module.close_db()
 
 

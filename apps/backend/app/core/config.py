@@ -90,15 +90,3 @@ ALERT_END_TIME = time(21, 30)
 # xem app/core/cache.py.
 REDIS_URL = os.getenv("REDIS_URL", "redis://tp-redis:6379/0")
 
-# Ket noi RIENG toi kho phan tich dbt (dbt_dev_bronze/silver/gold).
-#
-# MAC DINH BANG DATABASE_URL — day la diem mau chot de viec tach DB khong phai
-# mot cu big-bang: hien app va kho van chung mot database, nen chua dat bien nay
-# thi moi thu chay y nhu cu. Khi da tach, dat WAREHOUSE_DATABASE_URL tro vao kho
-# roi chuyen dan tung module doc kho sang `get_warehouse_db()`. Chuyen toi dau
-# chay tot toi do, moi buoc deploy doc lap duoc.
-_WAREHOUSE_RAW = os.getenv("WAREHOUSE_DATABASE_URL") or DATABASE_URL_RAW
-if _WAREHOUSE_RAW.startswith("postgresql://"):
-    WAREHOUSE_DATABASE_URL = _WAREHOUSE_RAW.replace("postgresql://", "postgresql+asyncpg://", 1)
-else:
-    WAREHOUSE_DATABASE_URL = _WAREHOUSE_RAW
