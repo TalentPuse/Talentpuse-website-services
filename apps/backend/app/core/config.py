@@ -85,3 +85,7 @@ AGUI_ENABLED = os.getenv("AGUI_ENABLED", "0") == "1"
 VN_TZ = timezone(timedelta(hours=7))
 ALERT_START_TIME = time(7, 30)
 ALERT_END_TIME = time(21, 30)
+
+# Cache tuy chon. Co default (khac DATABASE_URL): Redis chet thi app van chay,
+# xem app/core/cache.py.
+REDIS_URL = os.getenv("REDIS_URL", "redis://tp-redis:6379/0")

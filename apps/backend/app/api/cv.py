@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, Fil
 from sqlalchemy import delete, text as sa_text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_get_json, cache_set_json
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.cv_document import CvDocument
@@ -23,6 +24,11 @@ from app.services.cv_parser import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Từ vựng kỹ năng thị trường chỉ đổi khi dbt chạy lại (hàng ngày). `v1` trong
+# key để lần sau đổi định dạng thì chỉ cần bump lên v2, khỏi phải xoá cache tay.
+_MARKET_SKILLS_KEY = "cv:market_skills:v1"
+_MARKET_SKILLS_TTL = 3600
 
 router = APIRouter(prefix="/api/cv", tags=["cv"])
 
@@ -88,12 +94,18 @@ async def upload_cv(
     # Bọc try/except là BẮT BUỘC: mart_skill_demand thuộc kho dbt, không phải
     # schema app. Kho lỗi hoặc chưa build thì upload CV vẫn phải chạy — thiếu
     # từ vựng chỉ làm khớp job kém đi, còn ném lỗi là hỏng cả tính năng.
-    market_skills: list[str] | None = None
+    # Cache 1 giờ: từ vựng này chỉ đổi theo nhịp dbt chạy (hàng ngày), nên đọc
+    # lại kho ở MỌI lần upload CV là lãng phí. Redis chết thì cache_get_json trả
+    # None và ta rơi xuống truy vấn kho như cũ — không nhánh nào hỏng.
+    market_skills: list[str] | None = await cache_get_json(_MARKET_SKILLS_KEY)
     try:
-        rows = await db.execute(
-            sa_text("select skill from dbt_dev_gold.mart_skill_demand order by n_jobs desc limit 200")
-        )
-        market_skills = [r[0].strip().lower() for r in rows.all() if r[0] and r[0].strip()] or None
+        if not market_skills:
+            rows = await db.execute(
+                sa_text("select skill from dbt_dev_gold.mart_skill_demand order by n_jobs desc limit 200")
+            )
+            market_skills = [r[0].strip().lower() for r in rows.all() if r[0] and r[0].strip()] or None
+            if market_skills:
+                await cache_set_json(_MARKET_SKILLS_KEY, market_skills, _MARKET_SKILLS_TTL)
     except Exception:
         logger.warning("mart_skill_demand unavailable; parsing CV without market vocabulary", exc_info=True)
         # Postgres abort cả transaction khi một câu lệnh lỗi: mọi truy vấn sau
