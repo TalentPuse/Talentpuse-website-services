@@ -26,6 +26,10 @@ services:
       # Cung ly do voi tp-latex: `up -d backend` chi dung service duoc goi ten,
       # nen thieu depends_on thi redis khong bao gio duoc khoi dong tren box.
       - redis
+      # DB cua app nam ngay tren web box nay. Backend chay `alembic upgrade head`
+      # luc khoi dong, nen postgres PHAI len truoc — thieu depends_on thi lenh
+      # alembic that bai va container crash-loop.
+      - postgres
     env_file: .env
     environment:
       # Postgres lives on the warehouse box. No default: a fallback here would
