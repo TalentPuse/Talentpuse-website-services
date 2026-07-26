@@ -127,6 +127,11 @@ def _make_fake_user(**overrides):
     )
     defaults.update(overrides)
     user = MagicMock(spec=User)
+    # spec=User khien moi thuoc tinh tra ve MagicMock thay vi None, nen Pydantic
+    # nhan MagicMock cho `cv_file_url` va nem "Input should be a valid string".
+    # Mock cu hon schema: UserResponse them field nay sau. API that van chay dung
+    # (GET/PUT /api/auth/me deu 200) — day thuan tuy la loi test.
+    user.cv_file_url = None
     for k, v in defaults.items():
         setattr(user, k, v)
     return user
