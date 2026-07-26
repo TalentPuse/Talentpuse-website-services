@@ -127,6 +127,45 @@ services:
       timeout: 5s
       retries: 3
 
+  # Postgres RIENG cho du lieu van hanh cua app (schema `app`: user, ung tuyen,
+  # chat, alert log). KHAC HAN kho phan tich dbt tren warehouse box.
+  #
+  # ⚠️ CANH BAO: tu khi service nay giu du lieu that, `docker compose down -v`
+  # tren web box se XOA SACH TAI KHOAN NGUOI DUNG. Truoc day lenh do vo hai vi
+  # web box khong giu trang thai gi. Xem docs/DEPLOY.md.
+  #
+  # Chua co ai dung service nay: backend van tro DATABASE_URL vao kho nhu cu cho
+  # toi khi buoc di tru chay. Them truoc de ha tang san sang, khong doi hanh vi.
+  postgres:
+    image: postgres:16-alpine
+    container_name: tp-postgres
+    # Khong publish ra host: chi cac service trong mang talentpulse ket noi duoc.
+    environment:
+      POSTGRES_USER: ${APP_POSTGRES_USER:-talentpuse}
+      # CO default, KHONG dung cu phap `:?` bat buoc nhu DATABASE_URL.
+      #
+      # Ly do: compose PARSE CA FILE ke ca khi chi `up -d backend`, nen mot bien
+      # bat buoc o day se lam GAY TAT CA workflow CI hien tai (chung khong ghi
+      # bien nay vao .env). Da thu va xac nhan: `docker compose config` bao loi.
+      #
+      # ⚠️ Mat khau mac dinh nay chi an toan chung nao DB con RONG. Truoc khi chay
+      # buoc di tru dua du lieu nguoi dung that sang day, BAT BUOC dat
+      # APP_POSTGRES_PASSWORD bang mot chuoi that:
+      #   python -c "import secrets; print(secrets.token_urlsafe(32))"
+      # Service nay khong publish cong ra host, chi cac container cung mang thay.
+      POSTGRES_PASSWORD: ${APP_POSTGRES_PASSWORD:-change-me-before-migration}
+      POSTGRES_DB: ${APP_POSTGRES_DB:-talentpuse}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - talentpulse
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${APP_POSTGRES_USER:-talentpuse} -d ${APP_POSTGRES_DB:-talentpuse}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:7-alpine
     container_name: tp-redis
@@ -183,6 +222,10 @@ services:
 
 volumes:
   redis-data:
+  # ⚠️ Chua du lieu NGUOI DUNG THAT (tai khoan, ung tuyen, chat, alert log).
+  # `docker compose down -v` xoa volume nay = mat sach. Luon dump ra R2 truoc khi
+  # lam bat cu thao tac nao co co -v.
+  postgres-data:
 
 networks:
   # Owned by this compose file now, not borrowed. It used to be `external: true`,
