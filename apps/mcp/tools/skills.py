@@ -22,28 +22,27 @@ async def query_skill_gap(
             description="Comma-separated skills the user already knows, e.g. 'python,sql,docker'"
         ),
     ],
-    category: Annotated[
-        str | None,
-        Field(
-            description="Filter by category: ai_ml, programming_languages, frameworks_libraries, cloud_platforms, databases, devops_tools, data_engineering, soft_skills"
-        ),
-    ] = None,
     limit: Annotated[int, Field(description="Max skills to return", ge=1, le=50)] = 20,
 ) -> str:
     """Query top in-demand skills that the user DOES NOT already have.
-    Returns skill name, category, number of jobs requiring it, average salary."""
+    Returns skill name, number of jobs requiring it, average salary.
+
+    KHONG loc duoc theo nganh: kho chi co dbt_dev_gold.mart_skill_demand, ma bang
+    do khong he co chieu category (cot: skill, n_jobs, pct_of_jobs, avg_salary_vnd,
+    ...). Truoc day ham nay NHAN tham so `category` roi lang le bo qua — nguoi goi
+    tuong dang loc theo nganh nhung nhan ve so lieu cua toan bo thi truong."""
     skills = tuple(s.strip().lower() for s in user_skills.split(",") if s.strip())
     if not skills:
         return "Please provide at least one skill the user already knows."
 
-    rows = await _skill_repo.gap(exclude_skills=skills, category=category, limit=limit)
+    rows = await _skill_repo.gap(exclude_skills=skills, limit=limit)
     if not rows:
         return "No skill gap data found."
 
     lines = ["Skill gap analysis (skills user chưa có):\n"]
     for r in rows:
         lines.append(
-            f"- {r.skill} ({r.skill_category}): "
+            f"- {r.skill}: "
             f"{r.n_jobs} jobs, avg {r.avg_salary_m or '?'}M VND"
         )
     return "\n".join(lines)

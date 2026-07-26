@@ -11,7 +11,6 @@ class SkillRepository(BaseRepository):
     async def gap(
         self,
         exclude_skills: tuple[str, ...],
-        category: str | None = None,
         limit: int = 20,
     ) -> list[SkillGapRow]:
         # Normalize to lowercase for case-insensitive exclusion
@@ -43,7 +42,6 @@ class SkillRepository(BaseRepository):
 
     async def demand(
         self,
-        category: str | None = None,
         limit: int = 15,
     ) -> list[SkillDemandRow]:
         rows = await self._fetch(

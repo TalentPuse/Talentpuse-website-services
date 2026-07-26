@@ -41,14 +41,12 @@ async def get_job_market_overview(
 @tool(tags={"analytics", "readonly"})
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
 async def get_top_skills(
-    category: Annotated[
-        str | None,
-        Field(description="Filter by skill category: ai_ml, programming_languages, etc."),
-    ] = None,
     limit: Annotated[int, Field(description="Number of skills", ge=1, le=50)] = 15,
 ) -> str:
-    """Get top in-demand skills across all jobs. Returns skill name, number of jobs, average salary."""
-    rows = await _skill_repo.demand(category=category, limit=limit)
+    """Get top in-demand skills across all jobs. Returns skill name, number of jobs, average salary.
+
+    KHONG co bo loc theo nganh: mart_skill_demand khong co chieu category."""
+    rows = await _skill_repo.demand(limit=limit)
     return f"[{','.join(r.model_dump_json() for r in rows)}]"
 
 

@@ -22,9 +22,36 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        # PHAI la apps/mcp, dung doi thanh thu muc goc repo: cac test import
+        # bang `from tests...`, chay sai cho la `ModuleNotFoundError: No module
+        # named 'tests'` va CI do vi ly do khong lien quan gi toi chat luong code.
+        working-directory: apps/mcp
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
   build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
+    needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     permissions:
       contents: read

@@ -35,17 +35,17 @@ class TestSkillGap:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_gap_with_category_filter(self, repo, mock_db):
-        mock_db.fetch.return_value = [
-            make_record({"skill": "pytorch", "skill_category": "ai_ml", "n_jobs": 45, "avg_salary_m": 28.0}),
-        ]
+    async def test_gap_khong_nhan_tham_so_category(self, repo, mock_db):
+        """Kho KHONG co chieu category nen API khong duoc hua loc theo nganh.
 
-        result = await repo.gap(exclude_skills=("python",), category="ai_ml", limit=10)
+        Truoc day gap() nhan `category` roi lang le bo qua: nguoi goi tuong dang
+        loc theo nganh nhung nhan ve so lieu toan thi truong. Bo han tham so thi
+        loi thanh loi bao ngay tai cho goi, thay vi mot ket qua sai im lang.
+        """
+        import inspect
 
-        assert len(result) == 1
-        # Verify category filter passed as $3 (args: exclude_skills, limit, category)
-        call_args = mock_db.fetch.call_args
-        assert call_args[0][3] == "ai_ml"
+        assert "category" not in inspect.signature(repo.gap).parameters
+
 
     @pytest.mark.asyncio
     async def test_gap_null_salary(self, repo, mock_db):
@@ -73,13 +73,11 @@ class TestSkillDemand:
         assert result[0].pct_of_jobs == 45.5
 
     @pytest.mark.asyncio
-    async def test_demand_with_category(self, repo, mock_db):
-        mock_db.fetch.return_value = []
+    async def test_demand_khong_nhan_tham_so_category(self, repo, mock_db):
+        """Cung ly do voi test_gap_khong_nhan_tham_so_category."""
+        import inspect
 
-        await repo.demand(category="ai_ml", limit=10)
-
-        call_args = mock_db.fetch.call_args
-        assert call_args[0][2] == "ai_ml"
+        assert "category" not in inspect.signature(repo.demand).parameters
 
 
 class TestSkillTrends:

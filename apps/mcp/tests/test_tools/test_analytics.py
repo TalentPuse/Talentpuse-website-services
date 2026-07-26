@@ -120,14 +120,20 @@ class TestGetTopSkillsTool:
         assert result == "[]"
 
     @pytest.mark.asyncio
-    async def test_with_category_filter(self):
+    async def test_khong_con_tham_so_category(self):
+        """Tool khong duoc phoi tham so ma kho khong tra loi duoc.
+
+        mart_skill_demand khong co chieu category, nen truoc day tool nhan
+        `category` roi lang le bo qua — agent tuong dang loc theo nganh va tu van
+        bang so lieu cua toan thi truong.
+        """
+        import inspect
+
         from mcp_server.tools.analytics import get_top_skills
 
-        with patch("mcp_server.tools.analytics._skill_repo") as mock_repo:
-            mock_repo.demand = AsyncMock(return_value=[])
-            await get_top_skills(category="ai_ml", limit=10)
+        fn = getattr(get_top_skills, "fn", get_top_skills)
+        assert "category" not in inspect.signature(fn).parameters
 
-        mock_repo.demand.assert_called_once_with(category="ai_ml", limit=10)
 
 
 class TestGetSalaryAnalysisTool:

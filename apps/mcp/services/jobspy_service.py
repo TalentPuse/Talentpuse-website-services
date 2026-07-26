@@ -217,8 +217,21 @@ async def search_jobs(
 
     elapsed = round(time.time() - start_time, 1)
 
+    # success=False khi MOI nguon deu loi.
+    #
+    # Truoc day dong nay la `success=True` vo dieu kien, nen khi ca linkedin lan
+    # indeed cung chet, ham van tra success=True voi jobs=[] — agent AI doc vay
+    # se noi voi nguoi dung "khong tim thay viec lam nao phu hop", trong khi su
+    # that la "tat ca nguon deu hong". Hai cau do dan toi hai hanh dong khac han:
+    # mot cai lam ho bo cuoc, mot cai lam ho thu lai sau.
+    #
+    # Con it nhat mot nguon chay duoc thi van tinh la thanh cong mot phan:
+    # source_errors da mang thong tin nguon nao hong, khong can ha ca ket qua
+    # xuong that bai.
+    all_sources_failed = bool(source_errors) and len(source_errors) >= len(sources)
+
     return JobSearchResponse(
-        success=True,
+        success=not all_sources_failed,
         total_found=len(jobs),
         jobs=jobs,
         source_errors=source_errors or None,
