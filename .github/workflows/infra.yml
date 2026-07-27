@@ -65,6 +65,41 @@ jobs:
           docker run --rm -v "$PWD/deploy/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
             nginx:1.27-alpine nginx -t
 
+      # Caddy cua nha cung cap VPS chiem san 0.0.0.0:80 va enabled trong systemd,
+      # nen nginx khong bind duoc: "failed to bind host port 0.0.0.0:80/tcp:
+      # address already in use" -> container ket o Created, ExitCode=128.
+      #
+      # Caddy do dang chay Caddyfile MAC DINH (chi file_server tro /usr/share/caddy,
+      # khong reverse_proxy, khong domain, khong TLS) nen tat di khong mat gi.
+      # Giu nginx vi config cua repo co nhung thu Caddy mac dinh khong co:
+      # `proxy_buffering off` cho SSE (chat AI), block /api/copilotkit dat truoc
+      # /api/, va resolver dong de song sot qua moi lan redeploy backend.
+      #
+      # Chi tat DUNG caddy. Neu port 80 bi thu KHAC chiem thi bao loi va dung lai
+      # — tu dong kill mot tien trinh khong ro cua ai la cach pha server.
+      # Muon lui: `sudo systemctl enable --now caddy`.
+      - name: Free port 80 (disable Caddy)
+        run: |
+          if ! sudo ss -tlnp 'sport = :80' | grep -q LISTEN; then
+            echo "Port 80 dang trong — khong can lam gi."
+            exit 0
+          fi
+          if sudo ss -tlnp 'sport = :80' | grep -qi caddy; then
+            echo "Caddy dang giu port 80 — tat va disable."
+            sudo systemctl disable --now caddy
+            sleep 2
+            if sudo ss -tlnp 'sport = :80' | grep -q LISTEN; then
+              echo "VAN CON tien trinh giu port 80:"
+              sudo ss -tlnp 'sport = :80'
+              exit 1
+            fi
+            echo "Port 80 da duoc giai phong."
+          else
+            echo "Port 80 bi chiem boi tien trinh KHONG PHAI caddy — dung lai, can nguoi xem:"
+            sudo ss -tlnp 'sport = :80'
+            exit 1
+          fi
+
       - name: Deploy nginx + redis
         run: |
           # `--no-deps` la CO Y: nginx khai bao depends_on frontend+backend, nen
