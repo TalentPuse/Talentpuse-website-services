@@ -171,6 +171,7 @@ jobs:
           S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
           S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+          MCP_DATABASE_URL=${{ secrets.MCP_DATABASE_URL }}
           EOF
           sed -i 's/^[[:space:]]*//' .env
 

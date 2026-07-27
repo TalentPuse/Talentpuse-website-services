@@ -119,7 +119,13 @@ services:
       # DATABASE_URL da thuoc ve backend (schema app). MCP tro vao warehouse.
       # Same story as the backend: `talentpulse-postgres` was a docker DNS name on
       # the shared network and resolves to nothing from the web box.
-      DATABASE_URL: "${MCP_DATABASE_URL:?MCP_DATABASE_URL must be set - point it at the warehouse box tailnet IP}"
+      # KHONG dung `:?` o day. Compose noi suy CA FILE luc parse, nen mot bien
+      # bat buoc cua service nay lam CHET moi lenh compose tren may — ke ca
+      # `docker compose up -d backend`, thu chang lien quan gi toi MCP. Da vap
+      # that: deploy backend do o day du MCP khong he duoc bat.
+      # Default duoi day co y VO NGHIA de MCP that bai ngay va noi ro ly do khi
+      # ai do that su bat no, thay vi am tham tro nham DB.
+      DATABASE_URL: "${MCP_DATABASE_URL:-postgresql://MCP_DATABASE_URL-chua-duoc-dat@127.0.0.1:1/warehouse}"
       DASHBOARD_API_URL: ${DASHBOARD_API_URL:-http://tp-backend:8001}
       DASHBOARD_API_SECRET: ${DASHBOARD_API_SECRET:-}
     networks:
