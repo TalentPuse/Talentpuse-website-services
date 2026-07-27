@@ -105,8 +105,17 @@ jobs:
           echo "Port 80 DANG BI CHIEM:"
           ss -tln 'sport = :80'
 
-          # Tu day tro di bat buoc phai co sudo khong-mat-khau. Thieu thi DUNG HAN
-          # va noi ro cach xu ly, thay vi im lang di tiep.
+          # NGINX CUA CHINH TA giu cong la BINH THUONG, khong phai chuong ngai:
+          # khi compose recreate, container cu nha cong roi container moi bind lai.
+          # Thieu nhanh nay thi step chan dung cai trang thai KHOE MANH ma no sinh
+          # ra de tao — da vap that sau khi Caddy bi dep va nginx len xanh.
+          if docker ps --filter 'name=^tp-nginx$' --filter 'status=running' -q | grep -q .; then
+            echo "Cong dang do tp-nginx (cua ta) giu — binh thuong, compose se recreate."
+            exit 0
+          fi
+
+          # Tu day tro di la tien trinh LA giu cong, va can sudo de xem/tat. Thieu
+          # sudo thi DUNG HAN va noi ro cach xu ly, thay vi im lang di tiep.
           if ! sudo -n true 2>/dev/null; then
             echo ""
             echo "Runner khong co sudo khong-mat-khau nen khong tu giai phong duoc."
