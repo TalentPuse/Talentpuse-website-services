@@ -121,6 +121,14 @@ jobs:
           NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }}
           NEXT_PUBLIC_DOMAIN=${{ secrets.NEXT_PUBLIC_DOMAIN }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
+          # Ba workflow (backend/frontend/infra) cung GHI DE mot file .env tren
+          # runner, va compose noi suy CA FILE luc parse. Nen `.env` cua workflow
+          # nay van phai co du cac bien `:?` cua service KHAC, neu khong
+          # `docker compose up -d frontend` chet ngay o buoc noi suy — dung kieu
+          # loi MCP_DATABASE_URL da lam do deploy backend hom nay.
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          TELEGRAM_WEBHOOK_SECRET=${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          APP_POSTGRES_PASSWORD=${{ secrets.APP_POSTGRES_PASSWORD }}
           EOF
           sed -i 's/^[[:space:]]*//' .env
 

@@ -172,6 +172,12 @@ jobs:
           S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
           S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
           MCP_DATABASE_URL=${{ secrets.MCP_DATABASE_URL }}
+          # Mac dinh trong compose la `change-me-before-migration`. Khong ghi bien
+          # nay ra .env thi moi lan tp-postgres duoc TAO LAI tren volume moi se am
+          # tham quay ve mat khau yeu do. Postgres chi ap POSTGRES_PASSWORD luc
+          # khoi tao volume LAN DAU, nen dat bien khong doi mat khau cua DB dang
+          # co — muon doi phai `ALTER USER`.
+          APP_POSTGRES_PASSWORD=${{ secrets.APP_POSTGRES_PASSWORD }}
           EOF
           sed -i 's/^[[:space:]]*//' .env
 

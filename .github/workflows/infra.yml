@@ -50,6 +50,9 @@ jobs:
           TELEGRAM_WEBHOOK_SECRET=${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
           MCP_DATABASE_URL=${{ secrets.MCP_DATABASE_URL }}
           REDIS_URL=${{ secrets.REDIS_URL }}
+          # Xem ghi chu trong backend.yml: thieu bien nay thi tp-postgres tao lai
+          # tren volume moi se quay ve mat khau mac dinh yeu ma khong ai biet.
+          APP_POSTGRES_PASSWORD=${{ secrets.APP_POSTGRES_PASSWORD }}
           EOF
           sed -i 's/^[[:space:]]*//' .env
           test -f .env || { echo "Failed to create .env"; exit 1; }
