@@ -80,25 +80,55 @@ jobs:
       # Muon lui: `sudo systemctl enable --now caddy`.
       - name: Free port 80 (disable Caddy)
         run: |
-          if ! sudo ss -tlnp 'sport = :80' | grep -q LISTEN; then
+          set -u
+          # Do cong KHONG dung sudo. `ss -tln` liet ke duoc socket dang LISTEN voi
+          # user thuong; chi phan lay TEN TIEN TRINH (-p) va tat service moi can quyen.
+          #
+          # Ban dau step nay chay `sudo ss ...` roi suy ra "cong trong" khi lenh
+          # khong in ra LISTEN. Runner khong co sudo khong-mat-khau -> lenh loi,
+          # output rong -> step bao "port 80 dang trong" va di tiep, de nginx chet
+          # o buoc sau voi "address already in use". Coi LENH THAT BAI la CONG TRONG
+          # la bug: phai tach ro "do duoc va trong" voi "khong do duoc".
+          if ! command -v ss >/dev/null 2>&1; then
+            echo "Khong tim thay lenh 'ss' — khong the kiem tra port 80."
+            exit 1
+          fi
+
+          if ! ss -tln 'sport = :80' | grep -q LISTEN; then
             echo "Port 80 dang trong — khong can lam gi."
             exit 0
           fi
-          if sudo ss -tlnp 'sport = :80' | grep -qi caddy; then
-            echo "Caddy dang giu port 80 — tat va disable."
-            sudo systemctl disable --now caddy
-            sleep 2
-            if sudo ss -tlnp 'sport = :80' | grep -q LISTEN; then
-              echo "VAN CON tien trinh giu port 80:"
-              sudo ss -tlnp 'sport = :80'
-              exit 1
-            fi
-            echo "Port 80 da duoc giai phong."
-          else
-            echo "Port 80 bi chiem boi tien trinh KHONG PHAI caddy — dung lai, can nguoi xem:"
-            sudo ss -tlnp 'sport = :80'
+
+          echo "Port 80 DANG BI CHIEM:"
+          ss -tln 'sport = :80'
+
+          # Tu day tro di bat buoc phai co sudo khong-mat-khau. Thieu thi DUNG HAN
+          # va noi ro cach xu ly, thay vi im lang di tiep.
+          if ! sudo -n true 2>/dev/null; then
+            echo ""
+            echo "Runner khong co sudo khong-mat-khau nen khong tu giai phong duoc."
+            echo "Chay MOT LAN tren box (quyen root):"
+            echo "    sudo systemctl disable --now caddy"
+            echo "Sau do chay lai workflow nay — step se thay port 80 trong va di qua."
             exit 1
           fi
+
+          if ! sudo -n systemctl is-active --quiet caddy; then
+            echo ""
+            echo "Port 80 bi chiem boi thu KHONG PHAI caddy — dung lai, can nguoi xem:"
+            sudo -n ss -tlnp 'sport = :80' || true
+            exit 1
+          fi
+
+          echo "Caddy dang giu port 80 — tat va disable."
+          sudo -n systemctl disable --now caddy
+          for i in 1 2 3 4 5; do
+            ss -tln 'sport = :80' | grep -q LISTEN || { echo "Port 80 da duoc giai phong."; exit 0; }
+            sleep 2
+          done
+          echo "Da tat caddy nhung port 80 VAN bi giu:"
+          sudo -n ss -tlnp 'sport = :80' || true
+          exit 1
 
       - name: Deploy nginx + redis
         run: |
