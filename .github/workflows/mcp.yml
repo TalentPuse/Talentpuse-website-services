@@ -94,7 +94,15 @@ jobs:
 
   deploy:
     name: Deploy to Server
-    runs-on: [self-hosted, Linux, X64, mcp_warehouse]
+    # Cung ly do nhu frontend.yml: chi co MOT runner, mang label
+    # `talentpulse_backend`. Label `mcp_warehouse` khong ung voi runner nao nen
+    # job treo vo han thay vi bao loi.
+    #
+    # Service mcp vi the chay tren WEB BOX va noi toi kho qua tailnet
+    # (MCP_DATABASE_URL tro IP tailnet cua box warehouse) — nhat quan voi cach
+    # bien do duoc khai bao. Neu sau nay box warehouse co runner rieng thi doi
+    # lai label o day.
+    runs-on: [self-hosted, Linux, X64, talentpulse_backend]
     needs: build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     timeout-minutes: 10

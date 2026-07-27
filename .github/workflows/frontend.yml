@@ -101,7 +101,15 @@ jobs:
 
   deploy:
     name: Deploy to Server
-    runs-on: [self-hosted, Linux, X64, talentpulse_frontend]
+    # `talentpulse_backend` chu KHONG phai `talentpulse_frontend`: chi co MOT
+    # runner tren web box va no mang label nay. Doi label khac thi job treo vo
+    # han o "Waiting for a runner to pick up this job" — khong bao gio timeout,
+    # khong bao gio bao loi.
+    #
+    # Frontend cung BUOC phai cung may voi backend: nginx proxy toi
+    # `tp-frontend-standalone` bang TEN CONTAINER, chi phan giai duoc khi hai
+    # container cung docker network — tuc cung host.
+    runs-on: [self-hosted, Linux, X64, talentpulse_backend]
     needs: build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     timeout-minutes: 20
