@@ -149,6 +149,15 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: tp-postgres
+    # "127.0.0.1:5432" chu KHONG phai "5432:5432". Dang sau bind 0.0.0.0 = phoi
+    # DB ra Internet cho ca the gioi thu mat khau. Dang nay chi nghe tren loopback
+    # cua host; box warehouse voi toi qua `tailscale serve`, khong qua IP cong cong.
+    #
+    # Can co de flow `sync_to_web` (repo pipeline_data) day du lieu job tu kho
+    # sang day. Truoc do tp-postgres khong publish gi ca nen khong ai ngoai host
+    # nay cham toi duoc — ke ca qua tailnet.
+    ports:
+      - "127.0.0.1:5432:5432"
     # Khong publish ra host: chi cac service trong mang talentpulse ket noi duoc.
     environment:
       POSTGRES_USER: ${APP_POSTGRES_USER:-talentpulse}
