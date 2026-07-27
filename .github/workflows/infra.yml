@@ -145,7 +145,13 @@ jobs:
       - name: Smoke check
         run: |
           for i in $(seq 1 10); do
-            if curl -fsS http://localhost/nginx-health >/dev/null; then
+            # 127.0.0.1 chu KHONG phai localhost. Tren host, `localhost` phan giai
+            # ::1 truoc, ma docker publish "80:80" chi nghe IPv4 (0.0.0.0) -> curl
+            # bi tu choi ket noi du nginx chay binh thuong.
+            # Da vap that: khi Caddy con giu cong thi smoke check ra 404 (Caddy bind
+            # dual-stack nen ::1 van tra loi); dep Caddy xong, nginx len, smoke check
+            # lai thanh "Failed to connect" — chinh la luc IPv6 lo ra.
+            if curl -fsS http://127.0.0.1/nginx-health >/dev/null; then
               echo "nginx serving OK"
               exit 0
             fi
