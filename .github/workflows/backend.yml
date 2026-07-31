@@ -181,6 +181,11 @@ jobs:
           S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
           S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
           MCP_DATABASE_URL=${{ secrets.MCP_DATABASE_URL }}
+          # Cong tat toan bo duong AG-UI (/api/agent). Secret nay da ton tai tren
+          # GitHub tu lau nhung KHONG workflow nao ghi no ra .env va compose cung
+          # khong truyen — nen config.py luon doc mac dinh "0" va prod chua bao
+          # gio mount /api/agent. Dat "1" o day de bat that su.
+          AGUI_ENABLED=${{ secrets.AGUI_ENABLED }}
           # Mac dinh trong compose la `change-me-before-migration`. Khong ghi bien
           # nay ra .env thi moi lan tp-postgres duoc TAO LAI tren volume moi se am
           # tham quay ve mat khau yeu do. Postgres chi ap POSTGRES_PASSWORD luc

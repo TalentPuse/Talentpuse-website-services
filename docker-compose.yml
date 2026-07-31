@@ -49,6 +49,14 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-talentpulse-raw}
+      # Cong tat cua TOAN BO duong AG-UI. config.py doc `AGUI_ENABLED` va mac
+      # dinh "0"; tat thi main.py khong goi init_agui() nen /api/agent KHONG
+      # TON TAI. Truoc day bien nay khong duoc truyen o day lan trong .env cua
+      # bat ky workflow nao — secret AGUI_ENABLED co tren GitHub nhung khong gi
+      # doc no — nen prod luon tat, va frontend goi /api/copilotkit -> runtime
+      # goi /api/agent/ -> 404. Do la mat xich thu hai lam AI "mat tich" tren
+      # prod, doc lap voi hai co NEXT_PUBLIC_* ben frontend.
+      AGUI_ENABLED: ${AGUI_ENABLED:-0}
       MCP_SERVER_URL: ${MCP_SERVER_URL:-http://tp-mcp:8080/mcp/}
       LATEX_SERVICE_URL: ${LATEX_SERVICE_URL:-http://tp-latex:8090}
       # Cache. CO default (khac DATABASE_URL): redis la TUY CHON — app phai chay
