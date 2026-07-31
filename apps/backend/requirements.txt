@@ -20,6 +20,16 @@ minio==7.2.15
 langchain>=1.0
 langchain-openai>=0.3
 fastmcp==2.11.2
+# PHAI ghim cung fastmcp. `mcp` la dependency cua fastmcp nhung khong duoc ghim,
+# nen pip keo ban MOI NHAT — ma ban moi da BO `AnyFunction` khoi `mcp.types`,
+# trong khi fastmcp 2.11.2 van import ten do. Ket qua: CI chet ngay o
+# `from fastmcp import Client` voi
+#   ImportError: cannot import name 'AnyFunction' from 'mcp.types'
+# Container prod khong dinh vi image duoc build tu truoc, luc `mcp` con tuong
+# thich — nen loi chi hien ra o CI (cai moi moi lan chay). 1.28.1 la ban dang
+# chay that trong tp-backend, da duoc chung minh hoat dong voi fastmcp 2.11.2.
+# Nang fastmcp thi phai kiem tra lai ghim nay.
+mcp==1.28.1
 pyyaml>=6.0
 resend>=2.0
 jinja2>=3.1
