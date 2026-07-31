@@ -114,10 +114,20 @@ export default function CopilotDock({
           <Sparkles className="h-5 w-5" strokeWidth={1.75} />
         </button>
       )}
-      {/* Mobile: nút nổi + sheet */}
+      {/*
+       * Mobile: nút nổi + sheet.
+       *
+       * CÓ NHÃN CHỮ, không phải icon trần. Bản cũ chỉ là một chấm tròn tím
+       * không chữ ở góc, và vì cột dock desktop bị `hidden` dưới breakpoint
+       * lg, đó là thứ DUY NHẤT còn lại trên màn hẹp — người dùng thật báo
+       * "không thấy trợ lý AI đâu cả" dù tính năng chạy hoàn hảo. Nhãn rẻ
+       * hơn nhiều so với việc hạ ngưỡng lg: dock rộng 380px, nhồi vào màn
+       * ~800px sẽ bóp nát bảng kanban bên cạnh.
+       */}
       <button ref={mobileTriggerRef} onClick={() => setMobileOpen(true)} aria-label="Mở trợ lý AI"
-        className="fixed bottom-5 right-5 z-40 rounded-full bg-brand-600 p-3 text-white shadow-lg lg:hidden">
+        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-medium text-white shadow-lg hover:bg-brand-700 lg:hidden">
         <Sparkles className="h-5 w-5" strokeWidth={1.75} />
+        Trợ lý AI
       </button>
       {mobileOpen && (
         <div role="dialog" aria-modal="true" aria-label="Trợ lý AI"

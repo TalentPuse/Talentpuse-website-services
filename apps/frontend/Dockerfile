@@ -26,6 +26,13 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# @copilotkit/runtime tu gui telemetry ve telemetry.copilotkit.ai tren moi luot
+# chay agent — quan sat duoc that: `POST telemetry.copilotkit.ai/ingest -> 202`
+# trong tab Network cua /applications. Du lieu su dung cua nguoi dung chay ra
+# ben thu ba ma khong ai bat co y. Ten bien lay tu chinh package da cai
+# (@copilotkit/shared doc COPILOTKIT_TELEMETRY_DISABLED va DO_NOT_TRACK).
+ENV COPILOTKIT_TELEMETRY_DISABLED=true
+ENV DO_NOT_TRACK=1
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
