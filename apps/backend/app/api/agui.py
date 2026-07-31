@@ -11,7 +11,9 @@ thừa hưởng `agui_auth` middleware ở trên vì cùng mount trên `agui_app
 """
 from __future__ import annotations
 
+import json
 import logging
+import re
 import uuid
 
 from ag_ui_langgraph import add_langgraph_fastapi_endpoint
@@ -20,12 +22,13 @@ from copilotkit import CopilotKitMiddleware, LangGraphAGUIAgent
 from fastapi import Depends, FastAPI, HTTPException
 from jose import JWTError, jwt
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from app.api.chat import _build_profile_dict
+from app.api.chat import DEFAULT_ROOM_TITLE, _build_profile_dict
 from app.core import database as db_module
 from app.core.config import DATABASE_URL_RAW, JWT_ALGORITHM, JWT_SECRET
 from app.core.database import get_db
@@ -39,11 +42,82 @@ logger = logging.getLogger(__name__)
 
 AGENT_NAME = "talentpuse_assistant"
 
+# Dock threads (components/copilot/DockChat.tsx:33) — `dock-<userId>` cho lượt
+# đầu, `dock-<userId>-<n>` sau mỗi lần bấm "Cuộc trò chuyện mới". Chúng KHÔNG
+# có hàng ChatRoom nào (đó là lý do GET /threads/... trả 404 mà dock vẫn chạy),
+# nên quyền sở hữu phải đọc thẳng từ chính chuỗi id.
+_DOCK_THREAD_RE = re.compile(r"^dock-([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:-\d+)?$")
+
 agui_app = FastAPI(title="TalentPuse AG-UI")
 
 _checkpointer_cm = None  # async context manager giữ pool
 _graph = None  # graph LangGraph (build_agent(...)) — set trong init_agui, đọc
 # read-only bởi get_thread_messages bên dưới (KHÔNG chạy graph, chỉ aget_state).
+
+
+async def _thread_belongs_to(thread_id: str, user: User, db: AsyncSession) -> bool:
+    """Caller có được chạy agent trên `thread_id` này không?
+
+    `AsyncPostgresSaver` khoá checkpoint THUẦN theo thread_id, nên nếu không
+    chặn ở đây thì bất kỳ ai đoán được thread_id của người khác đều nạp được
+    hội thoại riêng tư của họ làm ngữ cảnh rồi ghi tiếp vào đó — đúng lỗ mà
+    `get_thread_messages` bên dưới đã chặn cho đường ĐỌC nhưng đường CHẠY thì
+    chưa. Hai dạng thread, hai cách chứng minh quyền sở hữu:
+
+    1. `dock-<userId>[-n]` — id tự chứa danh tính, so thẳng, không tra DB.
+       Dạng này NGUY HIỂM hơn UUID vì suy được từ user id (không cần đoán).
+    2. UUID — chính là `ChatRoom.id` do client sinh; tra bảng chat_rooms.
+
+    Với dạng 2 và chưa có ChatRoom: nếu thread ĐÃ có checkpoint thì không cách
+    nào biết ai là chủ ⇒ từ chối. Nếu chưa có checkpoint thì đây là thread mới
+    tinh ⇒ nhận chủ cho caller NGAY, tạo luôn ChatRoom. Phải tạo ở đây (không
+    ỷ vào `useRoomRegistration` bên FE, vốn cố ý nuốt lỗi) — nếu không, lượt
+    createRoom hụt sẽ biến thread của chính chủ thành mồ côi và tin nhắn THỨ
+    HAI của họ bị chặn.
+    """
+    dock = _DOCK_THREAD_RE.match(thread_id)
+    if dock is not None:
+        return uuid.UUID(dock.group(1)) == user.id
+
+    try:
+        room_id = uuid.UUID(thread_id)
+    except ValueError:
+        return False
+
+    room = await db.get(ChatRoom, room_id)
+    if room is not None:
+        return room.user_id == user.id
+
+    existing_checkpoint = await db.execute(
+        text("SELECT 1 FROM public.checkpoints WHERE thread_id = :tid LIMIT 1"),
+        {"tid": thread_id},
+    )
+    if existing_checkpoint.first() is not None:
+        return False
+
+    db.add(ChatRoom(id=room_id, user_id=user.id, title=DEFAULT_ROOM_TITLE))
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Hai request song song cùng claim một thread mới: người thua đọc lại
+        # xem người thắng có phải chính mình không.
+        await db.rollback()
+        room = await db.get(ChatRoom, room_id)
+        return room is not None and room.user_id == user.id
+    return True
+
+
+def _thread_id_from(body: bytes) -> str | None:
+    """`RunAgentInput.thread_id` với alias_generator=to_camel ⇒ JSON là
+    `threadId`; `populate_by_name=True` nên snake_case cũng hợp lệ."""
+    try:
+        payload = json.loads(body)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    value = payload.get("threadId") or payload.get("thread_id")
+    return value if isinstance(value, str) and value else None
 
 
 @agui_app.middleware("http")
@@ -71,6 +145,31 @@ async def agui_auth(request: Request, call_next):
         return JSONResponse(
             {"detail": "Token không hợp lệ hoặc đã hết hạn"}, status_code=401
         )
+
+    # Route run/stream do `ag_ui_langgraph` sở hữu nên không gắn Depends được;
+    # chặn quyền sở hữu thread ở đây, TRƯỚC khi graph kịp nạp checkpoint. Chỉ
+    # POST mới cần: GET /threads/{id}/messages đã tự kiểm bên dưới.
+    if request.method == "POST":
+        body = await request.body()
+
+        # `await request.body()` tiêu luôn receive channel; app phía sau sẽ
+        # treo chờ body không bao giờ tới nếu không bơm lại.
+        async def _receive() -> dict:
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        request._receive = _receive  # type: ignore[attr-defined]
+
+        thread_id = _thread_id_from(body)
+        if thread_id is None:
+            return JSONResponse({"detail": "Thiếu threadId"}, status_code=422)
+        async with db_module.async_session_factory() as db:
+            if not await _thread_belongs_to(thread_id, user, db):
+                # 404 chứ không 403 — không lộ sự tồn tại của thread, giống hệt
+                # get_thread_messages và các handler room trong app/api/chat.py.
+                logger.warning(
+                    "Chặn truy cập thread %s bởi user %s", thread_id, user.id
+                )
+                return JSONResponse({"detail": "Room not found"}, status_code=404)
 
     ctx_token = current_agent_profile.set(_build_profile_dict(user))
     uid_token = current_agent_user_id.set(user.id)

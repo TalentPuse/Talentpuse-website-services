@@ -30,6 +30,11 @@ from app.services.agent.context import current_agent_user_id, current_cv_update_
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
+# Title của một phòng chưa có tin nhắn nào để đặt tên. Dùng chung với
+# api/agui.py, nơi middleware claim phòng hộ trước khi FE kịp đăng ký — so
+# sánh title ở create_room dựa vào đúng hằng số này.
+DEFAULT_ROOM_TITLE = "Cuộc trò chuyện mới"
+
 logger = logging.getLogger(__name__)
 
 
@@ -116,6 +121,15 @@ async def create_room(
         if existing is not None:
             if existing.user_id != current_user.id:
                 raise HTTPException(404, "Room not found")
+            # Ngoại lệ DUY NHẤT của "không ghi đè title": phòng do middleware
+            # AG-UI claim hộ (api/agui.py:_thread_belongs_to) luôn mang title
+            # mặc định vì lúc đó chưa có tin nhắn nào để đặt tên. Lượt đăng ký
+            # thật của FE sau đó mới mang title lấy từ tin nhắn đầu — nhận nó,
+            # nếu không sidebar kẹt ở "Cuộc trò chuyện mới" vĩnh viễn.
+            if body.title and existing.title == DEFAULT_ROOM_TITLE:
+                existing.title = body.title
+                await db.commit()
+                await db.refresh(existing)
             return ChatRoomResponse(
                 id=str(existing.id),
                 title=existing.title,
@@ -125,7 +139,7 @@ async def create_room(
 
     room = ChatRoom(
         user_id=current_user.id,
-        title=body.title or "Cuộc trò chuyện mới",
+        title=body.title or DEFAULT_ROOM_TITLE,
     )
     if body.id is not None:
         room.id = body.id
