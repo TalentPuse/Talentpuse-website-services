@@ -50,7 +50,18 @@ export default function CopilotDockProvider({
 }: { page: "jobs" | "applications"; insight?: React.ReactNode; children: React.ReactNode }) {
   if (!COPILOT_DOCK) return <>{children}</>;
   return (
-    <CopilotKit runtimeUrl="/api/copilotkit">
+    // showDevConsole={false}: cho khop CopilotChatSurface.tsx:73, von da tat tu
+    // dau. Mac dinh cua CopilotKit la "auto" (tu quyet theo NODE_ENV).
+    //
+    // LUU Y: prop nay KHONG dep duoc nut tron den "Web Inspector" o goc phai
+    // tren lan banner quang cao keo tu cdn.copilotkit.ai ("Slack early access
+    // and React Native support are here!") de len TopBar. Da kiem chung: hai
+    // thu do van hien tren /assistant du trang do luon co showDevConsole={false}.
+    // Chung render trong shadow root DONG nen document.querySelector khong voi
+    // toi, va chuoi cua chung nam trong bundle .next (khong phai extension).
+    // Muon dep han phai chan o tang khac — vi du CSP `connect-src 'self'` o
+    // nginx de chan luon luot fetch announcements.
+    <CopilotKit runtimeUrl="/api/copilotkit" showDevConsole={false}>
       <DockStyles />
       <AuthHeaders />
       <div className="flex h-full min-h-0">
