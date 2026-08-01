@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessageChunk
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -136,6 +136,20 @@ async def create_room(
                 created_at=existing.created_at,
                 updated_at=existing.updated_at,
             )
+
+    # Khong co ChatRoom, nhung neu thread do DA CO checkpoint thi day la mot
+    # cuoc hoi thoai mo coi cua nguoi khac — khong ai chung minh duoc chu so huu,
+    # va tao phong o day se TRAO quyen do cho nguoi goi. Sau do api/agui.py thay
+    # room hop le va cho doc/ghi tiep toan bo lich su. Day la duong vong qua
+    # guard cua `_thread_belongs_to`: no chan POST /api/agent/, nhung endpoint
+    # nay thi khong. Da khai thac that trong kiem thu.
+    if body.id is not None:
+        orphan = await db.execute(
+            text("SELECT 1 FROM public.checkpoints WHERE thread_id = :tid LIMIT 1"),
+            {"tid": str(body.id)},
+        )
+        if orphan.first() is not None:
+            raise HTTPException(404, "Room not found")
 
     room = ChatRoom(
         user_id=current_user.id,

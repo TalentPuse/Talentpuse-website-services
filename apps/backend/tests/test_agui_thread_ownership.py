@@ -97,6 +97,34 @@ async def test_non_uuid_thread_rejected():
     assert await _thread_belongs_to("../etc/passwd", _user(), _db()) is False
 
 
+@pytest.mark.parametrize("style", ["braces", "urn", "upper", "nodash"])
+async def test_non_canonical_uuid_encoding_rejected(style: str):
+    """Biến thể mã hoá UUID phải bị từ chối, kể cả khi thread MỚI TINH.
+
+    `uuid.UUID()` nhận nhiều dạng cùng parse ra một UUID, nhưng truy vấn
+    checkpoint dùng CHUỖI THÔ — nên một biến thể không khớp hàng checkpoint nào
+    và bị coi là "thread mới", cho phép claim thread của người khác. Đã khai
+    thác thật: gửi "{<uuid nạn nhân>}" tạo ChatRoom đúng id đó cho kẻ tấn công,
+    sau đó gọi lại bằng uuid thường là đọc/ghi tiếp được hội thoại.
+    """
+    rid = uuid.uuid4()
+    thread_id = {
+        "braces": "{%s}" % rid,
+        "urn": "urn:uuid:%s" % rid,
+        "upper": str(rid).upper(),
+        "nodash": rid.hex,
+    }[style]
+    db = _db(room=None, has_checkpoint=False)
+    assert await _thread_belongs_to(thread_id, _user(), db) is False
+    db.add.assert_not_called()  # không được claim
+
+
+async def test_canonical_uuid_still_accepted():
+    """Chốt chặn trên không được làm hỏng luồng hợp lệ."""
+    db = _db(room=None, has_checkpoint=False)
+    assert await _thread_belongs_to(str(uuid.uuid4()), _user(), db) is True
+
+
 # --- nhánh UUID: tra ChatRoom ------------------------------------------------
 
 

@@ -84,6 +84,18 @@ async def _thread_belongs_to(thread_id: str, user: User, db: AsyncSession) -> bo
     except ValueError:
         return False
 
+    # PHAI la dang chuan tac (lowercase, co gach ngang). `uuid.UUID()` con nhan
+    # "{...}", "urn:uuid:...", ban khong gach va chu HOA — tat ca deu parse ra
+    # CUNG mot UUID nhung la CHUOI KHAC. Ma truy van checkpoint ben duoi dung
+    # chuoi THO, nen mot bien the ma hoa se khong khop hang checkpoint nao =>
+    # bi coi la "thread moi tinh" => claim duoc thread cua nguoi khac.
+    # Da khai thac that: gui "{<uuid nan nhan>}" tao ChatRoom dung id do cho ke
+    # tan cong, sau do goi lai bang uuid thuong la doc/ghi tiep duoc hoi thoai.
+    # Frontend luon sinh dang chuan tac (crypto.randomUUID) nen rang buoc nay
+    # khong chan luong hop le nao.
+    if str(room_id) != thread_id:
+        return False
+
     room = await db.get(ChatRoom, room_id)
     if room is not None:
         return room.user_id == user.id
