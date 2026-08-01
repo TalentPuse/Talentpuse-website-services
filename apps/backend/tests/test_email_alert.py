@@ -141,7 +141,15 @@ class TestEmailService:
         body = call_args[1]["json"]
         assert body["to"] == ["user@example.com"]
         assert "TalentPulse Alert" in body["subject"]
-        assert body["from"] == "TalentPulse <alerts@talentpuse.io.vn>"
+        # Doc gia tri app THUC SU chay voi, thay vi chep lai hang so o day.
+        # RESEND_FROM_EMAIL doc tu bien moi truong (config.py:63); test hardcode
+        # gia tri mac dinh se DO ngay khi moi truong dat gia tri khac — dung nhu
+        # da xay ra: container dat "alerts@talentpuse.io.vn" (dia chi tran) trong
+        # khi mac dinh la "TalentPulse <alerts@talentpuse.io.vn>".
+        # Cung ly le voi TELEGRAM_WEBHOOK_SECRET o test_job_alert.py.
+        from app.core.config import RESEND_FROM_EMAIL
+
+        assert body["from"] == RESEND_FROM_EMAIL
         assert "<html>" in body["html"].lower() or "<!doctype" in body["html"].lower()
 
     @pytest.mark.asyncio

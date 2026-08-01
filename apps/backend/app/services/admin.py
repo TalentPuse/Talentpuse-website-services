@@ -32,9 +32,14 @@ VALID_TIERS = {"free", "pro", "enterprise"}
 
 async def get_admin_stats(db: AsyncSession) -> AdminStats:
     now_vn = datetime.now(VN_TZ)
-    today_start = now_vn.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    # GIU nguyen tzinfo. Truoc day hai dong nay co `.replace(tzinfo=None)`, tuc la
+    # lay nua dem GIO VN roi vut bo mui gio, roi dem `sent_at >= :today` tren du
+    # lieu luu bang gio UTC — thanh ra "alert hom nay" thuc te dem tu 07:00 sang
+    # gio VN chu khong phai tu nua dem. Tu migration 016 sent_at la timestamptz
+    # nen datetime co mui gio duoc so sanh dung theo thoi diem tuyet doi.
+    today_start = now_vn.replace(hour=0, minute=0, second=0, microsecond=0)
     week_start = (now_vn - timedelta(days=now_vn.weekday())).replace(
-        hour=0, minute=0, second=0, microsecond=0, tzinfo=None
+        hour=0, minute=0, second=0, microsecond=0
     )
 
     # Core KPIs
@@ -67,7 +72,10 @@ async def get_admin_stats(db: AsyncSession) -> AdminStats:
 
     # Alerts daily (last 30 days)
     alert_rows = await db.execute(text("""
-        SELECT date(sent_at)::text AS d, count(*)::int AS c
+        -- Gom theo NGAY GIO VN. `date(sent_at)` tran se quy chieu theo TimeZone
+        -- cua phien Postgres (container chay UTC), nen alert tu 00:00-07:00 gio VN
+        -- bi don sang ngay hom truoc tren bieu do cua admin.
+        SELECT date(sent_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::text AS d, count(*)::int AS c
         FROM app.alert_logs
         WHERE sent_at >= now() - interval '30 days'
         GROUP BY 1 ORDER BY 1

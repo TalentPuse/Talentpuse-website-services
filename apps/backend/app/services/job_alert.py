@@ -78,7 +78,10 @@ async def dispatch_alerts(db: AsyncSession, source: str = "unknown") -> int:
                 if not jobs:
                     continue
 
-                sent = await matcher.log_and_send(user, jobs, chat_id, _send_message)
+                # Truyen `source` xuong: log_and_send ghi cac dong website/telegram,
+                # tuc la 2/3 so alert. Bo qua tham so nay la ly do 63% ban ghi that
+                # co source = NULL va trang admin dispatch-history khong doc duoc.
+                sent = await matcher.log_and_send(user, jobs, chat_id, _send_message, source=source)
 
                 # Send email if user subscribed
                 email_enabled = await _is_email_enabled(db, user.id)

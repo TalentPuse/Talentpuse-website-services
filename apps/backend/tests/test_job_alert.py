@@ -436,6 +436,78 @@ async def test_log_and_send_skips_already_alerted():
     send_fn.assert_called_once()
 
 
+class _EmptyAlertDB:
+    """FakeDB chua tung alert job nao — dung cho cac test ghi ban ghi moi."""
+
+    def __init__(self):
+        self.added = []
+
+    async def execute(self, sql, params=None):
+        class R:
+            def all(self):
+                return []
+        return R()
+
+    def add(self, obj):
+        self.added.append(obj)
+
+    async def flush(self):
+        pass
+
+
+@pytest.mark.asyncio
+async def test_log_and_send_records_telegram_failure():
+    """Telegram gui loi PHAI de lai ban ghi status='failed'.
+
+    Truoc day nhanh except chi goi logger.exception roi nuot. Nhung dong 'website'
+    da duoc ghi TRUOC do, nen job bi danh dau la da-alert => lan chay sau dedup
+    loai no ra vinh vien: push Telegram mat han, khong dau vet, va khong retry
+    duoc (co che retry o admin.py chi phuc vu channel='email').
+
+    Do chinh la ly do 100/100 ban ghi trong DB that deu status='sent' va
+    retry_count=0 — khong phai vi hoan hao ma vi that bai khong duoc ghi lai.
+    """
+    jobs = [MatchedJob(source="vietnamworks", source_job_id="job-9", title="A")]
+    db = _EmptyAlertDB()
+    send_fn = AsyncMock(side_effect=RuntimeError("telegram 502 bad gateway"))
+
+    matcher = JobMatcher(db)
+    sent = await matcher.log_and_send(
+        _make_user(), jobs, chat_id=123, send_fn=send_fn, source="background_loop"
+    )
+
+    # Van tinh la da alert (dong website da ghi) — nhung that bai phai hien ro.
+    assert sent == 1
+    telegram_rows = [a for a in db.added if a.channel == "telegram"]
+    assert len(telegram_rows) == 1, "phai co dong telegram ghi lai that bai"
+    assert telegram_rows[0].status == "failed"
+    assert "telegram 502 bad gateway" in (telegram_rows[0].error_message or "")
+
+
+@pytest.mark.asyncio
+async def test_log_and_send_records_source_on_every_row():
+    """Moi dong alert PHAI ghi `source`.
+
+    log_and_send truoc day khong nhan tham so `source`, trong khi nhanh email o
+    job_alert.py co truyen. Hau qua do duoc tren DB that: 57/59 dong website va
+    6/7 dong telegram co source = NULL, nen trang admin dispatch-history/stats
+    (gom nhom theo source) khong biet gi ve 63% so alert da gui.
+    """
+    jobs = [MatchedJob(source="vietnamworks", source_job_id="job-9", title="A")]
+    db = _EmptyAlertDB()
+    send_fn = AsyncMock()
+
+    matcher = JobMatcher(db)
+    await matcher.log_and_send(
+        _make_user(), jobs, chat_id=123, send_fn=send_fn, source="background_loop"
+    )
+
+    assert len(db.added) == 2  # website + telegram
+    assert {a.channel for a in db.added} == {"website", "telegram"}
+    assert all(a.source == "background_loop" for a in db.added), \
+        f"source bi bo trong: {[(a.channel, a.source) for a in db.added]}"
+
+
 # ─────────────────────────────────────────────
 # Multi-day dispatch simulation
 # ─────────────────────────────────────────────
@@ -450,6 +522,7 @@ class _SimDB:
 
     def __init__(self):
         self.alerted: dict[str, list[str]] = {}  # source_job_id → [channels]
+        self.rows: list = []  # moi AlertLog da add — de kiem tra status/error_message
         self._flush_count = 0
 
     async def execute(self, sql, params=None):
@@ -459,6 +532,7 @@ class _SimDB:
         return R()
 
     def add(self, obj):
+        self.rows.append(obj)
         channels = self.alerted.setdefault(obj.source_job_id, [])
         if obj.channel not in channels:
             channels.append(obj.channel)
@@ -587,8 +661,20 @@ class TestMultiDayDispatch:
         # Website logs exist even though telegram failed
         assert "j1" in db.alerted
         assert "j2" in db.alerted
-        assert db.alerted["j1"] == ["website"]  # no telegram channel
-        assert db.alerted["j2"] == ["website"]
+
+        # Telegram that bai VAN phai de lai ban ghi status='failed'.
+        # Hai dong nay truoc day khang dinh == ["website"] kem chu thich
+        # "no telegram channel" — tuc la TEST DANG MA HOA CHINH CAI BUG: nhanh
+        # except nuot loi nen that bai hoan toan vo hinh. Y dinh that cua test
+        # (theo docstring) la "website van duoc ghi nen hom sau dedup dung", va
+        # y dinh do van duoc giu nguyen o phan Day 2 ben duoi.
+        assert db.alerted["j1"] == ["website", "telegram"]
+        assert db.alerted["j2"] == ["website", "telegram"]
+
+        telegram_rows = [r for r in db.rows if r.channel == "telegram"]
+        assert len(telegram_rows) == 2
+        assert all(r.status == "failed" for r in telegram_rows)
+        assert all("telegram timeout" in (r.error_message or "") for r in telegram_rows)
 
         # Day 2: same jobs → deduped via website log
         send_fn_ok = AsyncMock()

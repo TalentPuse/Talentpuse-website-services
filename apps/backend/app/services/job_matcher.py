@@ -317,8 +317,17 @@ class JobMatcher:
         jobs: list[MatchedJob],
         chat_id: int | None,
         send_fn,
+        source: str | None = None,
     ) -> int:
-        """Log new alerts to DB and send via telegram. Returns count of new jobs."""
+        """Log new alerts to DB and send via telegram. Returns count of new jobs.
+
+        `source` = cai gi kich hoat lan gui nay ("background_loop", "admin_manual",
+        "cron_webhook", ...). PHAI ghi vao MOI dong: trang admin dispatch-history
+        va dispatch-stats gom nhom theo cot nay. Truoc day ham nay khong nhan tham
+        so do trong khi nhanh email o job_alert.py co truyen, nen tren DB that
+        57/59 dong website va 6/7 dong telegram co source = NULL — admin khong
+        biet gi ve nguon goc cua 63% so alert da gui.
+        """
         alerted = await self.get_already_alerted_ids(user.id)
         new_jobs = [j for j in jobs if j.source_job_id not in alerted]
 
@@ -331,6 +340,7 @@ class JobMatcher:
                 user_id=user.id,
                 source_job_id=j.source_job_id,
                 channel="website",
+                source=source,
             ))
         await self.db.flush()
 
@@ -338,14 +348,28 @@ class JobMatcher:
             try:
                 msg = _format_job_message(new_jobs)
                 await send_fn(chat_id, msg)
-                for j in new_jobs:
-                    self.db.add(AlertLog(
-                        user_id=user.id,
-                        source_job_id=j.source_job_id,
-                        channel="telegram",
-                    ))
-            except Exception:
+                status, err = "sent", None
+            except Exception as exc:
+                # KHONG duoc nuot that bai roi di tiep. Cac dong 'website' o tren
+                # DA duoc ghi, tuc la nhung job nay da bi danh dau la da-alert —
+                # lan chay sau `get_already_alerted_ids` se loai chung ra VINH VIEN.
+                # Neu khong ghi lai that bai o day thi push Telegram mat han ma
+                # khong de lai dau vet, va co che retry (admin.py) khong the tim
+                # thay de gui lai. Do la ly do 100/100 dong trong DB that deu
+                # status='sent' va retry_count=0: khong phai vi hoan hao, ma vi
+                # that bai chua bao gio duoc ghi.
                 logger.exception("Telegram send failed for user %s", user.id)
+                status, err = "failed", str(exc)[:500]
+
+            for j in new_jobs:
+                self.db.add(AlertLog(
+                    user_id=user.id,
+                    source_job_id=j.source_job_id,
+                    channel="telegram",
+                    status=status,
+                    error_message=err,
+                    source=source,
+                ))
 
         return len(new_jobs)
 

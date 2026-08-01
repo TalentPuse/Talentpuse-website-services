@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import and_, select, text
@@ -40,6 +40,12 @@ from app.services.job_alert import dispatch_alerts, email_all_users
 from app.services.job_matcher import MatchedJob
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+# Quy chieu `sent_at` (timestamptz tu migration 016) ve NGAY GIO VN truoc khi gom
+# nhom. `DATE(sent_at)` tran se dung TimeZone cua phien Postgres — container chay
+# UTC — nen moi alert gui trong khung 00:00-07:00 gio VN bi don sang ngay hom
+# truoc. Dat mot cho de bon vi tri dung chung khong thi lech nhau.
+_VN_DATE = "DATE(sent_at AT TIME ZONE 'Asia/Ho_Chi_Minh')"
 
 
 @router.get("/stats", response_model=AdminStats)
@@ -261,7 +267,10 @@ async def retry_failed_alerts(
         if email_result.success:
             log.status = "sent"
             log.retry_count += 1
-            log.last_retry_at = datetime.utcnow()
+            # `utcnow()` tra datetime KHONG mang mui gio — ghi vao cot timestamptz
+            # thi Postgres dien giai no theo TimeZone cua phien, khong phai UTC.
+            # `now(timezone.utc)` noi ro thoi diem nen khong phu thuoc cau hinh.
+            log.last_retry_at = datetime.now(timezone.utc)
             log.error_message = None
             retried += 1
         else:
@@ -339,10 +348,10 @@ async def get_dispatch_history(
     where_clause = ["1=1"]
     params: dict = {"limit": per_page, "offset": offset}
     if date_from:
-        where_clause.append("DATE(sent_at) >= :date_from")
+        where_clause.append(f"{_VN_DATE} >= :date_from")
         params["date_from"] = datetime.fromisoformat(date_from).date()
     if date_to:
-        where_clause.append("DATE(sent_at) <= :date_to")
+        where_clause.append(f"{_VN_DATE} <= :date_to")
         params["date_to"] = datetime.fromisoformat(date_to).date()
     where_sql = " AND ".join(where_clause)
 
@@ -350,7 +359,7 @@ async def get_dispatch_history(
     # NOTE: COUNT(DISTINCT a, b) is invalid in Postgres (single-arg only) — use a subquery.
     count_result = await db.execute(text(f"""
         SELECT COUNT(*) as total FROM (
-            SELECT DISTINCT DATE(sent_at), source
+            SELECT DISTINCT {_VN_DATE}, source
             FROM app.alert_logs
             WHERE {where_sql}
         ) g
@@ -360,7 +369,7 @@ async def get_dispatch_history(
     # Get paginated history
     history_result = await db.execute(text(f"""
         SELECT
-            DATE(sent_at) as dispatch_date,
+            {_VN_DATE} as dispatch_date,
             source,
             COUNT(DISTINCT source_job_id) as jobs_sent,
             COUNT(*) as total_logs,
@@ -368,7 +377,7 @@ async def get_dispatch_history(
             COUNT(DISTINCT CASE WHEN channel='email' THEN source_job_id END) as email_sent
         FROM app.alert_logs
         WHERE {where_sql}
-        GROUP BY DATE(sent_at), source
+        GROUP BY {_VN_DATE}, source
         ORDER BY dispatch_date DESC, source DESC
         LIMIT :limit OFFSET :offset
     """), params)

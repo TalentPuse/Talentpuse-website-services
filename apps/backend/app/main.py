@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
@@ -20,6 +21,21 @@ from app.core.config import (
 )
 from app.core import database as db_module
 from app.services.job_alert import dispatch_alerts
+
+# Python KHONG gan handler nao cho root logger theo mac dinh, va uvicorn chi cau
+# hinh rieng cac logger "uvicorn.*" — no khong dung toi root. Hau qua: moi
+# logger.info() cua ung dung roi vao "lastResort" handler, von chi in tu WARNING
+# tro len.
+#
+# Nghia la "Sent %d alerts to user %s" (job_alert.py) va "Alert dispatch
+# completed" (ben duoi) CHUA BAO GIO xuat hien trong log, trong khi
+# logger.warning("Alert dispatch already in progress") thi co. Nhin log chi thay
+# duoc luc alert BI BO QUA, khong bao gio thay luc no CHAY THANH CONG — du kiem
+# chung tren DB cho thay vong lap van dispatch dung khung gio.
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 
 logger = logging.getLogger(__name__)
 
