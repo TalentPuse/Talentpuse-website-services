@@ -28,11 +28,31 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+/**
+ * Chỉ cho phép điều hướng NỘI BỘ sau khi đăng nhập.
+ *
+ * `?redirect=` đi thẳng vào `router.push()` là một open redirect: Next coi mọi
+ * URL khác origin là "external" và thực hiện chuyển trang toàn phần
+ * (`handleExternalUrl` → `mpaNavigation = true`). Kẻ tấn công gửi link
+ * `https://talentpuse.io.vn/signin?redirect=https://talentpuse-io.vn/verify`
+ * (domain nhái) — nạn nhân thấy ĐÚNG domain thật, giao diện thật, gõ mật khẩu
+ * thật, đăng nhập THÀNH CÔNG, rồi bị đẩy sang trang giả. Vì vừa đăng nhập
+ * thành công nên họ tin trang kế tiếp và gõ tiếp bất kỳ thứ gì nó hỏi.
+ *
+ * Điều kiện: phải bắt đầu bằng ĐÚNG MỘT dấu `/`. Chặn `//evil.com`
+ * (protocol-relative — `new URL("//evil.com", location.href)` giữ nguyên
+ * protocol hiện tại nên vẫn ra ngoài) và mọi URL tuyệt đối.
+ */
+function safeRedirect(raw: string | null, fallback: string): string {
+  if (!raw) return fallback;
+  return /^\/(?!\/)/.test(raw) ? raw : fallback;
+}
+
 function SignInForm() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || (AI_HOME ? "/assistant" : "/dashboard");
+  const redirect = safeRedirect(searchParams.get("redirect"), AI_HOME ? "/assistant" : "/dashboard");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

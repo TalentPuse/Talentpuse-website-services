@@ -146,6 +146,31 @@ export type SignupPayload = {
 
 export type ApiError = { message: string; status: number };
 
+/**
+ * Rút thông điệp lỗi từ body của FastAPI, LUÔN trả về string.
+ *
+ * FastAPI trả `detail` ở HAI dạng: chuỗi (HTTPException tự viết) và MẢNG object
+ * `[{msg, loc, type, input, ctx}]` (lỗi validate Pydantic, mã 422).
+ *
+ * Trước đây chỗ này viết `body.detail ?? (Array.isArray(body.detail) ? ... )`.
+ * `??` chỉ rơi sang vế phải khi vế trái là null/undefined — mảng thì không phải,
+ * nên `message` nhận nguyên CẢ MẢNG và nhánh `Array.isArray` là code chết. Hậu
+ * quả có thật: người dùng gõ email thừa dấu chấm cuối ("a@gmail.com.") → backend
+ * 422 → trang đăng nhập render `{error}` với error là một mảng → React ném
+ * "Objects are not valid as a React child" → app không có error.tsx nên rơi
+ * thẳng ra màn hình "Application error", mất sạch form. Lỗi gõ phím thành ngõ
+ * cụt ngay cửa vào sản phẩm.
+ */
+export function errorMessage(body: unknown, fallback = "Đã có lỗi xảy ra"): string {
+  const detail = (body as { detail?: unknown } | null)?.detail;
+  if (typeof detail === "string" && detail) return detail;
+  if (Array.isArray(detail)) {
+    const first = detail[0] as { msg?: unknown } | undefined;
+    if (typeof first?.msg === "string" && first.msg) return first.msg;
+  }
+  return fallback;
+}
+
 /* ───── Client-side auth API (browser only) ───── */
 
 const CLIENT_BASE =
@@ -166,11 +191,7 @@ async function clientFetch<T>(
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const msg =
-      body.detail ??
-      (Array.isArray(body.detail) ? body.detail[0]?.msg : undefined) ??
-      "Đã có lỗi xảy ra";
-    throw { message: msg, status: res.status } as ApiError;
+    throw { message: errorMessage(body), status: res.status } as ApiError;
   }
   return res.json() as Promise<T>;
 }
@@ -745,7 +766,7 @@ export const cvApi = {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.detail || `Upload failed (${res.status})`);
+      throw new Error(errorMessage(body, `Upload failed (${res.status})`));
     }
     return res.json();
   },
@@ -858,7 +879,7 @@ export const chatApi = {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw {
-        message: body.detail ?? "Stream request failed",
+        message: errorMessage(body, "Stream request failed"),
         status: res.status,
       } as ApiError;
     }
@@ -1132,7 +1153,7 @@ export const interviewAgentApi = {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw {
-        message: body.detail ?? "Stream request failed",
+        message: errorMessage(body, "Stream request failed"),
         status: res.status,
       } as ApiError;
     }
@@ -1221,7 +1242,7 @@ export const applicationsApi = {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw { message: body.detail ?? "Không xóa được", status: res.status } as ApiError;
+      throw { message: errorMessage(body, "Không xóa được"), status: res.status } as ApiError;
     }
   },
 
