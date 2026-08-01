@@ -447,6 +447,47 @@ export type PublicJobRow = {
   skills: string[];
 };
 
+export interface JobMatch {
+  score: number;
+  reasons: string[];
+  matched_skills: string[];
+  missing_skills: string[];
+  skill_basis: "required" | "mentioned" | "none";
+  skills_matched: number;
+  skills_total: number;
+  criteria_used: string[];
+}
+
+export interface JobDetail {
+  source: string;
+  source_job_id: string;
+  title: string | null;
+  company_name: string | null;
+  company_logo_url: string | null;
+  company_size_label: string | null;
+  city_canonical: string | null;
+  primary_address: string | null;
+  job_level: string | null;
+  job_category: string | null;
+  employment_type: string | null;
+  years_of_experience: number | null;
+  working_days: string | null;
+  degree_label: string | null;
+  salary_million: number | null;
+  salary_min_million: number | null;
+  salary_max_million: number | null;
+  description: string | null;
+  requirement: string | null;
+  benefits: string[];
+  skills: string[];
+  source_url: string | null;
+  posted_at: string | null;
+  expired_at: string | null;
+  num_of_views: number | null;
+  num_of_applications: number | null;
+  match: JobMatch | null;
+}
+
 export type PublicJobList = {
   jobs: PublicJobRow[];
   total: number;
@@ -545,6 +586,12 @@ export const jobsApi = {
     clientFetch<FilterOptions>("/api/jobs/filters", {
       headers: authHeaders(token),
     }),
+
+  detail: (source: string, sourceJobId: string, token: string, signal?: AbortSignal) =>
+    clientFetch<JobDetail>(
+      `/api/jobs/${encodeURIComponent(source)}/${encodeURIComponent(sourceJobId)}`,
+      { headers: authHeaders(token), signal },
+    ),
 
   myAlerts: (
     token: string,
