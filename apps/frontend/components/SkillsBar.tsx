@@ -21,14 +21,22 @@ export default function SkillsBar({ data }: { data: SkillRow[] }) {
       <BarChart
         data={data}
         layout="vertical"
-        margin={{ top: 5, right: 24, left: 80, bottom: 5 }}
+        margin={{ top: 5, right: 24, left: 115, bottom: 5 }}
       >
         <CartesianGrid strokeDasharray="3 3" stroke={theme.grid} />
         <XAxis type="number" {...chartAxisProps(theme.axis)} />
+        {/* interval={0}: ep recharts ve DU moi nhan. Mac dinh no tu an bot tick
+            khi thay chat, nen bieu do 15 cot chi hien ~8 ten ky nang — 7 cot con
+            lai khong biet la gi, phai hover tung cai moi doc duoc.
+            width={110}: di kem bat buoc. Ep du 15 nhan vao 360px thi moi nhan
+            chi con ~24px; o width cu 75px thi ten dai ("machine learning",
+            "phan tich du lieu") xuong 2 dong va cham nhau. Noi rong de chung nam
+            gon mot dong. */}
         <YAxis
           dataKey="skill"
           type="category"
-          width={75}
+          width={110}
+          interval={0}
           {...chartAxisProps(theme.axis)}
         />
         <Tooltip
