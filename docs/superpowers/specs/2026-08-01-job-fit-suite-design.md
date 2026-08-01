@@ -28,18 +28,29 @@ bảng quản lý ở tầng miễn phí để kéo người dùng vào.
 
 ## 2. Sự thật đo được từ kho dữ liệu
 
-Đo ngày 2026-08-01 trên `tp-postgres`, 6432 tin đang mở. **Đây là xương sống của
-spec — mọi lựa chọn thiết kế bên dưới đều truy về bảng này.**
+Đo ngày 2026-08-01 trên `tp-postgres`. **Đây là xương sống của spec — mọi lựa chọn
+thiết kế bên dưới đều truy về bảng này.**
+
+> **Đính chính 2026-08-01 (phát hiện khi thi công Task 5):** bản đầu của spec này
+> ghi "6432 tin đang mở" ở khắp mục 2. Đó là số **DÒNG**, không phải số **TIN**.
+> `fct_jobs_daily` là bảng **snapshot hàng ngày** — mỗi tin có nhiều dòng
+> `is_active = true`, mỗi dòng một `snapshot_date`. Số tin phân biệt thật là
+> **3056** (hệ số nhân bản ~2,1). Các bảng dưới đã tính lại trên tin phân biệt.
+> **Mọi tỉ lệ và mọi kết luận thiết kế giữ nguyên** — chỉ con số tuyệt đối bị
+> thổi phồng. Sai sót này còn gây một lỗi thật trong `facts.py` (một khoá trả về
+> 2–3 `JobFacts`), đã sửa ở commit `99c4509`.
 
 ### 2.1 Độ phủ kỹ năng có cấu trúc lệch hẳn theo nguồn
 
-| Nguồn | Tin đang mở | Có kỹ năng trong `silver_skill_long` |
-|---|---:|---:|
-| itviec | 651 | 651 (100%) |
-| vietnamworks | 1345 | 1335 (99%) |
-| topcv | 306 | 162 (53%) |
-| **linkedin** | **4130** | **0 (0%)** |
-| **Tổng** | **6432** | **2148 (33%)** |
+| Nguồn | Tin phân biệt | Có kỹ năng trong `silver_skill_long` | (số dòng thô) |
+|---|---:|---:|---:|
+| itviec | 375 | 375 (100%) | 651 |
+| vietnamworks | 586 | 582 (99%) | 1345 |
+| topcv | 153 | 81 (53%) | 306 |
+| **linkedin** | **1942** | **0 (0%)** | 4130 |
+| **Tổng** | **3056** | **1038 (34%)** | 6432 |
+
+LinkedIn vẫn là **1942/3056 = 64% kho** — đúng tỉ lệ đã nêu ban đầu.
 
 **Hệ quả:** chấm điểm kỹ năng chỉ dựa vào `silver_skill_long` sẽ đẩy **toàn bộ 4130
 tin LinkedIn — 64% kho — xuống đáy bảng xếp hạng**, không phải vì chúng không hợp
