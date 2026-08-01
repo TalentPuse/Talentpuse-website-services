@@ -54,7 +54,14 @@ class JobFacts:
 
 _FACTS_SQL = rf"""
     WITH sk AS (SELECT unnest(CAST(:skills AS text[])) AS s)
-    SELECT
+    -- DISTINCT ON BAT BUOC: fct_jobs_daily la bang SNAPSHOT HANG NGAY, mot tin co
+    -- NHIEU dong is_active=true (mot dong moi snapshot_date). Do duoc tren kho
+    -- local: 6432 dong active nhung chi 3056 tin phan biet — 3376 dong la ban sao.
+    -- Khong khu trung thi truyen 1 khoa co the nhan ve 2-3 JobFacts: quet regex
+    -- lap thua, va scoring.score_jobs ghi vao dict theo (source, source_job_id)
+    -- nen ban sau LANG LE de ban truoc — khong ai biet snapshot nao thang neu
+    -- luong/cap bac giua chung khac nhau. Lay ban MOI NHAT cho xac dinh.
+    SELECT DISTINCT ON (f.source, f.source_job_id)
         f.source, f.source_job_id, f.title, f.company_name,
         f.city_canonical, f.job_level, f.job_category,
         f.salary_vnd_monthly_min, f.salary_vnd_monthly_max, f.salary_vnd_monthly_avg,
@@ -87,6 +94,9 @@ _FACTS_SQL = rf"""
     LEFT JOIN {SILVER}.silver_job_detail d
       ON d.source = f.source AND d.source_job_id = f.source_job_id
     WHERE f.is_active
+    -- ORDER BY phai BAT DAU bang dung cac cot cua DISTINCT ON (rang buoc cua
+    -- Postgres); snapshot_date DESC quyet dinh ban nao thang.
+    ORDER BY f.source, f.source_job_id, f.snapshot_date DESC
 """
 
 
