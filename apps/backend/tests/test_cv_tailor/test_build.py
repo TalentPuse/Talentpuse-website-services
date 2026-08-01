@@ -223,6 +223,33 @@ async def test_ensure_document_fast_path_skips_lock_when_row_exists():
 
 
 @pytest.mark.asyncio
+async def test_ensure_document_truncates_long_cv_text_before_building_base_model():
+    """user.cv_text is read straight from the DB with no length guarantee
+    (MAX_CV_TEXT_CHARS was previously only enforced on the upload path, in
+    cv_parser.extract_text). ensure_document's build branch must truncate at
+    the read point before forwarding to the LLM."""
+    from app.services.cv_parser import MAX_CV_TEXT_CHARS
+
+    long_text = "a" * (MAX_CV_TEXT_CHARS + 5000)
+    user_id = uuid4()
+    user = _ExpiringUser(user_id=user_id, cv_text=long_text)
+    db = _BuildOnceDB()
+
+    captured: dict = {}
+
+    async def _capture_build(cv_text):
+        captured["cv_text"] = cv_text
+        return _fake_model("Bao")
+
+    with patch("app.services.cv_tailor.build.build_base_model_from_cv_text", _capture_build), \
+         patch("app.services.cv_tailor.build.compile_and_store",
+               AsyncMock(return_value=("http://minio/bao.pdf", 1))):
+        await ensure_document(db, user)
+
+    assert len(captured["cv_text"]) <= MAX_CV_TEXT_CHARS
+
+
+@pytest.mark.asyncio
 async def test_ensure_document_reraises_when_winner_row_never_appears():
     """If the IntegrityError fires but a re-query still finds nothing (should
     not happen in practice, but must not hide the real error), the original

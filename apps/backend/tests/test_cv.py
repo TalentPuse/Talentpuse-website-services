@@ -16,11 +16,10 @@ from app.models.user import User
 from app.services.cv_parser import (
     MAX_CV_TEXT_CHARS,
     CvExtractResult,
-    _truncate_cv_text,
     parse_cv,
+    truncate_cv_text,
     upload_to_s3,
 )
-
 
 # ─── Helpers ─────────────────────────────────────────────
 
@@ -118,7 +117,7 @@ MOCK_EXTRACTED = {
 }
 
 
-# ─── _truncate_cv_text unit tests ────────────────────────
+# ─── truncate_cv_text unit tests ─────────────────────────
 # Do that tren DB: do dai cv_text trung binh 237,553 ky tu, lon nhat 705,718,
 # gui nguyen cho LLM moi lan parse (~60k token). Cac test nay bao dam nguong
 # cat hoat dong dung va khong bao gio cat giua tu.
@@ -132,7 +131,7 @@ class TestTruncateCvText:
         assert len(text) > MAX_CV_TEXT_CHARS
         assert not text[MAX_CV_TEXT_CHARS].isspace()  # diem cat nam giua chuoi "bbb..."
 
-        result = _truncate_cv_text(text)
+        result = truncate_cv_text(text)
 
         assert len(result) <= MAX_CV_TEXT_CHARS
         # Tu "bbb..." bi cat giua nen phai bi loai bo toan bo, khong giu lai
@@ -150,7 +149,7 @@ class TestTruncateCvText:
         assert len(text) > MAX_CV_TEXT_CHARS
         assert text[MAX_CV_TEXT_CHARS].isspace()
 
-        result = _truncate_cv_text(text)
+        result = truncate_cv_text(text)
 
         assert result == head
 
@@ -158,7 +157,7 @@ class TestTruncateCvText:
         text = "Nguyen Van A - Backend Developer - 3 nam kinh nghiem Python."
         assert len(text) < MAX_CV_TEXT_CHARS
 
-        result = _truncate_cv_text(text)
+        result = truncate_cv_text(text)
 
         assert result == text
 
@@ -166,7 +165,7 @@ class TestTruncateCvText:
         text = "a" * MAX_CV_TEXT_CHARS
         assert len(text) == MAX_CV_TEXT_CHARS
 
-        result = _truncate_cv_text(text)
+        result = truncate_cv_text(text)
 
         assert result == text
         assert len(result) == MAX_CV_TEXT_CHARS
@@ -175,7 +174,7 @@ class TestTruncateCvText:
         text = "x" * (MAX_CV_TEXT_CHARS + 500)
 
         with caplog.at_level("WARNING", logger="app.services.cv_parser"):
-            _truncate_cv_text(text)
+            truncate_cv_text(text)
 
         assert any("MAX_CV_TEXT_CHARS" in r.message for r in caplog.records)
 
@@ -183,7 +182,7 @@ class TestTruncateCvText:
         text = "short cv text"
 
         with caplog.at_level("WARNING", logger="app.services.cv_parser"):
-            _truncate_cv_text(text)
+            truncate_cv_text(text)
 
         assert caplog.records == []
 

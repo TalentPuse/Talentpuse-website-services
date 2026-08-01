@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL
 from app.models.cv_document import CvDocument
-from app.services.cv_parser import upload_to_s3
+from app.services.cv_parser import truncate_cv_text, upload_to_s3
 from app.services.cv_tailor.compiler import compile_tex
 from app.services.cv_tailor.model import ResumeModel
 from app.services.cv_tailor.renderer import render_tex
@@ -76,10 +76,18 @@ async def render_and_compile(model: ResumeModel) -> bytes:
     return res.pdf
 
 
-async def compile_and_store(user, model: ResumeModel) -> tuple[str | None, int]:
-    """Render+compile, upload the PDF to storage, return (pdf_url, page_count)."""
+async def compile_and_store(user_id, model: ResumeModel) -> tuple[str | None, int]:
+    """Render+compile, upload the PDF to storage, return (pdf_url, page_count).
+
+    Takes user_id (not the `user` ORM object) on purpose: callers that recover
+    from a concurrent-insert IntegrityError via db.rollback() have an EXPIRED
+    `user` at that point (rollback expires every object on the session) --
+    touching `user.id` there raises MissingGreenlet (see the comment on
+    CV_BUILD_LOCK_NAMESPACE below). A plain id captured before any DB write
+    sidesteps that entirely.
+    """
     pdf = await render_and_compile(model)
-    pdf_url = await asyncio.to_thread(upload_to_s3, pdf, f"cv-pdf/{user.id}.pdf")
+    pdf_url = await asyncio.to_thread(upload_to_s3, pdf, f"cv-pdf/{user_id}.pdf")
     return pdf_url, page_count(pdf)
 
 
@@ -133,8 +141,8 @@ async def ensure_document(db: AsyncSession, user) -> dict:
         row = (await db.execute(
             select(CvDocument).where(CvDocument.user_id == user_id))).scalar_one_or_none()
         if row is None:
-            model = await build_base_model_from_cv_text(user.cv_text)
-            pdf_url, pages = await compile_and_store(user, model)
+            model = await build_base_model_from_cv_text(truncate_cv_text(user.cv_text))
+            pdf_url, pages = await compile_and_store(user_id, model)
             row = CvDocument(user_id=user_id, model_json=model.model_dump(),
                              pdf_url=pdf_url, page_count=pages)
             db.add(row)

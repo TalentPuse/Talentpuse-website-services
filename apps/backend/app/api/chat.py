@@ -35,6 +35,26 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 # sánh title ở create_room dựa vào đúng hằng số này.
 DEFAULT_ROOM_TITLE = "Cuộc trò chuyện mới"
 
+
+def _room_uuid(room_id: str) -> uuid.UUID:
+    """Ep room_id thanh UUID, tra 404 thay vi de ValueError bung ra 500.
+
+    Truoc day 4 handler (get_messages, delete_room, send_message,
+    send_message_stream) goi thang `uuid.UUID(room_id)` khong bao try/except, nen
+    mot id sai dinh dang (vi du /api/chat/rooms/not-a-uuid/messages) lam
+    `ValueError: badly formed hexadecimal UUID string` bung ra khoi handler ->
+    HTTP 500 Internal Server Error.
+
+    404 chu khong phai 400: dong nhat voi get_thread_messages ben api/agui.py von
+    da xu ly dung truong hop nay, va voi cac handler room khac — khong lo su ton
+    tai cua phong cho nguoi khong phai chu.
+    """
+    try:
+        return uuid.UUID(room_id)
+    except ValueError:
+        raise HTTPException(404, "Room not found") from None
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -196,7 +216,7 @@ async def delete_room(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    room = await db.get(ChatRoom, uuid.UUID(room_id))
+    room = await db.get(ChatRoom, _room_uuid(room_id))
     if not room or room.user_id != current_user.id:
         raise HTTPException(404, "Room not found")
     await db.delete(room)
@@ -214,13 +234,13 @@ async def get_messages(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    room = await db.get(ChatRoom, uuid.UUID(room_id))
+    room = await db.get(ChatRoom, _room_uuid(room_id))
     if not room or room.user_id != current_user.id:
         raise HTTPException(404, "Room not found")
 
     q = (
         select(ChatMessage)
-        .where(ChatMessage.room_id == uuid.UUID(room_id))
+        .where(ChatMessage.room_id == _room_uuid(room_id))
         .order_by(ChatMessage.created_at.asc())
         .limit(limit)
     )
@@ -244,13 +264,13 @@ async def send_message(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    room = await db.get(ChatRoom, uuid.UUID(room_id))
+    room = await db.get(ChatRoom, _room_uuid(room_id))
     if not room or room.user_id != current_user.id:
         raise HTTPException(404, "Room not found")
 
     # 1. Save user message
     user_msg = ChatMessage(
-        room_id=uuid.UUID(room_id),
+        room_id=_room_uuid(room_id),
         role="user",
         content=body.content,
     )
@@ -264,7 +284,7 @@ async def send_message(
     await db.refresh(user_msg)
 
     # 3. Load recent history for context
-    agent_messages = await _load_chat_history(db, uuid.UUID(room_id))
+    agent_messages = await _load_chat_history(db, _room_uuid(room_id))
 
     # 4. Build context
     profile_dict = _build_profile_dict(current_user)
@@ -283,7 +303,7 @@ async def send_message(
 
     # 7. Save assistant message
     bot_msg = ChatMessage(
-        room_id=uuid.UUID(room_id),
+        room_id=_room_uuid(room_id),
         role="assistant",
         content=reply_text,
     )
@@ -321,13 +341,13 @@ async def send_message_stream(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    room = await db.get(ChatRoom, uuid.UUID(room_id))
+    room = await db.get(ChatRoom, _room_uuid(room_id))
     if not room or room.user_id != current_user.id:
         raise HTTPException(404, "Room not found")
 
     # 1. Save user message
     user_msg = ChatMessage(
-        room_id=uuid.UUID(room_id),
+        room_id=_room_uuid(room_id),
         role="user",
         content=body.content,
     )
@@ -341,13 +361,13 @@ async def send_message_stream(
     await db.refresh(user_msg)
 
     # 3. Load recent history
-    agent_messages = await _load_chat_history(db, uuid.UUID(room_id))
+    agent_messages = await _load_chat_history(db, _room_uuid(room_id))
 
     # 4. Build context
     profile_dict = _build_profile_dict(current_user)
     agent_ctx = AgentContext(profile=profile_dict)
 
-    uid = uuid.UUID(room_id)
+    uid = _room_uuid(room_id)
 
     async def _token_generator():
         cv_state = {"updated": False}

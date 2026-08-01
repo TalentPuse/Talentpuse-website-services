@@ -97,8 +97,15 @@ class CvExtractResult:
     error: str | None = None
 
 
-def _truncate_cv_text(text: str) -> str:
+def truncate_cv_text(text: str) -> str:
     """Cat text tai ranh gioi tu neu vuot MAX_CV_TEXT_CHARS, khong cat giua tu.
+
+    Public (khong con la _truncate_cv_text): truoc day chi duoc goi tren duong
+    upload (extract_text), nhung build_base_model_from_cv_text (cv_tailor/build.py)
+    va apply_edit (cv_tailor/edit.py) doc THANG user.cv_text da luu trong DB, bo
+    qua nguong nay hoan toan - user cu voi cv_text hang tram nghin ky tu van gui
+    full payload cho LLM moi lan build/edit CV. Ca hai noi do giờ goi ham nay tai
+    diem doc thay vi chay migration cat du lieu cu tren prod.
 
     Tach rieng khoi extract_text() de test duoc truc tiep tren chuoi text,
     khong phai dung PDF that.
@@ -137,7 +144,7 @@ def extract_text(pdf_bytes: bytes) -> str:
             pages.append(text.strip())
     doc.close()
     full_text = "\n\n".join(pages)
-    return _truncate_cv_text(full_text)
+    return truncate_cv_text(full_text)
 
 
 def _market_vocab_instruction(market_skills: list[str] | None) -> str:

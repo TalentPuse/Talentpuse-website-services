@@ -23,11 +23,19 @@ async def get_overview(
         text(f"""
             select
                 count(*)::int as total_jobs,
-                round(
+                -- coalesce(..., 0) BAT BUOC: khi bo loc khong khop job nao thi
+                -- nullif(count(*), 0) tra NULL, phep chia ra NULL, va schema
+                -- Overview.pct_with_salary khai bao `float` KHONG Optional nen
+                -- Pydantic nem ValidationError -> HTTP 500. Endpoint nay CONG KHAI
+                -- (khong can token) nen bat ky ai cung trigger duoc 500 chi bang
+                -- mot gia tri `category` khong ton tai. 0 job thi 0% co luong la
+                -- dung ve nghia, va khop cach /api/skills/top, /api/salary/by-level,
+                -- /api/companies/top da xu ly (tra du lieu rong, khong loi).
+                coalesce(round(
                     (100.0 * count(*) filter (where salary_vnd_monthly_avg is not null)
                     / nullif(count(*), 0))::numeric,
                     1
-                )::float as pct_with_salary,
+                )::float, 0) as pct_with_salary,
                 round(
                     (percentile_cont(0.5) within group (order by salary_vnd_monthly_avg)
                         filter (where salary_vnd_monthly_avg is not null
