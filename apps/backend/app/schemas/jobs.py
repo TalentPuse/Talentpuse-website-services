@@ -50,3 +50,45 @@ class MyAlertList(BaseModel):
     total: int
     page: int
     per_page: int
+
+
+class JobMatch(BaseModel):
+    score: int
+    reasons: list[str] = []
+    matched_skills: list[str] = []
+    missing_skills: list[str] = []
+    skill_basis: str = "none"
+    skills_matched: int = 0
+    skills_total: int = 0
+    criteria_used: list[str] = []
+
+
+class JobDetail(BaseModel):
+    source: str
+    source_job_id: str
+    title: str | None = None
+    company_name: str | None = None
+    company_logo_url: str | None = None
+    company_size_label: str | None = None
+    city_canonical: str | None = None
+    primary_address: str | None = None
+    job_level: str | None = None
+    job_category: str | None = None
+    employment_type: str | None = None
+    years_of_experience: int | None = None
+    working_days: str | None = None
+    degree_label: str | None = None
+    salary_million: float | None = None
+    salary_min_million: float | None = None
+    salary_max_million: float | None = None
+    description: str | None = None
+    requirement: str | None = None
+    benefits: list[str] = []
+    skills: list[str] = []
+    source_url: str | None = None
+    posted_at: datetime | None = None
+    expired_at: datetime | None = None
+    num_of_views: int | None = None
+    num_of_applications: int | None = None
+    # None khi ho so nguoi dung con rong — UI moi ho dien ho so, KHONG hien 0%.
+    match: JobMatch | None = None

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,11 +11,14 @@ from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.jobs import (
     FilterOptions,
+    JobDetail,
+    JobMatch,
     MyAlertList,
     MyAlertRow,
     PublicJobList,
     PublicJobRow,
 )
+from app.services.job_fit import score_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -228,3 +231,99 @@ async def my_alerts(
     ]
 
     return MyAlertList(alerts=alerts, total=total, page=page, per_page=per_page)
+
+
+# DISTINCT ON BAT BUOC: fct_jobs_daily la bang SNAPSHOT HANG NGAY, mot tin co the
+# co NHIEU dong is_active=true (mot dong moi snapshot_date). WHERE source+sjid da
+# loc dung MOT tin, nhung neu khong khu trung theo snapshot_date thi LIMIT 1 lay
+# mot dong BAT KY trong so do — khong xac dinh, va co the la ban CU neu luong/cap
+# bac giua cac snapshot khac nhau. Cung cach da ap dung o job_fit/facts.py.
+_DETAIL_SQL = text("""
+    WITH job AS (
+        SELECT DISTINCT ON (f.source, f.source_job_id) f.*
+        FROM dbt_dev_gold.fct_jobs_daily f
+        WHERE f.source = :source AND f.source_job_id = :sjid AND f.is_active
+        ORDER BY f.source, f.source_job_id, f.snapshot_date DESC
+    )
+    SELECT
+        job.source, job.source_job_id, job.title, job.company_name,
+        job.city_canonical, job.job_level, job.job_category, job.degree_label,
+        job.posted_at, job.expired_at, job.num_of_views, job.num_of_applications,
+        round((job.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
+        round((job.salary_vnd_monthly_min / 1000000.0)::numeric, 1)::float AS salary_min_million,
+        round((job.salary_vnd_monthly_max / 1000000.0)::numeric, 1)::float AS salary_max_million,
+        d.company_logo_url, d.company_size_label, d.primary_address,
+        d.employment_type, d.years_of_experience, d.working_days,
+        d.job_description_text, d.job_requirement_text,
+        d.benefits, d.skills, d.source_url
+    FROM job
+    LEFT JOIN dbt_dev_silver.silver_job_detail d
+        ON d.source = job.source AND d.source_job_id = job.source_job_id
+    LIMIT 1
+""")
+
+
+def _json_labels(raw) -> list[str]:
+    """`benefits`/`skills` la jsonb voi hinh dang khong dong nhat giua cac nguon:
+    co cho la ["a","b"], co cho la [{"name":"a"}]. Lay nhan doc duoc va bo qua
+    phan con lai, thay vi de mot nguon la khien ca panel 500."""
+    out: list[str] = []
+    if not isinstance(raw, list):
+        return out
+    for item in raw:
+        if isinstance(item, str) and item.strip():
+            out.append(item.strip())
+        elif isinstance(item, dict):
+            for key in ("name", "label", "title", "vi", "en"):
+                v = item.get(key)
+                if isinstance(v, str) and v.strip():
+                    out.append(v.strip())
+                    break
+    return out[:20]
+
+
+@router.get("/{source}/{source_job_id}", response_model=JobDetail)
+async def get_job_detail(
+    source: str,
+    source_job_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> JobDetail:
+    row = (await db.execute(
+        _DETAIL_SQL, {"source": source, "sjid": source_job_id}
+    )).mappings().first()
+    if row is None:
+        raise HTTPException(404, "Job not found")
+
+    scores = await score_jobs(db, user, [(source, source_job_id)])
+    fit = scores.get((source, source_job_id))
+
+    return JobDetail(
+        source=row["source"],
+        source_job_id=row["source_job_id"],
+        title=row["title"],
+        company_name=row["company_name"],
+        company_logo_url=row["company_logo_url"],
+        company_size_label=row["company_size_label"],
+        city_canonical=row["city_canonical"],
+        primary_address=row["primary_address"],
+        job_level=row["job_level"],
+        job_category=row["job_category"],
+        employment_type=row["employment_type"],
+        years_of_experience=row["years_of_experience"],
+        working_days=row["working_days"],
+        degree_label=row["degree_label"],
+        salary_million=row["salary_million"],
+        salary_min_million=row["salary_min_million"],
+        salary_max_million=row["salary_max_million"],
+        description=row["job_description_text"],
+        requirement=row["job_requirement_text"],
+        benefits=_json_labels(row["benefits"]),
+        skills=_json_labels(row["skills"]),
+        source_url=row["source_url"],
+        posted_at=row["posted_at"],
+        expired_at=row["expired_at"],
+        num_of_views=row["num_of_views"],
+        num_of_applications=row["num_of_applications"],
+        match=JobMatch(**fit.__dict__) if fit else None,
+    )
