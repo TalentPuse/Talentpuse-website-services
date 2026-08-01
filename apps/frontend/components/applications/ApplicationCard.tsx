@@ -78,8 +78,24 @@ export default function ApplicationCard({ app, onDelete, onOpenDetail, isOverlay
                 target="_blank"
                 rel="noopener noreferrer"
                 onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => onOpenDetail?.(app)}
-                className="line-clamp-2 text-sm font-medium text-text hover:text-brand-600"
+                onClick={(e) => {
+                  // PHAI preventDefault. Truoc day chi goi onOpenDetail ma khong
+                  // chan hanh vi mac dinh cua the <a>, nen bam vao tieu de vua mo
+                  // panel VUA mo tab moi sang tin goc — tab moi cuop focus nen
+                  // nguoi dung khong bao gio thay panel. Do duoc tren trinh duyet
+                  // that: defaultPrevented = false.
+                  //
+                  // Chi chan CLICK TRAI THUAN. Ctrl/Cmd/Shift/Alt hoac chuot giua
+                  // van mo tin goc o tab moi — do la ky vong voi mot the <a>, va
+                  // giu nguyen href cho phep chuot phai "mo o tab moi". Duong toi
+                  // tin goc cung con nguyen trong panel ("Xem tin gốc và ứng
+                  // tuyển"), nen chan o day khong lam mat loi ra nao.
+                  if (!onOpenDetail) return;
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                  e.preventDefault();
+                  onOpenDetail(app);
+                }}
+                className="line-clamp-2 cursor-pointer text-sm font-medium text-text hover:text-brand-600"
               >
                 {app.title}
               </a>
@@ -88,7 +104,7 @@ export default function ApplicationCard({ app, onDelete, onOpenDetail, isOverlay
                 type="button"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => onOpenDetail?.(app)}
-                className="line-clamp-2 text-left text-sm font-medium text-text hover:text-brand-600"
+                className="line-clamp-2 cursor-pointer text-left text-sm font-medium text-text hover:text-brand-600"
               >
                 {app.title}
               </button>

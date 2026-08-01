@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
@@ -267,10 +268,24 @@ function JobBoardContent() {
             <ArrowUpDown size={14} strokeWidth={1.75} />
             {sortMode === "match" ? "Phù hợp nhất" : "Mới nhất"}
           </Button>
-          {sortMode === "match" && data?.scored_pool != null && (
-            <p className="text-xs text-slate-500">
-              Đã chấm {data.scored_pool} tin mới nhất khớp bộ lọc
-            </p>
+          {sortMode === "match" && data != null && (
+            data.scored_pool != null ? (
+              <p className="text-xs text-slate-500">
+                Đã chấm {data.scored_pool} tin mới nhất khớp bộ lọc
+              </p>
+            ) : (
+              /* scored_pool = null nghia la KHONG cham duoc tin nao — gan nhu luon
+                 vi ho so con rong. Im lang o day thi nguoi dung bam "Phù hợp
+                 nhất", nhan lai dung thu tu cu, va khong hieu vi sao. Noi thang
+                 va chi duong den cho sua. */
+              <p className="text-xs text-amber-700">
+                Chưa xếp được theo độ phù hợp —{" "}
+                <Link href="/profile" className="font-medium underline">
+                  thêm kỹ năng và vị trí mong muốn vào hồ sơ
+                </Link>{" "}
+                để dùng tính năng này.
+              </p>
+            )
           )}
         </div>
 

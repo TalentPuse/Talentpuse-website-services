@@ -173,7 +173,13 @@ async def list_jobs(
             return (fit is None, -(fit.score if fit else 0), idx)
 
         ordered_rows = [row for _, row in sorted(enumerate(pool_rows), key=_sort_key)]
-        scored_pool = len(ordered_rows)
+        # Dem so tin THUC SU cham duoc, khong phai kich thuoc pool. Truoc day gan
+        # bang len(ordered_rows), nen ho so con rong van tra scored_pool = 300 va
+        # UI hien "Đã chấm 300 tin mới nhất khớp bộ lọc" trong khi score_jobs tra
+        # ve rong va MOI match_score deu null — tuc la cham 0 tin. Nguoi dung bam
+        # "Phù hợp nhất", nhan lai dung thu tu cu, kem mot cau khong dung su that.
+        # None => UI khong hien dong do (app/jobs/page.tsx da guard `!= null`).
+        scored_pool = len(scores) or None
         page_rows = ordered_rows[offset: offset + per_page]
 
         jobs = [

@@ -61,14 +61,36 @@ export default function JobCard({ job, tracked, onTracked, onOpenDetail }: JobCa
               {job.company_name || "Chưa rõ công ty"}
             </p>
           </div>
-          <span
-            className={cn(
-              "inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
-              sourceBadgeClass
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                sourceBadgeClass
+              )}
+            >
+              {sourceLabel}
+            </span>
+            {/* Diem phu hop. Backend da tra `match_score` tren tung dong khi co
+                sort=match, nhung card khong he hien no — nguoi dung sap xep theo
+                "Phù hợp nhất" roi van phai mo tung panel moi biet job nao hop.
+                Xep hang ma khong cho thay thu hang thi khong dung duoc.
+                null = ho so con rong: khong hien gi ca, KHONG hien 0%. */}
+            {job.match_score != null && (
+              <span
+                title="Mức độ phù hợp với hồ sơ của bạn"
+                className={cn(
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1",
+                  job.match_score >= 75
+                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                    : job.match_score >= 50
+                      ? "bg-amber-50 text-amber-700 ring-amber-200"
+                      : "bg-slate-50 text-slate-600 ring-slate-200"
+                )}
+              >
+                {job.match_score}% hợp
+              </span>
             )}
-          >
-            {sourceLabel}
-          </span>
+          </div>
         </div>
 
         <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-text-muted">
