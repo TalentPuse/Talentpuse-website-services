@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
-import { SearchX, AlertTriangle } from "lucide-react";
+import { SearchX, AlertTriangle, ArrowUpDown } from "lucide-react";
 
 import { jobsApi, applicationsApi, PublicJobList, FilterOptions, type TrackedKey } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -44,6 +44,7 @@ function readParams(sp: URLSearchParams) {
     source: pick("source"),
     category: pick("category"),
     salary: pick("salary"),
+    sort: sp.get("sort") === "match" ? "match" : "date",
   };
 }
 
@@ -66,6 +67,11 @@ function JobBoardContent() {
   const [sourceFilter, setSourceFilter] = useState<string>(initial.source);
   const [salaryFilter, setSalaryFilter] = useState<string>(initial.salary);
   const [categoryFilter, setCategoryFilter] = useState<string>(initial.category);
+  // "date" = moi nhat truoc (mac dinh backend), "match" = goi API voi
+  // sort=match de rerank theo diem phu hop (job_fit engine).
+  const [sortMode, setSortMode] = useState<"date" | "match">(
+    initial.sort === "match" ? "match" : "date"
+  );
   const [trackedKeys, setTrackedKeys] = useState<Map<string, TrackedKey>>(new Map());
   // Job dang mo trong panel chi tiet. Doc tu URL luc khoi tao de F5 / chia se
   // link / bam Back deu giu dung job dang xem, giong cach `search`/bo loc lam.
@@ -119,6 +125,7 @@ function JobBoardContent() {
           source: sourceFilter === "all" ? null : sourceFilter,
           category: categoryFilter === "all" ? null : categoryFilter,
           has_salary: salaryFilter === "all" ? null : salaryFilter === "yes",
+          sort: sortMode === "match" ? "match" : null,
         },
         controller.signal
       );
@@ -137,7 +144,7 @@ function JobBoardContent() {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [token, page, search, cityFilter, levelFilter, sourceFilter, categoryFilter, salaryFilter]);
+  }, [token, page, search, cityFilter, levelFilter, sourceFilter, categoryFilter, salaryFilter, sortMode]);
 
   // Day trang thai nguoc len URL. `replace` chu khong `push` de moi lan go phim
   // khong tao mot muc lich su rieng (bam Back se phai bam hang chuc lan).
@@ -150,6 +157,7 @@ function JobBoardContent() {
     if (sourceFilter !== "all") sp.set("source", sourceFilter);
     if (categoryFilter !== "all") sp.set("category", categoryFilter);
     if (salaryFilter !== "all") sp.set("salary", salaryFilter);
+    if (sortMode === "match") sp.set("sort", "match");
     if (page > 1) sp.set("page", String(page));
     if (openJob) sp.set("job", `${openJob.source}:${openJob.id}`);
     const qs = sp.toString();
@@ -157,7 +165,7 @@ function JobBoardContent() {
     if (next !== window.location.pathname + window.location.search) {
       router.replace(next, { scroll: false });
     }
-  }, [router, page, search, cityFilter, levelFilter, sourceFilter, categoryFilter, salaryFilter, openJob]);
+  }, [router, page, search, cityFilter, levelFilter, sourceFilter, categoryFilter, salaryFilter, sortMode, openJob]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -186,6 +194,11 @@ function JobBoardContent() {
     setSourceFilter("all");
     setCategoryFilter("all");
     setSalaryFilter("all");
+    setPage(1);
+  }
+
+  function toggleSort() {
+    setSortMode((m) => (m === "match" ? "date" : "match"));
     setPage(1);
   }
 
@@ -239,6 +252,27 @@ function JobBoardContent() {
           hasActiveFilters={hasFilters}
           onReset={resetFilters}
         />
+
+        {/* Sap xep theo do phu hop (rerank) — day KHONG phai bo loc nen tach
+            rieng khoi JobFilterBar. Chuyen sang "match" goi lai API voi
+            sort=match; job_fit engine cham diem tren mot pool gioi han
+            (RERANK_POOL o backend), nen phai hien ro so tin da cham o duoi. */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Button
+            variant={sortMode === "match" ? "default" : "outline"}
+            size="sm"
+            onClick={toggleSort}
+            className="gap-1.5"
+          >
+            <ArrowUpDown size={14} strokeWidth={1.75} />
+            {sortMode === "match" ? "Phù hợp nhất" : "Mới nhất"}
+          </Button>
+          {sortMode === "match" && data?.scored_pool != null && (
+            <p className="text-xs text-slate-500">
+              Đã chấm {data.scored_pool} tin mới nhất khớp bộ lọc
+            </p>
+          )}
+        </div>
 
         {/* Job cards */}
         {loading && !data ? (

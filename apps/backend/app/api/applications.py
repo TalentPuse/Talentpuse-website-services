@@ -13,6 +13,7 @@ from app.schemas.application import (
 )
 from app.services import application_service as svc
 from app.services.application_summary import build_summary
+from app.services.job_fit import score_jobs
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
@@ -48,6 +49,31 @@ async def stats(user: User = Depends(get_current_user), db: AsyncSession = Depen
 @router.get("/keys", response_model=list[TrackedKey])
 async def keys(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     return await svc.tracked_keys(db, user.id)
+
+
+# CHU Y THU TU ROUTE: "/focus" phai khai bao TRUOC bat ky route "/{app_id}" nao
+# trong cung router, neu khong FastAPI se coi "focus" la mot id.
+@router.get("/focus")
+async def focus_suggestions(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Ba job DA LUU nhung CHUA apply, diem phu hop cao nhat.
+
+    Khong dung LLM: cau tra loi "nen focus cai nao" chinh la diem so + ly do da
+    tinh o job_fit. Chay them mot model ngon ngu o day chi lam cham va lam ket
+    qua bap benh, khong them thong tin gi.
+    """
+    rows = await svc.tracked_keys(db, user.id)
+    keys = [(r["source"], r["source_job_id"]) for r in rows if r["status"] == "saved"]
+    if not keys:
+        return []
+    scored = await score_jobs(db, user, keys)
+    top = sorted(scored.items(), key=lambda kv: kv[1].score, reverse=True)[:3]
+    return [
+        {"source": k[0], "source_job_id": k[1], "score": v.score, "reasons": v.reasons}
+        for k, v in top
+    ]
 
 
 @router.post("/ai-summary", response_model=SummaryOut)

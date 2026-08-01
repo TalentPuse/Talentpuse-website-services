@@ -445,6 +445,9 @@ export type PublicJobRow = {
   source_url: string | null;
   posted_at: string | null;
   skills: string[];
+  // Chi co gia tri khi goi voi `sort: "match"`. null o cac truong hop khac,
+  // KE CA khi ho so nguoi dung rong (xem app/services/job_fit).
+  match_score: number | null;
 };
 
 export interface JobMatch {
@@ -493,6 +496,10 @@ export type PublicJobList = {
   total: number;
   page: number;
   per_page: number;
+  // So tin THUC SU duoc cham diem o lan rerank nay (<= RERANK_POOL cua
+  // backend). null khi khong sap xep theo do phu hop. PHAI hien thi con so
+  // nay tren UI — cat bot am tham se doc thanh "da xet het kho".
+  scored_pool: number | null;
 };
 
 export type FilterOptions = {
@@ -563,6 +570,8 @@ export const jobsApi = {
       source?: string | null;
       has_salary?: boolean | null;
       category?: string | null;
+      /** "match" sap xep theo do phu hop; bo qua/undefined = moi nhat truoc. */
+      sort?: "match" | null;
     },
     signal?: AbortSignal,
   ) => {
@@ -576,6 +585,7 @@ export const jobsApi = {
     if (params.category) q.set("category", params.category);
     if (params.has_salary !== undefined && params.has_salary !== null)
       q.set("has_salary", String(params.has_salary));
+    if (params.sort) q.set("sort", params.sort);
     return clientFetch<PublicJobList>(`/api/jobs?${q.toString()}`, {
       headers: authHeaders(token),
       signal,

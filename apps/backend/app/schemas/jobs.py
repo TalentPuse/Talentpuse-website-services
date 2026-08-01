@@ -17,6 +17,7 @@ class PublicJobRow(BaseModel):
     source_url: str | None
     posted_at: datetime | None
     skills: list[str]
+    match_score: int | None = None
 
 
 class PublicJobList(BaseModel):
@@ -24,6 +25,9 @@ class PublicJobList(BaseModel):
     total: int
     page: int
     per_page: int
+    # So tin THUC SU duoc cham diem o lan rerank nay. UI phai hien con so nay:
+    # cat bot am tham se doc thanh "da xet het kho" trong khi khong phai.
+    scored_pool: int | None = None
 
 
 class FilterOptions(BaseModel):

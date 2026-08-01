@@ -24,6 +24,14 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
+# Chan kich thuoc shortlist truoc khi cham diem. Quet bien tu ton ~250ms cho MOI
+# ky nang tren 6432 tin; 300 tin voi 30 ky nang la ~350ms — chap nhan duoc cho
+# mot request. Cham ca kho se mat hang chuc giay.
+#
+# Gioi han nay PHAI duoc noi ro tren UI (truong `scored_pool`). Cat bot am tham
+# se doc thanh "da xet het kho" trong khi khong phai.
+RERANK_POOL = 300
+
 
 @router.get("", response_model=PublicJobList)
 async def list_jobs(
@@ -35,7 +43,8 @@ async def list_jobs(
     source: str | None = Query(None),
     has_salary: bool | None = Query(None),
     category: str | None = Query(None),
-    _user: User = Depends(get_current_user),
+    sort: str | None = Query(None),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PublicJobList:
     conditions: list[str] = []
@@ -105,6 +114,93 @@ async def list_jobs(
         logger.warning("silver_skill_long missing; serving jobs without skill tags")
         skills_select = "ARRAY[]::text[] AS skills"
         skills_join = ""
+
+    if sort == "match":
+        # Rerank theo do phu hop: KHONG BAO GIO cham ca kho (spec §2.4). Lay
+        # mot pool gioi han cac tin MOI NHAT khop bo loc, cham diem shortlist
+        # do, roi sap xep + cat trang trong Python — Postgres khong biet diem
+        # phu hop, chi SQL engine job_fit moi tinh duoc.
+        #
+        # DISTINCT ON (source, source_job_id) BAT BUOC: fct_jobs_daily la bang
+        # SNAPSHOT HANG NGAY, mot tin co the co NHIEU dong is_active=true (moi
+        # dong mot snapshot_date). Khong khu trung truoc khi LIMIT :pool thi
+        # cung mot tin chiem nhieu cho trong pool, lam scored_pool bi phong dai
+        # va mot tin co the xuat hien hai lan trong ket qua rerank. Cung cach
+        # da ap dung o job_fit/facts.py va _DETAIL_SQL ben tren.
+        pool_params = {k: v for k, v in params.items() if k not in ("limit", "offset")}
+        pool_params["pool"] = RERANK_POOL
+        pool_result = await db.execute(text(f"""
+            WITH pool AS (
+                SELECT DISTINCT ON (f.source, f.source_job_id) f.*
+                FROM dbt_dev_gold.fct_jobs_daily f
+                WHERE f.is_active {where_extra}
+                ORDER BY f.source, f.source_job_id, f.snapshot_date DESC
+            )
+            SELECT
+                f.source,
+                f.source_job_id,
+                f.title,
+                f.company_name,
+                f.city_canonical,
+                f.job_level,
+                f.job_category,
+                round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
+                sd.source_url,
+                f.posted_at,
+                {skills_select}
+            FROM pool f
+            LEFT JOIN dbt_dev_silver.silver_job_detail sd
+                ON sd.source = f.source AND sd.source_job_id = f.source_job_id
+            {skills_join}
+            GROUP BY f.source, f.source_job_id, f.title, f.company_name,
+                     f.city_canonical, f.job_level, f.job_category,
+                     f.salary_vnd_monthly_avg, sd.source_url, f.posted_at
+            ORDER BY f.posted_at DESC NULLS LAST
+            LIMIT :pool
+        """), pool_params)
+        pool_rows = list(pool_result.mappings())
+
+        keys = [(r["source"], r["source_job_id"]) for r in pool_rows]
+        scores = await score_jobs(db, user, keys)
+
+        # Sap xep giam dan theo diem; tin KHONG cham duoc (score is None) xep
+        # cuoi thay vi bi coi la 0, va giu nguyen thu tu tuong doi ban dau
+        # (posted_at DESC, tu truy van tren) lam tie-break — enumerate() bao
+        # toan on dinh cho ca hai nhom.
+        def _sort_key(item: tuple[int, object]) -> tuple[bool, int, int]:
+            idx, row = item
+            fit = scores.get((row["source"], row["source_job_id"]))
+            return (fit is None, -(fit.score if fit else 0), idx)
+
+        ordered_rows = [row for _, row in sorted(enumerate(pool_rows), key=_sort_key)]
+        scored_pool = len(ordered_rows)
+        page_rows = ordered_rows[offset: offset + per_page]
+
+        jobs = [
+            PublicJobRow(
+                source=row["source"],
+                source_job_id=row["source_job_id"],
+                title=row["title"],
+                company_name=row["company_name"],
+                city_canonical=row["city_canonical"],
+                job_level=row["job_level"],
+                job_category=row["job_category"],
+                salary_million=row["salary_million"],
+                source_url=row["source_url"],
+                posted_at=row["posted_at"],
+                skills=row["skills"] or [],
+                match_score=(
+                    fit.score
+                    if (fit := scores.get((row["source"], row["source_job_id"])))
+                    else None
+                ),
+            )
+            for row in page_rows
+        ]
+
+        return PublicJobList(
+            jobs=jobs, total=total, page=page, per_page=per_page, scored_pool=scored_pool,
+        )
 
     result = await db.execute(text(f"""
         SELECT
