@@ -343,8 +343,22 @@ async def list_alert_logs(
 
     where = (" AND " + " AND ".join(conditions)) if conditions else ""
 
+    # PHAI dung Y HET menh de FROM/JOIN cua cau SELECT ben duoi. Truoc day cau
+    # count chi co `FROM app.alert_logs al`, trong khi `where` co the tham chieu
+    # `f.title` / `f.company_name` (nhanh search o tren) — Postgres tra ngay
+    # `missing FROM-clause entry for table "f"` va endpoint 500. Hau qua: o
+    # Tim kiem cua trang Admin -> Alert Logs CHUA BAO GIO chay; frontend chi
+    # console.error nen bang van hien du lieu cu, admin tuong la "khong tim thay".
+    # Giu ca JOIN users de count luon khop voi so dong that su tra ve.
     count_result = await db.execute(
-        text(f"SELECT count(*) FROM app.alert_logs al WHERE 1=1 {where}"),
+        text(f"""
+            SELECT count(*)
+            FROM app.alert_logs al
+            JOIN app.users u ON u.id = al.user_id
+            LEFT JOIN dbt_dev_gold.fct_jobs_daily f
+                ON f.source_job_id = al.source_job_id AND f.is_active
+            WHERE 1=1 {where}
+        """),
         params,
     )
     total = count_result.scalar()
