@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
-import { SearchX, AlertTriangle, ArrowUpDown } from "lucide-react";
+import { SearchX, AlertTriangle, ArrowUpDown, Search, X } from "lucide-react";
 
 import { jobsApi, applicationsApi, PublicJobList, FilterOptions, type TrackedKey } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -214,22 +214,76 @@ function JobBoardContent() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-brand-50/30">
-      {/* Hero */}
-      <div className="bg-linear-to-r from-brand-600 to-brand-700 text-white">
-        <div className="mx-auto max-w-6xl px-6 py-10">
+      {/* ── Hero TIM KIEM ──────────────────────────────────────────────────
+          Truoc day day la mot dai gradient chi de chua tieu de + dem so tin —
+          trang tri thuan tuy, khong lam duoc gi. O mo hinh Marketplace/Directory
+          (VietnamWorks, TopCV, ITviec deu vay) THANH TIM KIEM CHINH LA CTA: viec
+          dau tien nguoi dung lam khi vao trang la go tu khoa, nen no phai to va
+          nam ngay tam mat, khong bi lan giua mot hang dropdown. */}
+      <div className="relative overflow-hidden bg-linear-to-br from-brand-700 via-brand-600 to-brand-500 text-white">
+        {/* Lop hoa tiet mo tao chieu sau — tranh mang gradient phang lì. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 20% 20%, #fff 1px, transparent 1px), radial-gradient(circle at 70% 60%, #fff 1px, transparent 1px)",
+            backgroundSize: "48px 48px, 32px 32px",
+          }}
+        />
+        <div className="relative mx-auto max-w-6xl px-6 py-10 sm:py-12">
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={shouldReduceMotion ? undefined : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
           >
-            <h1 className="mb-2 text-3xl font-bold">Khám phá cơ hội việc làm</h1>
-            <p className="text-brand-100">
+            <h1 className="text-2xl font-bold sm:text-3xl">Tìm việc phù hợp với bạn</h1>
+            <p className="mt-1.5 text-sm text-brand-100">
               {data
-                ? `${data.total.toLocaleString()} việc làm đang tuyển dụng`
+                ? `${data.total.toLocaleString()} việc làm đang tuyển · cập nhật mỗi ngày từ VietnamWorks, ITviec, TopCV, LinkedIn`
                 : error
                   ? "Chưa tải được dữ liệu"
                   : "Đang tải..."}
             </p>
+
+            {/* O tim kiem lon. Dung chung state `search` voi JobFilterBar ben duoi
+                nen go o dau cung ra cung ket qua — khong nhan doi trang thai. */}
+            <div className="mt-5 flex items-center gap-2 rounded-[var(--radius-lg)] bg-white p-1.5 shadow-lg shadow-brand-900/20">
+              <Search size={18} strokeWidth={2} className="ml-2.5 shrink-0 text-text-muted" />
+              <input
+                value={search}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Tên công việc, công ty hoặc kỹ năng…"
+                aria-label="Tìm việc làm"
+                className="min-w-0 flex-1 bg-transparent py-2.5 text-[15px] text-text outline-none placeholder:text-text-muted"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange("")}
+                  aria-label="Xoá từ khoá"
+                  className="mr-1 cursor-pointer rounded-full p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-text"
+                >
+                  <X size={16} strokeWidth={2} />
+                </button>
+              )}
+            </div>
+
+            {/* Tim kiem pho bien — giam ma sat cho nguoi chua biet go gi, dung
+                khuyen nghi "Popular searches suggestions" cua mo hinh nay. */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-brand-200">Gợi ý:</span>
+              {["Data Engineer", "Backend", "AI Engineer", "Business Analyst", "Fresher"].map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => onSearchChange(q)}
+                  className="cursor-pointer rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-white/20"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
           </motion.div>
         </div>
       </div>
@@ -253,6 +307,52 @@ function JobBoardContent() {
           hasActiveFilters={hasFilters}
           onReset={resetFilters}
         />
+
+        {/* ── Chip bo loc dang bat ────────────────────────────────────────────
+            Design system canh bao dung "hidden filters", va truoc day day dung
+            la van de: bo loc chi doi mau cai dropdown, cuon xuong mot doan la
+            khong con thay dang loc gi — nguoi dung thac mac "sao it ket qua
+            the?" ma khong biet minh dang loc Da Nang tu 10 phut truoc.
+            Chip hien ro tung dieu kien va go duoc TUNG CAI, thay vi chi co nut
+            "Xoa tat ca" duoc-an-ca-lang. */}
+        {hasFilters && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-text-muted">Đang lọc:</span>
+            {([
+              ["Từ khoá", search, () => onSearchChange("")],
+              ["Thành phố", cityFilter !== "all" ? cityFilter : "", () => withPageReset(setCityFilter)("all")],
+              ["Cấp bậc", levelFilter !== "all" ? levelFilter : "", () => withPageReset(setLevelFilter)("all")],
+              ["Nguồn", sourceFilter !== "all" ? sourceFilter : "", () => withPageReset(setSourceFilter)("all")],
+              ["Ngành", categoryFilter !== "all" ? categoryFilter : "", () => withPageReset(setCategoryFilter)("all")],
+              ["Lương", salaryFilter !== "all" ? salaryFilter : "", () => withPageReset(setSalaryFilter)("all")],
+            ] as const)
+              .filter(([, value]) => Boolean(value))
+              .map(([label, value, clear]) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 py-1 pl-2.5 pr-1 text-xs font-medium text-brand-700 dark:border-brand-800 dark:bg-brand-950/40 dark:text-brand-300"
+                >
+                  <span className="text-brand-500 dark:text-brand-400">{label}:</span>
+                  <span className="max-w-[10rem] truncate">{value}</span>
+                  <button
+                    type="button"
+                    onClick={clear}
+                    aria-label={`Bỏ lọc ${label}`}
+                    className="cursor-pointer rounded-full p-0.5 transition-colors hover:bg-brand-200 dark:hover:bg-brand-800"
+                  >
+                    <X size={12} strokeWidth={2.5} />
+                  </button>
+                </span>
+              ))}
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="cursor-pointer text-xs font-medium text-text-muted underline transition-colors hover:text-text"
+            >
+              Xoá tất cả
+            </button>
+          </div>
+        )}
 
         {/* Sap xep theo do phu hop (rerank) — day KHONG phai bo loc nen tach
             rieng khoi JobFilterBar. Chuyen sang "match" goi lai API voi

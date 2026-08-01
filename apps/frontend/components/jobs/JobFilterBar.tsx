@@ -1,6 +1,4 @@
-import { Search } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -62,19 +60,12 @@ export default function JobFilterBar({
 }: JobFilterBarProps) {
   return (
     <div className="mb-6 flex flex-wrap items-center gap-3">
-      <div className="relative w-full sm:w-64">
-        <Search
-          size={16}
-          strokeWidth={1.75}
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-        />
-        <Input
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Tìm theo tiêu đề, công ty..."
-          className="pl-9"
-        />
-      </div>
+      {/* O tim kiem da CHUYEN LEN HERO cua trang (app/jobs/page.tsx). De lai o
+          day nua thi mot trang co HAI o tim kiem cung dieu khien mot state — go
+          o duoi thi o tren tu doi theo, nhin nhu app bi loi.
+          `search` / `onSearchChange` VAN o trong props: chung con duoc dung de
+          tinh `hasActiveFilters` va cho nut "Xoa bo loc"; bo prop se buoc sua ca
+          call-site ma khong duoc them gi. */}
 
       <Select value={city} onValueChange={onCityChange}>
         <SelectTrigger
