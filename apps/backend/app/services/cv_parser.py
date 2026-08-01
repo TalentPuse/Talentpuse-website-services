@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 
 from app.core.config import OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL
@@ -10,6 +11,14 @@ from app.core.config import OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL
 logger = logging.getLogger(__name__)
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+# Do that tren DB (2026-07): 3 user co CV, do dai cv_text trung binh 237,553
+# ky tu, lon nhat 705,718. Toan bo duoc gui cho LLM MOI lan parse (~60k token)
+# va luu nguyen vao users.cv_text - MAX_FILE_SIZE chi chan kich thuoc file PDF
+# upload, khong chan duoc do dai text trich ra (PDF nen/rac lam text bung no).
+# 20000 ky tu vi: CV 3 trang day dac ~6-8k ky tu; 20k du cho CV hoc thuat dai
+# 8-10 trang. 237k khong phai la noi dung CV that ma la rac con sot trong PDF.
+MAX_CV_TEXT_CHARS = 20000
 
 SYSTEM_PROMPT = """\
 Bạn là HR data extraction assistant. Phân tích CV/resume và trích xuất thông tin theo JSON schema.
@@ -88,6 +97,35 @@ class CvExtractResult:
     error: str | None = None
 
 
+def _truncate_cv_text(text: str) -> str:
+    """Cat text tai ranh gioi tu neu vuot MAX_CV_TEXT_CHARS, khong cat giua tu.
+
+    Tach rieng khoi extract_text() de test duoc truc tiep tren chuoi text,
+    khong phai dung PDF that.
+    """
+    if len(text) <= MAX_CV_TEXT_CHARS:
+        return text
+
+    original_length = len(text)
+    truncated = text[:MAX_CV_TEXT_CHARS]
+    # Chi lui ve khoang trang gan nhat khi diem cat THAT SU nam giua mot tu
+    # (ky tu ke tiep trong text goc khong phai whitespace). Neu diem cat vua
+    # khop ranh gioi tu thi giu nguyen - tru regex se xoa oan mot tu du da
+    # tron ven, vi \S*$ khop ca truong hop khong con ky tu nao bi cat dang.
+    if not text[MAX_CV_TEXT_CHARS].isspace():
+        match = re.search(r"\s\S*$", truncated)
+        if match:
+            truncated = truncated[: match.start()]
+    truncated = truncated.rstrip()
+    logger.warning(
+        "cv_text vuot nguong MAX_CV_TEXT_CHARS, da cat: %d -> %d ky tu (nguong=%d)",
+        original_length,
+        len(truncated),
+        MAX_CV_TEXT_CHARS,
+    )
+    return truncated
+
+
 def extract_text(pdf_bytes: bytes) -> str:
     import fitz
 
@@ -98,7 +136,8 @@ def extract_text(pdf_bytes: bytes) -> str:
         if text:
             pages.append(text.strip())
     doc.close()
-    return "\n\n".join(pages)
+    full_text = "\n\n".join(pages)
+    return _truncate_cv_text(full_text)
 
 
 def _market_vocab_instruction(market_skills: list[str] | None) -> str:

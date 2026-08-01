@@ -4,10 +4,13 @@ LLM output is confined to a Pydantic ResumeModel (JSON) — never raw LaTeX.
 Deterministic rendering + Tectonic compile live in the shared helpers below,
 reused by the edit pipeline."""
 from __future__ import annotations
-import asyncio, json, logging
+
+import asyncio
+import json
+import logging
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -93,27 +96,58 @@ async def build_base_model_from_cv_text(cv_text: str) -> ResumeModel:
     return await asyncio.to_thread(_llm_to_model, cv_text)
 
 
+# Khoa 2-so-nguyen (namespace, hash(user_id)) khac khong-gian voi khoa 1-so-nguyen
+# ALERT_DISPATCH_LOCK_ID trong job_alert.py nen khong dung nhau duoc (PG dam bao
+# 2 kieu khoa nay khong bao gio va cham). Gia tri namespace la tuy y, chi can co
+# dinh va khong trung voi khoa khac trong repo.
+CV_BUILD_LOCK_NAMESPACE = 918_273_645
+
+
 async def ensure_document(db: AsyncSession, user) -> dict:
+    # Chup user_id ngay tu dau, KHONG dung lai user.id sau buoc rollback ben duoi:
+    # AsyncSession.rollback() lam HET HAN moi object ORM gan voi session nay - ke
+    # ca `user` (cung duoc load qua Depends(get_db) trong get_current_user). Dong
+    # vao thuoc tinh da het han trong async session se nem MissingGreenlet (loi ha
+    # tang, khong phai loi nghiep vu) -> FastAPI tra HTTP 500 plain text, frontend
+    # khong parse duoc JSON.
+    user_id = user.id
     row = (await db.execute(
-        select(CvDocument).where(CvDocument.user_id == user.id))).scalar_one_or_none()
+        select(CvDocument).where(CvDocument.user_id == user_id))).scalar_one_or_none()
     if row is None:
         if not user.cv_text:
             raise ValueError("no_cv_text")
-        model = await build_base_model_from_cv_text(user.cv_text)
-        pdf_url, pages = await compile_and_store(user, model)
-        row = CvDocument(user_id=user.id, model_json=model.model_dump(),
-                         pdf_url=pdf_url, page_count=pages)
-        db.add(row)
-        try:
-            await db.commit()
-        except IntegrityError:
-            # Concurrent first-render race: another request already inserted the
-            # row. Discard ours and reuse the winner instead of 500-ing.
-            await db.rollback()
-            row = (await db.execute(
-                select(CvDocument).where(CvDocument.user_id == user.id))).scalar_one_or_none()
-            if row is None:
-                raise
+
+        # Khoa quanh buoc build (theo user_id) de nhieu request GET /api/cv/document
+        # goi song song khong con cung build -> insert trung -> IntegrityError -> 502
+        # cho nguoi thua cuoc. Cung kieu voi pg_try_advisory_lock trong
+        # app/services/job_alert.py, nhung dung ban pg_advisory_xact_lock (tu nha khi
+        # transaction commit/rollback) thay vi ban session: request build CV co the
+        # chet giua chung (LLM/Tectonic timeout), ban xact tranh ro ri khoa ma khong
+        # can code unlock thu cong o finally. Nguoi den sau CHO (block) ngay tai day
+        # toi khi nguoi dau tien commit/rollback xong roi doc lai row thay vi build
+        # them lan nua -> khong con 502 vi race.
+        await db.execute(
+            text("SELECT pg_advisory_xact_lock(:ns, hashtext(:uid))"),
+            {"ns": CV_BUILD_LOCK_NAMESPACE, "uid": str(user_id)},
+        )
+        row = (await db.execute(
+            select(CvDocument).where(CvDocument.user_id == user_id))).scalar_one_or_none()
+        if row is None:
+            model = await build_base_model_from_cv_text(user.cv_text)
+            pdf_url, pages = await compile_and_store(user, model)
+            row = CvDocument(user_id=user_id, model_json=model.model_dump(),
+                             pdf_url=pdf_url, page_count=pages)
+            db.add(row)
+            try:
+                await db.commit()
+            except IntegrityError:
+                # Concurrent first-render race: another request already inserted the
+                # row. Discard ours and reuse the winner instead of 500-ing.
+                await db.rollback()
+                row = (await db.execute(
+                    select(CvDocument).where(CvDocument.user_id == user_id))).scalar_one_or_none()
+                if row is None:
+                    raise
     return {"model": row.model_json, "pdf_url": row.pdf_url, "page_count": row.page_count}
 
 

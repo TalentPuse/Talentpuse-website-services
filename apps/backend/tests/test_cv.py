@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -12,7 +13,13 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.main import app
 from app.models.user import User
-from app.services.cv_parser import CvExtractResult, parse_cv, upload_to_s3
+from app.services.cv_parser import (
+    MAX_CV_TEXT_CHARS,
+    CvExtractResult,
+    _truncate_cv_text,
+    parse_cv,
+    upload_to_s3,
+)
 
 
 # ─── Helpers ─────────────────────────────────────────────
@@ -109,6 +116,76 @@ MOCK_EXTRACTED = {
         "salary_max_m": "low",
     },
 }
+
+
+# ─── _truncate_cv_text unit tests ────────────────────────
+# Do that tren DB: do dai cv_text trung binh 237,553 ky tu, lon nhat 705,718,
+# gui nguyen cho LLM moi lan parse (~60k token). Cac test nay bao dam nguong
+# cat hoat dong dung va khong bao gio cat giua tu.
+
+class TestTruncateCvText:
+    def test_text_longer_than_threshold_gets_truncated_at_word_boundary(self):
+        # Dat mot "tu" dai 20 ky tu nam trum len diem cat (MAX_CV_TEXT_CHARS),
+        # ep tinh huong cat giua tu phai xay ra.
+        head = "a" * (MAX_CV_TEXT_CHARS - 5)
+        text = head + " " + "b" * 20
+        assert len(text) > MAX_CV_TEXT_CHARS
+        assert not text[MAX_CV_TEXT_CHARS].isspace()  # diem cat nam giua chuoi "bbb..."
+
+        result = _truncate_cv_text(text)
+
+        assert len(result) <= MAX_CV_TEXT_CHARS
+        # Tu "bbb..." bi cat giua nen phai bi loai bo toan bo, khong giu lai
+        # mot manh vo cua no.
+        assert result == head
+        assert not result.endswith(" ")
+        # Ky tu ngay sau result trong text goc la khoang trang -> dung ranh gioi tu.
+        assert text[len(result) : len(result) + 1] in (" ", "")
+
+    def test_cut_exactly_at_word_boundary_keeps_the_last_full_word(self):
+        # Diem cat trung khop ngay sau mot tu tron ven (ky tu tiep theo la
+        # khoang trang) -> KHONG duoc xoa oan tu do di.
+        head = "a" * (MAX_CV_TEXT_CHARS - 3) + "bbb"
+        text = head + " " + "c" * 20
+        assert len(text) > MAX_CV_TEXT_CHARS
+        assert text[MAX_CV_TEXT_CHARS].isspace()
+
+        result = _truncate_cv_text(text)
+
+        assert result == head
+
+    def test_text_shorter_than_threshold_is_kept_as_is(self):
+        text = "Nguyen Van A - Backend Developer - 3 nam kinh nghiem Python."
+        assert len(text) < MAX_CV_TEXT_CHARS
+
+        result = _truncate_cv_text(text)
+
+        assert result == text
+
+    def test_text_exactly_at_threshold_is_kept_as_is(self):
+        text = "a" * MAX_CV_TEXT_CHARS
+        assert len(text) == MAX_CV_TEXT_CHARS
+
+        result = _truncate_cv_text(text)
+
+        assert result == text
+        assert len(result) == MAX_CV_TEXT_CHARS
+
+    def test_logs_warning_with_original_and_truncated_length_on_cut(self, caplog):
+        text = "x" * (MAX_CV_TEXT_CHARS + 500)
+
+        with caplog.at_level("WARNING", logger="app.services.cv_parser"):
+            _truncate_cv_text(text)
+
+        assert any("MAX_CV_TEXT_CHARS" in r.message for r in caplog.records)
+
+    def test_no_log_when_not_truncated(self, caplog):
+        text = "short cv text"
+
+        with caplog.at_level("WARNING", logger="app.services.cv_parser"):
+            _truncate_cv_text(text)
+
+        assert caplog.records == []
 
 
 # ─── parse_cv unit tests ─────────────────────────────────
@@ -431,3 +508,141 @@ async def test_upload_persists_cv_text(mock_extract, mock_parse, mock_s3):
     assert r.status_code == 200
     # The endpoint must persist the extracted text on the user so AI features can read it.
     assert user.cv_text == "extracted cv plain text"
+
+
+@pytest.mark.asyncio
+@patch("app.api.cv.upload_to_s3")
+@patch("app.api.cv.extract_text", side_effect=Exception("corrupt or protected pdf"))
+async def test_upload_invalid_pdf_never_writes_to_storage(mock_extract, mock_s3):
+    """(2) Validate TRUOC khi ghi storage: PDF loi/protect phai bi tu choi
+    TRUOC khi goi upload_to_s3, khong duoc de sot object mo coi trong MinIO."""
+    user = _make_fake_user()
+    _auth_override(user)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.post(
+            "/api/cv/upload",
+            files={"file": ("cv.pdf", b"%PDF fake corrupt", "application/pdf")},
+        )
+    assert r.status_code == 400
+    assert "PDF" in r.json()["detail"]
+    mock_s3.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("app.api.cv.upload_to_s3", return_value="http://minio:9000/bucket/cvs/new.pdf")
+@patch("app.api.cv.parse_cv", return_value=CvExtractResult(error="PDF không chứa text (có thể là file scan ảnh)"))
+@patch("app.api.cv.extract_text", return_value="")
+async def test_upload_empty_text_does_not_update_only_file_url(mock_extract, mock_parse, mock_s3):
+    """(5) PDF upload thanh cong nhung khong trich duoc text (anh scan, text
+    rong) thi KHONG duoc cap nhat rieng cv_file_url — tranh tinh trang
+    cv_file_url tro CV moi trong khi cv_text van la CV cu (hai truong mo ta
+    hai CV khac nhau). Phai cap nhat ca hai hoac khong cai nao."""
+    old_url = "http://minio:9000/bucket/cvs/old.pdf"
+    old_text = "old cv text"
+    user = _make_fake_user(cv_file_url=old_url, cv_text=old_text)
+    _auth_override(user)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.post(
+            "/api/cv/upload",
+            files={"file": ("cv.pdf", b"%PDF fake scan", "application/pdf")},
+        )
+    assert r.status_code == 200
+    assert user.cv_file_url == old_url
+    assert user.cv_text == old_text
+
+
+# ─── /document/pdf freshness tests (6) ───────────────────
+
+class _FakeCvDocRow:
+    """Doi tuong gia dung thay CvDocument, chi can thuoc tinh updated_at de
+    so sanh - AsyncMock() thuong tra ve MagicMock auto-vivify khong so sanh
+    duoc voi datetime that (TypeError khi >=)."""
+
+    def __init__(self, updated_at):
+        self.updated_at = updated_at
+
+
+class _FakeSelectResult:
+    def __init__(self, row):
+        self._row = row
+
+    def scalar_one_or_none(self):
+        return self._row
+
+
+def _fake_db_dep(row):
+    """Tra ve mot dependency override cho get_db, ma db.execute(...) luon tra
+    ve `row` bat ke cau query - du de test nhanh so sanh do tuoi trong
+    get_cv_document_pdf ma khong can dung DB that."""
+
+    async def _dep():
+        class _Db:
+            async def execute(self, *args, **kwargs):
+                return _FakeSelectResult(row)
+
+        yield _Db()
+
+    return _dep
+
+
+@pytest.mark.asyncio
+async def test_document_pdf_no_row_returns_409_without_touching_storage():
+    """(6) CvDocument da bi xoa (vd ngay sau khi upload CV moi, xem upload_cv)
+    - khong duoc doc PDF cu con sot trong storage, phai tra 409 de client goi
+    lai /document truoc (dung y docstring cua endpoint)."""
+    user = _make_fake_user(updated_at=datetime.now())
+    _auth_override(user)
+    app.dependency_overrides[get_db] = _fake_db_dep(None)
+
+    with patch("app.api.cv.download_from_s3") as mock_download:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.get("/api/cv/document/pdf")
+
+    assert r.status_code == 409
+    mock_download.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("app.api.cv.render_pdf_bytes", new_callable=AsyncMock, return_value=b"%PDF fresh rebuild")
+async def test_document_pdf_skips_stale_storage_when_row_older_than_user(mock_render):
+    """(6) CvDocument con ton tai nhung cu hon lan cap nhat user gan nhat (vd
+    upload_cv vua doi user.updated_at) thi khong duoc tin PDF cache trong
+    storage - phai build lai tu model_json hien tai."""
+    now = datetime.now()
+    user = _make_fake_user(updated_at=now)
+    _auth_override(user)
+    stale_row = _FakeCvDocRow(updated_at=now - timedelta(hours=1))
+    app.dependency_overrides[get_db] = _fake_db_dep(stale_row)
+
+    with patch("app.api.cv.download_from_s3") as mock_download:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.get("/api/cv/document/pdf")
+
+    assert r.status_code == 200
+    assert r.content == b"%PDF fresh rebuild"
+    mock_download.assert_not_called()
+    mock_render.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("app.api.cv.render_pdf_bytes", new_callable=AsyncMock)
+@patch("app.api.cv.download_from_s3", return_value=b"%PDF cached")
+async def test_document_pdf_uses_cache_when_row_is_fresh(mock_download, mock_render):
+    """Doi chung: row moi hon (hoac bang) lan cap nhat user gan nhat thi van
+    duoc phep dung PDF cache trong storage nhu binh thuong, khong build lai
+    lang phi."""
+    now = datetime.now()
+    user = _make_fake_user(updated_at=now - timedelta(hours=1))
+    _auth_override(user)
+    fresh_row = _FakeCvDocRow(updated_at=now)
+    app.dependency_overrides[get_db] = _fake_db_dep(fresh_row)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.get("/api/cv/document/pdf")
+
+    assert r.status_code == 200
+    assert r.content == b"%PDF cached"
+    mock_download.assert_called_once()
+    mock_render.assert_not_called()
