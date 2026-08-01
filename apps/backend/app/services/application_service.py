@@ -125,6 +125,16 @@ async def update_application(db, user_id, app_id, *, status=None, notes=None, ap
         if status not in APPLICATION_STATUSES:
             raise ValueError("invalid status")
         app.status = status
+        # Doi xung voi create_application (dong 57-58): o do tao moi voi
+        # status="applied" thi applied_at duoc dat la hom nay. Truoc day
+        # update_application KHONG lam vay, nen duong PHO BIEN NHAT — keo card tu
+        # "Da luu" sang "Da apply" — de applied_at = NULL.
+        # Hau qua da do duoc: get_stats loc applied_this_week theo
+        # `applied_at IS NOT NULL` (dong 96-97), nen dem 0 VINH VIEN du nguoi dung
+        # da apply. Thong ke theo tuan hong am tham, khong bao loi gi.
+        # Chi dat khi CHUA co, de khong ghi de ngay that nguoi dung tu nhap.
+        if status == "applied" and app.applied_at is None:
+            app.applied_at = datetime.date.today()
     if notes is not None:
         app.notes = notes
     if applied_at is not None:
