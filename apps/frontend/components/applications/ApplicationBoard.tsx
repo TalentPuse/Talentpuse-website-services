@@ -23,6 +23,7 @@ type ApplicationBoardProps = {
   apps: Application[];
   onStatusChange: (id: string, status: ApplicationStatus) => void;
   onDelete: (id: string) => void;
+  onOpenDetail?: (app: Application) => void;
 };
 
 /**
@@ -33,7 +34,7 @@ type ApplicationBoardProps = {
  * sortable within a column — `app.job_applications` has no position column, so
  * ordering stays `created_at desc` as it comes from the API.
  */
-export default function ApplicationBoard({ apps, onStatusChange, onDelete }: ApplicationBoardProps) {
+export default function ApplicationBoard({ apps, onStatusChange, onDelete, onOpenDetail }: ApplicationBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -101,6 +102,7 @@ export default function ApplicationBoard({ apps, onStatusChange, onDelete }: App
             label={STATUS_LABEL[status]}
             apps={byStatus[status]}
             onDelete={onDelete}
+            onOpenDetail={onOpenDetail}
           />
         ))}
       </div>

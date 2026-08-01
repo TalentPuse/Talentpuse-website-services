@@ -20,6 +20,7 @@ type BoardColumnProps = {
   label: string;
   apps: Application[];
   onDelete: (id: string) => void;
+  onOpenDetail?: (app: Application) => void;
 };
 
 /**
@@ -31,7 +32,7 @@ type BoardColumnProps = {
  * answer for a 5-column board on a narrow screen); from 2xl the columns flex to
  * fill instead, so a wide desktop never shows a scrollbar.
  */
-export default function BoardColumn({ status, label, apps, onDelete }: BoardColumnProps) {
+export default function BoardColumn({ status, label, apps, onDelete, onOpenDetail }: BoardColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
@@ -62,7 +63,7 @@ export default function BoardColumn({ status, label, apps, onDelete }: BoardColu
         )}
       >
         {apps.map((app) => (
-          <ApplicationCard key={app.id} app={app} onDelete={onDelete} />
+          <ApplicationCard key={app.id} app={app} onDelete={onDelete} onOpenDetail={onOpenDetail} />
         ))}
 
         {apps.length === 0 && (

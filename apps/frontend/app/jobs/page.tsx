@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import JobCard from "@/components/jobs/JobCard";
 import JobFilterBar from "@/components/jobs/JobFilterBar";
+import JobDetailSheet from "@/components/jobs/JobDetailSheet";
 
 const PER_PAGE = 20;
 const SKELETON_COUNT = 6;
@@ -66,6 +67,14 @@ function JobBoardContent() {
   const [salaryFilter, setSalaryFilter] = useState<string>(initial.salary);
   const [categoryFilter, setCategoryFilter] = useState<string>(initial.category);
   const [trackedKeys, setTrackedKeys] = useState<Map<string, TrackedKey>>(new Map());
+  // Job dang mo trong panel chi tiet. Doc tu URL luc khoi tao de F5 / chia se
+  // link / bam Back deu giu dung job dang xem, giong cach `search`/bo loc lam.
+  const [openJob, setOpenJob] = useState<{ source: string; id: string } | null>(() => {
+    const raw = searchParams.get("job");
+    if (!raw) return null;
+    const i = raw.indexOf(":");
+    return i > 0 ? { source: raw.slice(0, i), id: raw.slice(i + 1) } : null;
+  });
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const abortRef = useRef<AbortController>();
   const shouldReduceMotion = useReducedMotion();
@@ -142,12 +151,13 @@ function JobBoardContent() {
     if (categoryFilter !== "all") sp.set("category", categoryFilter);
     if (salaryFilter !== "all") sp.set("salary", salaryFilter);
     if (page > 1) sp.set("page", String(page));
+    if (openJob) sp.set("job", `${openJob.source}:${openJob.id}`);
     const qs = sp.toString();
     const next = qs ? `/jobs?${qs}` : "/jobs";
     if (next !== window.location.pathname + window.location.search) {
       router.replace(next, { scroll: false });
     }
-  }, [router, page, search, cityFilter, levelFilter, sourceFilter, categoryFilter, salaryFilter]);
+  }, [router, page, search, cityFilter, levelFilter, sourceFilter, categoryFilter, salaryFilter, openJob]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -279,6 +289,9 @@ function JobBoardContent() {
                       job={job}
                       tracked={trackedKeys.get(`${job.source}:${job.source_job_id}`) ?? null}
                       onTracked={handleTracked}
+                      onOpenDetail={() =>
+                        setOpenJob({ source: job.source, id: job.source_job_id })
+                      }
                     />
                   </motion.div>
                 ))}
@@ -336,6 +349,12 @@ function JobBoardContent() {
           </motion.div>
         )}
       </main>
+
+      <JobDetailSheet
+        source={openJob?.source ?? null}
+        sourceJobId={openJob?.id ?? null}
+        onClose={() => setOpenJob(null)}
+      />
     </div>
   );
 }

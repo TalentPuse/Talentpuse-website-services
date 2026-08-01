@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { ClipboardCheck } from "@/lib/icons";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,8 +8,9 @@ import AddApplicationDialog from "@/components/applications/AddApplicationDialog
 import CopilotDockProvider from "@/components/copilot/CopilotDockProvider";
 import BoardCopilot from "@/components/copilot/BoardCopilot";
 import DockInsight from "@/components/copilot/DockInsight";
+import JobDetailSheet from "@/components/jobs/JobDetailSheet";
 import { COPILOT_DOCK } from "@/lib/flags";
-import type { ApplicationStatus } from "@/lib/api";
+import type { Application, ApplicationStatus } from "@/lib/api";
 import { useBoardData, type BoardData } from "./use-board-data";
 
 export default function ApplicationsPage() {
@@ -24,6 +26,10 @@ export default function ApplicationsPage() {
 
 function Content({ board }: { board: BoardData }) {
   const { apps, stats, loading, reload, changeStatus, remove } = board;
+  // Job dang mo trong panel chi tiet. Giu ca Application (khong chi khoa) vi
+  // job tu nhap (source_job_id NULL) can `title` de panel bao ro thay vi goi
+  // API vo ich — xem JobDetailSheet.manualTitle.
+  const [openJob, setOpenJob] = useState<Application | null>(null);
 
   // `changeStatus` ném lỗi để handler của copilot biết mà báo lại cho AI, nhưng
   // `ApplicationBoard.handleDragEnd` gọi nó không await/catch — ném thẳng lên đó
@@ -62,10 +68,22 @@ function Content({ board }: { board: BoardData }) {
         <>
           <p className="mb-2 shrink-0 text-xs text-text-muted">Kéo card sang cột khác để đổi trạng thái, hoặc bảo trợ lý AI bên phải làm hộ.</p>
           <div className="min-h-0 flex-1">
-            <ApplicationBoard apps={apps} onStatusChange={dragStatusChange} onDelete={remove} />
+            <ApplicationBoard
+              apps={apps}
+              onStatusChange={dragStatusChange}
+              onDelete={remove}
+              onOpenDetail={setOpenJob}
+            />
           </div>
         </>
       )}
+
+      <JobDetailSheet
+        source={openJob?.source ?? null}
+        sourceJobId={openJob?.source_job_id ?? null}
+        manualTitle={openJob?.title}
+        onClose={() => setOpenJob(null)}
+      />
     </div>
   );
 }

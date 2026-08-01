@@ -17,6 +17,8 @@ import type { Application } from "@/lib/api";
 type ApplicationCardProps = {
   app: Application;
   onDelete: (id: string) => void;
+  /** Mo panel chi tiet cho job nay. Khong truyen thi tieu de khong the bam. */
+  onOpenDetail?: (app: Application) => void;
   /** Rendered inside DragOverlay — no drag wiring, just the visual. */
   isOverlay?: boolean;
 };
@@ -28,7 +30,7 @@ type ApplicationCardProps = {
  * so moving the card is what changes it. Drag is wired through dnd-kit, which
  * also gives keyboard dragging for free (Space to lift, arrows, Space to drop).
  */
-export default function ApplicationCard({ app, onDelete, isOverlay = false }: ApplicationCardProps) {
+export default function ApplicationCard({ app, onDelete, onOpenDetail, isOverlay = false }: ApplicationCardProps) {
   const [confirming, setConfirming] = useState(false);
   const reduceMotion = useReducedMotion();
 
@@ -64,6 +66,11 @@ export default function ApplicationCard({ app, onDelete, isOverlay = false }: Ap
       <div className="flex items-start gap-2">
         <Monogram name={app.company_name || app.title} />
         <div className="min-w-0 flex-1">
+          {/* "Phan tieu de": vung bam de mo panel chi tiet. Dat onClick o day —
+              KHONG o div ngoai cung (dong tren mang {...listeners}) — vi div
+              ngoai la be mat keo-tha cua dnd-kit; gan onClick vao do thi moi
+              lan keo cung se mo panel theo. onPointerDown stopPropagation giu
+              nguyen de bam vao day khong lam dnd-kit hieu nham la bat dau keo. */}
           <div className="flex items-start gap-1.5">
             {app.source_url ? (
               <a
@@ -71,12 +78,20 @@ export default function ApplicationCard({ app, onDelete, isOverlay = false }: Ap
                 target="_blank"
                 rel="noopener noreferrer"
                 onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => onOpenDetail?.(app)}
                 className="line-clamp-2 text-sm font-medium text-text hover:text-brand-600"
               >
                 {app.title}
               </a>
             ) : (
-              <span className="line-clamp-2 text-sm font-medium text-text">{app.title}</span>
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => onOpenDetail?.(app)}
+                className="line-clamp-2 text-left text-sm font-medium text-text hover:text-brand-600"
+              >
+                {app.title}
+              </button>
             )}
           </div>
           <p className="mt-0.5 truncate text-xs text-text-muted">
