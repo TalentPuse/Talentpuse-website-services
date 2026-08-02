@@ -43,7 +43,7 @@ function formatPosted(postedAt: string | null): string | null {
 function CompanyAvatar({ logoUrl, name }: { logoUrl: string | null; name: string }) {
   const [hong, setHong] = useState(false);
 
-  if (!logoUrl || hong) return <Monogram name={name} size="sm" />;
+  if (!logoUrl || hong) return <Monogram name={name} size="md" />;
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -54,7 +54,7 @@ function CompanyAvatar({ logoUrl, name }: { logoUrl: string | null; name: string
       width={32}
       height={32}
       onError={() => setHong(true)}
-      className="h-8 w-8 shrink-0 rounded-[var(--radius-sm)] border border-border bg-white object-contain p-0.5"
+      className="h-10 w-10 shrink-0 rounded-[var(--radius-md)] border border-border bg-white object-contain p-1"
     />
   );
 }
@@ -97,7 +97,11 @@ export default function JobRow({ job, tracked, onTracked, onOpenDetail }: JobRow
     .join(" · ");
 
   return (
-    <div className="group relative flex items-center gap-3 bg-surface px-3 py-2.5 transition-colors hover:bg-surface-2 sm:px-4">
+    // The le RIENG, khong con dinh lien nhau bang mot duong ke: moi tin co vien
+    // + bo goc rieng, cach nhau bang khoang trong o danh sach cha. Doi lai mat
+    // do (53px -> ~78px moi dong, ~14 -> ~10 tin mot man hinh), duoc lai chieu
+    // sau va vung bam ro rang — dung mo hinh cua VietnamWorks/TopCV/ITviec.
+    <div className="group relative flex items-center gap-3.5 rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-3.5 transition-all duration-150 hover:-translate-y-px hover:border-brand-500/40 hover:shadow-md hover:shadow-brand-900/5">
       <div
         role={onOpenDetail ? "button" : undefined}
         tabIndex={onOpenDetail ? 0 : undefined}

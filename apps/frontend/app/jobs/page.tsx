@@ -394,9 +394,9 @@ function JobBoardContent() {
 
         {/* Job cards */}
         {loading && !data ? (
-          <div className="divide-y divide-border overflow-hidden rounded-[var(--radius-lg)] border border-border">
+          <div className="flex flex-col gap-2.5">
             {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-              <Skeleton key={i} className="h-[53px] rounded-none" />
+              <Skeleton key={i} className="h-[78px] rounded-[var(--radius-lg)]" />
             ))}
           </div>
         ) : error ? (
@@ -434,7 +434,7 @@ function JobBoardContent() {
               initial={shouldReduceMotion ? undefined : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="divide-y divide-border overflow-hidden rounded-[var(--radius-lg)] border border-border"
+              className="flex flex-col gap-2.5"
             >
               {data.jobs.map((job) => (
                 <JobRow
