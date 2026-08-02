@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { SearchX, AlertTriangle, ArrowUpDown, Search, X } from "lucide-react";
 
@@ -12,12 +12,15 @@ import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import JobCard from "@/components/jobs/JobCard";
+import JobRow from "@/components/jobs/JobRow";
 import JobFilterBar from "@/components/jobs/JobFilterBar";
 import JobDetailSheet from "@/components/jobs/JobDetailSheet";
 
 const PER_PAGE = 20;
-const SKELETON_COUNT = 6;
+// Bo cuc hang gon hon card nen mot man hinh chua duoc nhieu hon — khung xuong
+// phai phu du chieu cao that su cua danh sach, khong thi luc du lieu ve trang
+// bi giat len mot doan (CLS).
+const SKELETON_COUNT = 12;
 
 export default function JobBoardPage() {
   return (
@@ -391,9 +394,9 @@ function JobBoardContent() {
 
         {/* Job cards */}
         {loading && !data ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="divide-y divide-border overflow-hidden rounded-[var(--radius-lg)] border border-border">
             {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-              <Skeleton key={i} className="h-48 rounded-[var(--radius-lg)]" />
+              <Skeleton key={i} className="h-[53px] rounded-none" />
             ))}
           </div>
         ) : error ? (
@@ -418,33 +421,30 @@ function JobBoardContent() {
                 `page` thi React remount ca luoi va danh sach TRANG CU chay lai
                 animation vao — nguoi dung thay list nhap nhay roi hien y het,
                 tuong bam hut nen bam tiep, nhay qua mot trang. */}
+            {/* Danh sach mot cot, cac hang dinh lien nhau va cach nhau bang mot
+                duong ke — day la thu bien "card roi rac" thanh "bang doc duoc":
+                mat nhin chay thang mot mach xuong duoi thay vi phai nhay zic-zac
+                giua hai cot.
+                Hieu ung vao chi con MOT lan cho ca khoi. Truoc day moi hang tu
+                chay mot animation lech nhau 0.03s — voi 20 hang la 0.6s moi
+                hien xong dong cuoi, va design system xep "animation trang tri"
+                vao muc phai bo. */}
             <motion.div
               key={data.page}
-              initial={shouldReduceMotion ? undefined : { opacity: 0, y: 10 }}
+              initial={shouldReduceMotion ? undefined : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="grid gap-4 md:grid-cols-2"
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="divide-y divide-border overflow-hidden rounded-[var(--radius-lg)] border border-border"
             >
-              <AnimatePresence mode="popLayout">
-                {data.jobs.map((job, idx) => (
-                  <motion.div
-                    key={`${job.source}-${job.source_job_id}`}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.25, delay: idx * 0.03 }}
-                  >
-                    <JobCard
-                      job={job}
-                      tracked={trackedKeys.get(`${job.source}:${job.source_job_id}`) ?? null}
-                      onTracked={handleTracked}
-                      onOpenDetail={() =>
-                        setOpenJob({ source: job.source, id: job.source_job_id })
-                      }
-                    />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              {data.jobs.map((job) => (
+                <JobRow
+                  key={`${job.source}-${job.source_job_id}`}
+                  job={job}
+                  tracked={trackedKeys.get(`${job.source}:${job.source_job_id}`) ?? null}
+                  onTracked={handleTracked}
+                  onOpenDetail={() => setOpenJob({ source: job.source, id: job.source_job_id })}
+                />
+              ))}
             </motion.div>
 
             {/* Pagination */}
