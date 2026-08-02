@@ -89,3 +89,12 @@ ALERT_END_TIME = time(21, 30)
 # xem app/core/cache.py.
 REDIS_URL = os.getenv("REDIS_URL", "redis://tp-redis:6379/0")
 
+# Umami (analytics tu host). CO Y KHONG dung _require_secret(): day la cau hinh
+# TUY CHON, khong phai secret ky token. Neu bat no boot khi thieu key thi ca
+# backend (login, alert, chat) chet chi vi mot dashboard admin chua cau hinh.
+# Thieu thi umami_client raise UmamiUnavailable luc goi, va trang analytics hien
+# error state — dung mot widget, khong sap ca app.
+UMAMI_BASE_URL = os.getenv("UMAMI_BASE_URL", "http://umami:3000")
+UMAMI_API_KEY = os.getenv("UMAMI_API_KEY", "")
+UMAMI_WEBSITE_ID = os.getenv("UMAMI_WEBSITE_ID", "")
+
