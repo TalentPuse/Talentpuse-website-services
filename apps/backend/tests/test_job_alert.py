@@ -309,7 +309,21 @@ async def test_student_sql_has_level_filter():
 
     sql = captured["sql"]
     assert "job_level = ANY" in sql
-    assert "is_active = true" in sql
+
+    # `is_active` phai loc SAU khi da chon snapshot moi nhat, tuc tren CTE chu
+    # khong tren bang goc.
+    #
+    # `fct_jobs_daily` la bang snapshot theo ngay. Loc trong CTE nghia la
+    # Postgres chon "dong moi nhat TRONG SO CAC DONG CON ACTIVE" — mot tin da
+    # het han hom nay van duoc alert qua snapshot con active cua tuan truoc.
+    # Do duoc tren DB dev: linkedin/4377133563 co snapshot 02/08 is_active=f va
+    # snapshot 24/07 is_active=t, va manual test thay no van bi gui di.
+    assert "moi_nhat_student.is_active" in sql, f"is_active loc sai cho:\n{sql}"
+    # Chi bat DANG BO LOC (`= true`). Ban than cot `is_active` VAN phai co mat
+    # trong SELECT cua CTE — no duoc mang theo de loc o vong ngoai.
+    assert "fct_jobs_daily.is_active = true" not in sql, (
+        f"van loc is_active truoc DISTINCT ON -> alert tin da het han:\n{sql}"
+    )
 
 
 @pytest.mark.asyncio

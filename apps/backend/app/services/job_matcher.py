@@ -104,6 +104,9 @@ def _base_columns():
         fct_jobs_daily.c.job_category,
         _salary_m,
         fct_jobs_daily.c.posted_at,
+        # Mang `is_active` theo de LOC SAU khi da chon snapshot moi nhat — xem
+        # chu thich o `_find_scored_jobs`. Loc truoc `DISTINCT ON` la sai.
+        fct_jobs_daily.c.is_active,
         silver_job_detail.c.source_url,
         silver_job_detail.c.primary_address,
         silver_job_detail.c.city_raw_vi,
@@ -200,8 +203,8 @@ class JobMatcher:
         title_patterns = [_mau_chua(t) for t in titles]
         levels = LEVEL_MAP["student"]
 
+        # `is_active` KHONG nam o day — xem chu thich o `_find_scored_jobs`.
         conditions = [
-            fct_jobs_daily.c.is_active == True,  # noqa: E712
             fct_jobs_daily.c.job_level == any_(levels),
             (fct_jobs_daily.c.title.ilike(any_(title_patterns)))
             | (fct_jobs_daily.c.job_category.ilike(any_(title_patterns))),
@@ -241,6 +244,7 @@ class JobMatcher:
 
         query = (
             select(moi_nhat)
+            .where(moi_nhat.c.is_active)
             .order_by(moi_nhat.c.posted_at.desc().nullslast())
             .limit(STUDENT_ALERT_LIMIT)
         )
@@ -285,10 +289,17 @@ class JobMatcher:
                 isouter=True,
             )
 
-        # Level filter
-        level_filters = [
-            fct_jobs_daily.c.is_active == True,  # noqa: E712
-        ]
+        # `is_active` KHONG loc o day ma loc SAU khi da chon snapshot moi nhat.
+        #
+        # `fct_jobs_daily` la bang snapshot theo ngay. Loc `is_active` TRUOC
+        # `DISTINCT ON` nghia la Postgres chon "dong moi nhat TRONG SO CAC DONG
+        # CON ACTIVE" — mot tin da het han hom nay van duoc alert qua snapshot
+        # con active cua tuan truoc.
+        #
+        # Do duoc tren DB dev: linkedin/4377133563 co snapshot 02/08 is_active=f
+        # va snapshot 24/07 is_active=t; manual test thay no van bi gui di nhu
+        # tin dang tuyen. Nguoi dung bam vao thi thay tin da dong.
+        level_filters: list = []
         if allowed_levels:
             level_filters.append(fct_jobs_daily.c.job_level == any_(allowed_levels))
         if not include_alerted:
@@ -339,6 +350,7 @@ class JobMatcher:
                 scored.c.city_raw_vi,
             )
             .where(scored.c.score > 0)
+            .where(scored.c.is_active)
             .order_by(scored.c.score.desc(), scored.c.posted_at.desc().nullslast())
             .limit(ALERT_LIMIT)
         )
