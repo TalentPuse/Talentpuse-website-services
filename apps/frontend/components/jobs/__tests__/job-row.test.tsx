@@ -14,7 +14,7 @@ function makeJob(over: Partial<PublicJobRow> = {}): PublicJobRow {
     title: "Senior Data Engineer",
     company_name: "Zalopay",
     company_logo_url: null,
-    city_canonical: "Hồ Chí Minh",
+    city_canonical: "HCMC",
     job_level: "Senior",
     job_category: "Data",
     salary_million: 45,
@@ -32,9 +32,11 @@ test("hien tieu de, cong ty, luong va thong tin phu tren mot hang", () => {
   expect(screen.getByText("Senior Data Engineer")).toBeInTheDocument();
   expect(screen.getAllByText("Zalopay").length).toBeGreaterThan(0);
   expect(screen.getAllByText(/45 triệu/).length).toBeGreaterThan(0);
-  // getAll, khong phai get: JSDOM khong ap dung media query nen CA nhanh mobile
-  // lan nhanh desktop deu nam trong DOM. Tren trinh duyet that chi mot cai hien.
+  // Kho luu ma khong dau ("HCMC") lam KHOA cho URL va bo loc; giao dien phai
+  // hien ten tieng Viet. getAll chu khong get: JSDOM khong ap dung media query
+  // nen ca nhanh mobile lan desktop deu nam trong DOM.
   expect(screen.getAllByText(/Hồ Chí Minh/).length).toBeGreaterThan(0);
+  expect(screen.queryByText(/HCMC/)).not.toBeInTheDocument();
 });
 
 test("luong KHONG bi lam mo — day la thong tin nguoi tim viec doc dau tien", () => {

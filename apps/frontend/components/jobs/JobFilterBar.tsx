@@ -9,6 +9,7 @@ import {
 import { getSourceLabel } from "@/lib/job-sources";
 import { cn } from "@/lib/utils";
 import type { FilterOptions } from "@/lib/api";
+import { getCityLabel } from "@/lib/city-labels";
 
 /** Visual treatment applied to a filter Select trigger once it has an active (non-"all") value. */
 const ACTIVE_FILTER_TRIGGER_CLASS =
@@ -80,7 +81,7 @@ export default function JobFilterBar({
           <SelectItem value="all">Tất cả thành phố</SelectItem>
           {filters?.cities.map((c) => (
             <SelectItem key={c} value={c}>
-              {c}
+              {getCityLabel(c)}
             </SelectItem>
           ))}
         </SelectContent>

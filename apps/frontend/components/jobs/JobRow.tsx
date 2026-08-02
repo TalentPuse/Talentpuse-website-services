@@ -7,6 +7,7 @@ import Monogram from "@/components/brand/Monogram";
 import { getSourceLabel } from "@/lib/job-sources";
 import { cn } from "@/lib/utils";
 import type { PublicJobRow, TrackedKey } from "@/lib/api";
+import { getCityLabel } from "@/lib/city-labels";
 
 type JobRowProps = {
   job: PublicJobRow;
@@ -92,7 +93,7 @@ export default function JobRow({ job, tracked, onTracked, onOpenDetail }: JobRow
 
   // Thong tin phu, ghep bang dau "·" thay vi moi thu mot the co icon rieng:
   // icon o co nay chi lam nhieu mat, khong them nghia nao.
-  const meta = [job.city_canonical, job.job_level, posted, getSourceLabel(job.source)]
+  const meta = [getCityLabel(job.city_canonical), job.job_level, posted, getSourceLabel(job.source)]
     .filter(Boolean)
     .join(" · ");
 
@@ -144,7 +145,7 @@ export default function JobRow({ job, tracked, onTracked, onOpenDetail }: JobRow
             {job.city_canonical && (
               <>
                 <span aria-hidden>·</span>
-                <span className="shrink-0">{job.city_canonical}</span>
+                <span className="shrink-0">{getCityLabel(job.city_canonical)}</span>
               </>
             )}
           </div>

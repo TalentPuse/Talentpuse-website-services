@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { jobsApi, type JobDetail } from "@/lib/api";
 import JobMatchScore from "./JobMatchScore";
 import JobDescriptionText from "./JobDescriptionText";
+import { getCityLabel } from "@/lib/city-labels";
 
 interface Props {
   source: string | null;
@@ -116,7 +117,7 @@ export default function JobDetailSheet({ source, sourceJobId, onClose, manualTit
                   {data.city_canonical && (
                     <span className="inline-flex items-center gap-1">
                       <MapPin size={13} strokeWidth={1.75} />
-                      {data.city_canonical}
+                      {getCityLabel(data.city_canonical)}
                     </span>
                   )}
                 </p>

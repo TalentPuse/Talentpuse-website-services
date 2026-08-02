@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import JobRow from "@/components/jobs/JobRow";
 import JobFilterBar from "@/components/jobs/JobFilterBar";
 import JobDetailSheet from "@/components/jobs/JobDetailSheet";
+import { getCityLabel } from "@/lib/city-labels";
 
 const PER_PAGE = 20;
 // Bo cuc hang gon hon card nen mot man hinh chua duoc nhieu hon — khung xuong
@@ -323,7 +324,7 @@ function JobBoardContent() {
             <span className="text-xs text-text-muted">Đang lọc:</span>
             {([
               ["Từ khoá", search, () => onSearchChange("")],
-              ["Thành phố", cityFilter !== "all" ? cityFilter : "", () => withPageReset(setCityFilter)("all")],
+              ["Thành phố", cityFilter !== "all" ? getCityLabel(cityFilter) : "", () => withPageReset(setCityFilter)("all")],
               ["Cấp bậc", levelFilter !== "all" ? levelFilter : "", () => withPageReset(setLevelFilter)("all")],
               ["Nguồn", sourceFilter !== "all" ? sourceFilter : "", () => withPageReset(setSourceFilter)("all")],
               ["Ngành", categoryFilter !== "all" ? categoryFilter : "", () => withPageReset(setCategoryFilter)("all")],
