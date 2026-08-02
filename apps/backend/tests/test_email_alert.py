@@ -494,10 +494,13 @@ class TestDispatchWithEmail:
             total = await dispatch_alerts(mock_db)
 
         assert total == 2
+        # `user_id` la bat buoc: no sinh ra token huy nhan email cho header
+        # List-Unsubscribe (JA-22). Thieu no thi mail di ma khong co duong huy.
         mock_send.assert_called_once_with(
             to="sub@example.com",
             user_name="Test User",
             jobs=jobs,
+            user_id=user.id,
         )
 
     @pytest.mark.asyncio

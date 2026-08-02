@@ -112,6 +112,7 @@ async def _dispatch_alerts_locked(db: AsyncSession, source: str) -> int:
                         to=user.email,
                         user_name=user.full_name,
                         jobs=jobs,
+                        user_id=user.id,
                     )
                     if email_result.success:
                         for j in jobs:
@@ -216,13 +217,34 @@ async def email_all_users(db: AsyncSession, source: str = "admin_manual") -> dic
 
 async def _email_all_users_locked(db: AsyncSession, source: str) -> dict:
     """Than cua `email_all_users`, chay khi da CHAC CHAN giu khoa dispatch."""
+    # CHI gui cho nguoi da bat `email_job_match` (JA-10).
+    #
+    # Ban cu chi loc `is_active AND NOT is_admin` va CO TINH bo qua
+    # AlertSubscription, nen nguoi da bam huy nhan mail van nhan. Cong voi
+    # JA-22 (mail khong co link huy) thi ho khong con cach nao khac ngoai bam
+    # "Report spam" — va Gmail/Yahoo ha uy tin CA DOMAIN `talentpuse.io.vn`,
+    # tuc la lam hong email cho toan bo user chu khong rieng nguoi bam.
+    #
+    # Neu that su can mot dot gui cho tat ca (vd thong bao van hanh), do la mot
+    # tinh nang khac va phai co su dong y rieng — khong duoc muon lai duong
+    # alert viec lam.
     result = await db.execute(
-        select(User).where(
+        select(User)
+        .join(
+            AlertSubscription,
+            (AlertSubscription.user_id == User.id)
+            & (AlertSubscription.alert_type == EMAIL_ALERT_TYPE)
+            & (AlertSubscription.enabled == True),  # noqa: E712
+        )
+        .where(
             User.is_active == True,  # noqa: E712
             User.is_admin == False,  # noqa: E712
         )
     )
     users: list[User] = result.scalars().all()
+    logger.info(
+        "email_all_users: %d nguoi dang bat email_job_match (source=%s)", len(users), source
+    )
 
     emailed = 0
     skipped = 0
@@ -243,6 +265,7 @@ async def _email_all_users_locked(db: AsyncSession, source: str) -> dict:
                 to=user.email,
                 user_name=user.full_name,
                 jobs=jobs,
+                user_id=user.id,
             )
             status = "sent" if email_result.success else "failed"
             err = (email_result.error or "Unknown error")[:500] if not email_result.success else None

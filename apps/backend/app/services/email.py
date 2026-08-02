@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import httpx
 
 from app.core.config import RESEND_API_KEY, RESEND_FROM_EMAIL
+from app.core.unsubscribe import tao_token
 from app.services.job_matcher import MatchedJob, SOURCE_LABEL, _build_job_url
 
 logger = logging.getLogger(__name__)
@@ -21,10 +22,21 @@ class EmailResult:
     error: str | None = None
 
 
+BASE_URL = "https://talentpuse.io.vn"
+API_BASE_URL = "https://talentpuse.io.vn/api"
+
+
+def _unsubscribe_url(user_id) -> str | None:
+    if user_id is None:
+        return None
+    return f"{API_BASE_URL}/email/alerts/unsubscribe/one-click?token={tao_token(user_id)}"
+
+
 async def send_job_alert_email(
     to: str,
     user_name: str,
     jobs: list[MatchedJob],
+    user_id=None,
 ) -> EmailResult:
     """Send a job alert email via Resend API.
 
@@ -38,7 +50,21 @@ async def send_job_alert_email(
         return EmailResult(success=False, error="RESEND_API_KEY not configured")
 
     subject = f"TalentPulse Alert: {len(jobs)} viec lam moi phu hop"
-    html = _build_job_alert_html(user_name, jobs)
+    huy_url = _unsubscribe_url(user_id)
+    html = _build_job_alert_html(user_name, jobs, huy_url)
+
+    # Gmail va Yahoo BAT BUOC bulk sender phai co one-click unsubscribe
+    # (RFC 8058) — thieu no thi ca domain gui bi ha uy tin, khong chi rieng
+    # nhung mail bi bam Report spam (JA-22).
+    #
+    # `List-Unsubscribe-Post` la phan lam cho no "one-click": khong co header
+    # nay, mail client chi hien link va nguoi dung phai tu bam.
+    headers = {}
+    if huy_url:
+        headers = {
+            "List-Unsubscribe": f"<{huy_url}>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        }
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -53,6 +79,7 @@ async def send_job_alert_email(
                     "to": [to],
                     "subject": subject,
                     "html": html,
+                    **({"headers": headers} if headers else {}),
                 },
             )
 
@@ -70,7 +97,7 @@ async def send_job_alert_email(
         return EmailResult(success=False, error=str(exc))
 
 
-def _build_job_alert_html(user_name: str, jobs: list[MatchedJob]) -> str:
+def _build_job_alert_html(user_name: str, jobs: list[MatchedJob], huy_url: str | None = None) -> str:
     """Build HTML email content for job alerts."""
     job_cards = ""
     for i, job in enumerate(jobs, 1):
@@ -121,6 +148,17 @@ def _build_job_alert_html(user_name: str, jobs: list[MatchedJob]) -> str:
         <tr><td style="height:8px;"></td></tr>
         """
 
+    # Link huy PHAI nam trong noi dung mail, khong chi trong header: nguoi doc
+    # tren mobile thuong khong thay nut Unsubscribe cua mail client. Muon huy
+    # ma phai dang nhap thi phan lon se bam "Report spam" thay the (JA-22).
+    huy_html = (
+        f'''<p style="margin:8px 0 0;color:#94a3b8;font-size:11px;">
+                <a href="{huy_url}" style="color:#94a3b8;text-decoration:underline;">Huy nhan email nay</a>
+              </p>'''
+        if huy_url
+        else ""
+    )
+
     return f"""
 <!DOCTYPE html>
 <html>
@@ -154,6 +192,7 @@ def _build_job_alert_html(user_name: str, jobs: list[MatchedJob]) -> str:
               <p style="margin:8px 0 0;color:#94a3b8;font-size:11px;">
                 &copy; 2026 TalentPulse. Ban nhan email vi dang ky nhan thong bao viec lam.
               </p>
+              {huy_html}
             </td>
           </tr>
         </table>

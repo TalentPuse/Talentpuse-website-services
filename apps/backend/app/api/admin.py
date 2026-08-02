@@ -263,6 +263,7 @@ async def retry_failed_alerts(
             to=user.email,
             user_name=user.full_name,
             jobs=[job],
+            user_id=user.id,
         )
         if email_result.success:
             log.status = "sent"

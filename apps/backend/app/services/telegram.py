@@ -311,16 +311,26 @@ async def _handle_stop(db: AsyncSession, msg: TelegramMessage) -> None:
         return
 
     conn.status = "stopped"
+    # CHI tat subscription cua Telegram (`job_match`).
+    #
+    # Ban cu khong loc `alert_type`, nen `/stop` go luon `email_job_match` —
+    # user go /stop trong Telegram de bot thoi lam phien thi mat luon email ma
+    # ho da chu dong bat o mot noi hoan toan khac. Khong co gi bao cho ho biet,
+    # va trang /profile van hien email "dang bat" cho toi lan tai lai (JA-11).
     await db.execute(
         update(AlertSubscription)
-        .where(AlertSubscription.user_id == conn.user_id)
+        .where(
+            AlertSubscription.user_id == conn.user_id,
+            AlertSubscription.alert_type == "job_match",
+        )
         .values(enabled=False)
     )
     await db.commit()
 
     await _send_message(
         msg.chat.id,
-        "Đã tắt thông báo việc làm. Dùng /start từ trang cá nhân để bật lại.",
+        "Đã tắt thông báo việc làm qua Telegram. Dùng /start từ trang cá nhân để bật lại.\n"
+        "Thông báo qua email (nếu bạn đã bật) vẫn giữ nguyên — quản lý tại talentpuse.io.vn/profile.",
     )
 
 
