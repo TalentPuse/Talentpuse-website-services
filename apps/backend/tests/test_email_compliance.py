@@ -123,3 +123,118 @@ def test_stop_telegram_khong_tat_email():
     src = inspect.getsource(telegram._handle_stop)
 
     assert 'alert_type == "job_match"' in src, "/stop van go ca subscription email"
+
+
+# ─── JA-17: escape HTML trong email ────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "truong,gia_tri",
+    [
+        ("title", "R&D Engineer <script>alert(1)</script>"),
+        ("company_name", "Cty <b>ABC</b> & Co"),
+        ("city_raw_vi", "Hà Nội & lân cận"),
+        ("job_level", "Senior <Lead>"),
+    ],
+)
+def test_email_escape_du_lieu_crawl(truong, gia_tri):
+    """Du lieu crawl khong duoc noi tho vao HTML cua mail (JA-17)."""
+    from app.services.email import _build_job_alert_html
+    from app.services.job_matcher import MatchedJob
+
+    job = MatchedJob(source="vietnamworks", source_job_id="1", title="Dev")
+    setattr(job, truong, gia_tri)
+
+    html = _build_job_alert_html("Test", [job])
+
+    assert "<script>" not in html
+    assert "<b>ABC</b>" not in html
+
+
+def test_email_escape_dau_nhay_trong_url():
+    """`source_url` nam trong attribute href — mot dau nhay chua escape cho
+    phep chen markup tuy y vao mail gui cho nguoi dung."""
+    from app.services.email import _build_job_alert_html
+    from app.services.job_matcher import MatchedJob
+
+    html = _build_job_alert_html(
+        "Test",
+        [MatchedJob(
+            source="vietnamworks", source_job_id="1", title="Dev",
+            source_url='https://x.com/a" onmouseover="alert(1)',
+        )],
+    )
+
+    assert 'onmouseover="' not in html
+
+
+def test_email_escape_ten_nguoi_dung():
+    """`full_name` do nguoi dung tu nhap — cung la du lieu khong tin cay."""
+    from app.services.email import _build_job_alert_html
+    from app.services.job_matcher import MatchedJob
+
+    html = _build_job_alert_html(
+        "<script>alert(1)</script>",
+        [MatchedJob(source="vietnamworks", source_job_id="1", title="Dev")],
+    )
+
+    assert "<script>" not in html
+
+
+# ─── JA-45: wildcard SQL trong tieu de mong muon ───────────────────
+
+
+@pytest.mark.parametrize(
+    "nhap,mong_doi",
+    [
+        ("Data Engineer", "%Data Engineer%"),
+        ("Senior_Engineer", "%Senior\_Engineer%"),
+        ("%", "%\%%"),
+        ("100%_dev", "%100\%\_dev%"),
+    ],
+)
+def test_mau_ilike_thoat_wildcard(nhap, mong_doi):
+    """`%` va `_` la wildcard cua LIKE, khong phai ky tu binh thuong.
+
+    Mot title chi co `%` se khop MOI job — nguoi dung khong he yeu cau dieu do
+    va ket qua alert sai ma khong co dau hieu gi (JA-45).
+    """
+    from app.services.job_matcher import _mau_chua
+
+    assert _mau_chua(nhap) == mong_doi
+
+
+# ─── JA-55 / JA-56: 422 thay vi 500 ────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "truong,gia_tri",
+    [
+        ("graduation_year", 20255),      # nam 5 chu so — vuot smallint
+        ("graduation_year", 1800),
+        ("desired_salary_min", 10**12),  # vuot int4
+        ("desired_salary_min", -1),
+        ("full_name", "x" * 300),        # vuot varchar(255)
+        ("full_name", ""),
+        ("university", "y" * 300),       # vuot varchar(200)
+    ],
+)
+def test_ho_so_tu_choi_gia_tri_ngoai_kieu_cot(truong, gia_tri):
+    """Gia tri vuot kieu cot Postgres phai bi chan o schema.
+
+    Neu khong, asyncpg nem loi va API tra 500 KEM STACK TRACE thay vi 422 —
+    chan luon luong hoan thien ho so ma khong noi duoc sai o dau.
+    """
+    from pydantic import ValidationError
+
+    from app.schemas.auth import UserUpdate
+
+    with pytest.raises(ValidationError):
+        UserUpdate(**{truong: gia_tri})
+
+
+def test_ho_so_hop_le_van_qua_duoc():
+    from app.schemas.auth import UserUpdate
+
+    u = UserUpdate(full_name="Nguyen Van A", graduation_year=2025, desired_salary_min=20_000_000)
+    assert u.graduation_year == 2025

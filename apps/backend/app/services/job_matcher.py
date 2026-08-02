@@ -142,6 +142,23 @@ def _alerted_subquery(user_id: UUID):
     )
 
 
+_ILIKE_DAC_BIET = str.maketrans({"\\": "\\\\", "%": "\\%", "_": "\\_"})
+
+
+def _mau_chua(v: str) -> str:
+    """Bien mot chuoi nguoi dung nhap thanh mau ILIKE "chua chuoi nay".
+
+    `%` va `_` la wildcard cua LIKE. Noi thang chuoi nguoi dung vao mau nghia
+    la mot title kieu `Senior_Engineer` khop ca `SeniorXEngineer`, con mot
+    title chi co `%` khop MOI job — nguoi dung khong he yeu cau dieu do, va
+    ket qua alert sai ma khong co dau hieu gi (JA-45).
+
+    Postgres mac dinh dung dau cheo nguoc lam ky tu thoat cua LIKE nen khong
+    can menh de ESCAPE rieng.
+    """
+    return f"%{v.translate(_ILIKE_DAC_BIET)}%"
+
+
 def _jobs_join():
     return fct_jobs_daily.outerjoin(
         silver_job_detail,
@@ -180,7 +197,7 @@ class JobMatcher:
         if not titles:
             return []
 
-        title_patterns = [f"%{t}%" for t in titles]
+        title_patterns = [_mau_chua(t) for t in titles]
         levels = LEVEL_MAP["student"]
 
         conditions = [
@@ -335,7 +352,7 @@ class JobMatcher:
     def _title_score_expr(titles: list[str]) -> case:
         if not titles:
             return literal_column("0")
-        patterns = [f"%{t}%" for t in titles]
+        patterns = [_mau_chua(t) for t in titles]
         return case(
             (
                 (fct_jobs_daily.c.title.ilike(any_(patterns)))
@@ -404,7 +421,7 @@ class JobMatcher:
         # 0) voi "job nay khong he co du lieu skill" (ratio IS NULL). Chi
         # nhom thu hai moi dung tieu de lam nguon thay the — cac nguon da co
         # du lieu skill van cham diem y nhu cu, khong bi xao tron thu hang.
-        patterns = [f"%{s}%" for s in skills]
+        patterns = [_mau_chua(s) for s in skills]
         fallback = case(
             (fct_jobs_daily.c.title.ilike(any_(patterns)), 15),
             else_=0,

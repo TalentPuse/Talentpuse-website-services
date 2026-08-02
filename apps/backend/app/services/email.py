@@ -1,6 +1,7 @@
 """Email alert service using Resend API."""
 from __future__ import annotations
 
+import html
 import logging
 from dataclasses import dataclass
 
@@ -99,15 +100,20 @@ async def send_job_alert_email(
 
 def _build_job_alert_html(user_name: str, jobs: list[MatchedJob], huy_url: str | None = None) -> str:
     """Build HTML email content for job alerts."""
+    # `full_name` do nguoi dung tu nhap — cung phai escape nhu du lieu crawl.
+    ten_hien_thi = html.escape(user_name or "", quote=False)
     job_cards = ""
     for i, job in enumerate(jobs, 1):
-        title = job.title or "Khong ro"
-        company = job.company_name or "Khong ro"
-        city = job.city_raw_vi or job.city_canonical or ""
-        level = job.job_level or ""
+        # Escape MOI truong du lieu crawl truoc khi noi vao HTML (JA-17).
+        # `source_url` chua dau nhay se thoat khoi attribute `href` va chen
+        # markup tuy y vao mail gui cho nguoi dung — nen no dung `quote=True`.
+        title = html.escape(job.title or "Khong ro", quote=False)
+        company = html.escape(job.company_name or "Khong ro", quote=False)
+        city = html.escape(job.city_raw_vi or job.city_canonical or "", quote=False)
+        level = html.escape(job.job_level or "", quote=False)
         salary = job.salary_m
-        url = _build_job_url(job)
-        source_label = SOURCE_LABEL.get(job.source, job.source)
+        url = html.escape(_build_job_url(job), quote=True)
+        source_label = html.escape(SOURCE_LABEL.get(job.source, job.source), quote=False)
         score_text = f'<span style="color:#f59e0b;">&#9733; {job.score:.0f}%</span>' if job.score else ""
 
         salary_html = ""
@@ -172,7 +178,7 @@ def _build_job_alert_html(user_name: str, jobs: list[MatchedJob], huy_url: str |
           <tr>
             <td style="background:linear-gradient(135deg,#1e293b 0%,#334155 100%);padding:32px;border-radius:12px 12px 0 0;text-align:center;">
               <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">TalentPulse Alert</h1>
-              <p style="margin:8px 0 0;color:#94a3b8;font-size:14px;">Xin chao {user_name}, co <strong style="color:#ffffff;">{len(jobs)}</strong> viec lam moi phu hop voi ban.</p>
+              <p style="margin:8px 0 0;color:#94a3b8;font-size:14px;">Xin chao {ten_hien_thi}, co <strong style="color:#ffffff;">{len(jobs)}</strong> viec lam moi phu hop voi ban.</p>
             </td>
           </tr>
           <!-- Jobs -->
