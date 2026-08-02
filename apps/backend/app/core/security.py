@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES, JWT_ALGORITHM, JWT_SECRET
 from app.core.database import get_db
 from app.models.user import User
+from app.services.activity import touch_user_activity
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -55,6 +56,12 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
         raise credentials_exc
+
+    # Dat SAU khi da xac thuc xong: chi user that su hop le moi duoc tinh la
+    # hoat dong, neu khong thi mot ke ban token rac cung day duoc so DAU len.
+    # Ham nay tu nuot moi loi ben trong (xem app/services/activity.py) — no
+    # nam trong duong di cua MOI endpoint can dang nhap.
+    await touch_user_activity(db, user.id)
     return user
 
 

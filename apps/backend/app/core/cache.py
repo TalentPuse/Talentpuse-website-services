@@ -88,3 +88,29 @@ async def cache_set_json(key: str, value: Any, ttl_seconds: int) -> None:
         await client.set(key, json.dumps(value, ensure_ascii=False), ex=ttl_seconds)
     except Exception:
         logger.warning("redis SET failed for %s; value not cached", key, exc_info=True)
+
+
+async def cache_claim(key: str, ttl_seconds: int) -> bool:
+    """Giu cho mot key trong `ttl_seconds`. True o lan dau, False o cac lan sau.
+
+    Dung de bop so lan ghi. Khac voi phan con lai cua file nay (tra ve "khong co
+    trong cache" khi Redis chet), ham nay FAIL-OPEN — tra ve True:
+
+    - Mat throttle  -> ghi nhieu hon can, san pham chi cham hon mot chut.
+    - Mat du lieu   -> DAU/WAU/MAU thung mot khoang bang dung thoi gian Redis
+                       chet, va khong the va lai duoc vi khong ai luu lai su
+                       kien do o cho khac.
+
+    Nen chon cai thu nhat. Doi chieu dung huong ay o `touch_user_activity`.
+    """
+    client = _get_client()
+    if client is None:
+        return True
+    try:
+        # nx=True + ex la mot lenh nguyen tu: hai worker cung xu ly request cua
+        # cung mot user trong cung mot gio thi chi dung mot ben thang. Neu tach
+        # thanh GET roi SET thi ca hai cung doc thay trong va cung ghi.
+        return bool(await client.set(key, "1", nx=True, ex=ttl_seconds))
+    except Exception:
+        logger.warning("cache_claim failed for key=%s, failing open", key)
+        return True
