@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 
 from app.core.config import VN_TZ
 
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +27,23 @@ from app.schemas.admin import (
 )
 
 logger = logging.getLogger(__name__)
+
+# `fct_jobs_daily` la bang SNAPSHOT THEO NGAY: mot tin co nhieu dong
+# `is_active=true`, moi `snapshot_date` mot dong. Join thang vao no NHAN BAN moi
+# dong alert_log len bang so snapshot — trang Admin dem "so alert da gui" tren
+# mot con so bi thoi phong, va phan trang nhay coc (JA-13).
+#
+# Lay ca `source_url` de link Job ID tro dung nguon that: truoc day frontend
+# ghep cung mot mau URL VietnamWorks cho MOI dong, ke ca job ITviec/LinkedIn
+# (JA-48).
+_JOB_MOI_NHAT = """
+    SELECT DISTINCT ON (f.source, f.source_job_id)
+        f.source, f.source_job_id, f.title, f.company_name, sd.source_url
+    FROM dbt_dev_gold.fct_jobs_daily f
+    LEFT JOIN dbt_dev_silver.silver_job_detail sd
+        ON sd.source = f.source AND sd.source_job_id = f.source_job_id
+    ORDER BY f.source, f.source_job_id, f.snapshot_date DESC
+"""
 
 VALID_TIERS = {"free", "pro", "enterprise"}
 
@@ -336,12 +354,19 @@ async def list_alert_logs(
     if user_id:
         conditions.append("al.user_id = :user_id")
         params["user_id"] = user_id
+    # Moc ngay phai mang MUI GIO VN. `datetime.combine(...)` cho ra datetime
+    # naive, va asyncpg encode datetime naive theo TZ CUA PROCESS — nghia la
+    # cung mot bo loc cho ket qua khac nhau tuy cau hinh may chu, va lech 7
+    # tieng so voi `dispatch-history` (von quy chieu ve gio VN). Cung mot cap
+    # ngay tren cung mot man hinh ra ba tap ket qua khac nhau (JA-25, JA-T2).
     if date_from:
         conditions.append("al.sent_at >= :date_from")
-        params["date_from"] = datetime.combine(date_from, datetime.min.time())
+        params["date_from"] = datetime.combine(date_from, datetime.min.time(), tzinfo=VN_TZ)
     if date_to:
         conditions.append("al.sent_at < :date_to")
-        params["date_to"] = datetime.combine(date_to + timedelta(days=1), datetime.min.time())
+        params["date_to"] = datetime.combine(
+            date_to + timedelta(days=1), datetime.min.time(), tzinfo=VN_TZ
+        )
     if channel:
         conditions.append("al.channel = :channel")
         params["channel"] = channel
@@ -360,11 +385,13 @@ async def list_alert_logs(
     # Giu ca JOIN users de count luon khop voi so dong that su tra ve.
     count_result = await db.execute(
         text(f"""
+            WITH job AS ({_JOB_MOI_NHAT})
             SELECT count(*)
             FROM app.alert_logs al
             JOIN app.users u ON u.id = al.user_id
-            LEFT JOIN dbt_dev_gold.fct_jobs_daily f
-                ON f.source_job_id = al.source_job_id AND f.is_active
+            LEFT JOIN job f
+                ON f.source_job_id = al.source_job_id
+                AND (al.job_source IS NULL OR f.source = al.job_source)
             WHERE 1=1 {where}
         """),
         params,
@@ -376,14 +403,16 @@ async def list_alert_logs(
     params["offset"] = offset
 
     result = await db.execute(text(f"""
+        WITH job AS ({_JOB_MOI_NHAT})
         SELECT
-            al.id, al.source_job_id, al.channel, al.sent_at,
+            al.id, al.source_job_id, al.job_source, al.channel, al.sent_at,
             u.email AS user_email, u.full_name AS user_full_name,
-            f.title AS job_title, f.company_name
+            f.title AS job_title, f.company_name, f.source_url
         FROM app.alert_logs al
         JOIN app.users u ON u.id = al.user_id
-        LEFT JOIN dbt_dev_gold.fct_jobs_daily f
-            ON f.source_job_id = al.source_job_id AND f.is_active
+        LEFT JOIN job f
+            ON f.source_job_id = al.source_job_id
+            AND (al.job_source IS NULL OR f.source = al.job_source)
         WHERE 1=1 {where}
         ORDER BY al.sent_at DESC
         LIMIT :limit OFFSET :offset
@@ -396,8 +425,10 @@ async def list_alert_logs(
             user_email=row["user_email"],
             user_full_name=row["user_full_name"],
             source_job_id=row["source_job_id"],
+            job_source=row["job_source"],
             job_title=row["job_title"],
             company_name=row["company_name"],
+            source_url=row["source_url"],
             channel=row["channel"],
             sent_at=row["sent_at"],
         ))

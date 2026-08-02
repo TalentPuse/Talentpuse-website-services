@@ -347,8 +347,11 @@ export type AlertLogRow = {
   user_email: string;
   user_full_name: string;
   source_job_id: string;
+  /** Nguồn thật của tin — link Job ID phải theo nguồn này, không ghép cứng VietnamWorks (JA-48). */
+  job_source: string | null;
   job_title: string | null;
   company_name: string | null;
+  source_url: string | null;
   channel: string;
   sent_at: string;
 };

@@ -78,8 +78,15 @@ class AlertLogRow(BaseModel):
     user_email: str
     user_full_name: str
     source_job_id: str
+    # Nguon that cua job. Thieu no, UI ghep cung mot mau URL VietnamWorks cho
+    # MOI dong — job ITviec/LinkedIn dan toi mot trang khong ton tai, trinh bay
+    # nhu mot link binh thuong (JA-48). NULL voi cac dong ghi truoc migration
+    # 017 khong suy nguoc duoc nguon.
+    job_source: str | None = None
     job_title: str | None
     company_name: str | None
+    # Link that cua tin, lay tu silver_job_detail — dung thay cho URL tu ghep.
+    source_url: str | None = None
     channel: str
     sent_at: datetime
 

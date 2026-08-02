@@ -8,6 +8,7 @@ from sqlalchemy import and_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import config as cfg
+from app.core.config import VN_TZ
 from app.core.database import get_db
 from app.core.security import require_admin
 from app.models.alert_log import AlertLog
@@ -46,6 +47,56 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 # UTC — nen moi alert gui trong khung 00:00-07:00 gio VN bi don sang ngay hom
 # truoc. Dat mot cho de bon vi tri dung chung khong thi lech nhau.
 _VN_DATE = "DATE(sent_at AT TIME ZONE 'Asia/Ho_Chi_Minh')"
+
+
+def _khoang_ngay(date_from: str | None, date_to: str | None) -> tuple[datetime | None, datetime | None]:
+    """Doi hai chuoi ngay cua date picker thanh mot khoang thoi diem tuyet doi.
+
+    Truoc day moi endpoint tu dien giai mot kieu (JA-25):
+      - `alert-logs` so naive-UTC,
+      - `dispatch-history` so `DATE(sent_at AT TIME ZONE 'Asia/Ho_Chi_Minh')`,
+      - `dispatch-stats`/`retry` so naive.
+    Cung mot cap ngay tren cung mot man hinh cho ra ba tap ket qua khac nhau —
+    bang liet ke 12 email fail hom nay trong khi card "Email failed" hien 0 va
+    nut Retry tra `{retried: 0}` (JA-26).
+
+    Con te hon: gia tri naive duoc asyncpg encode theo TZ CUA PROCESS, nen bug
+    doi hanh vi theo cau hinh may chu. Dev o VN se thay "khong reproduce duoc"
+    dung cai bug ma production dang gap (JA-T2).
+
+    Hai quy uoc o day:
+      - `date_to` la HET NGAY do theo gio VN, khong phai nua dem dau ngay. Ban
+        cu loai bo toan bo ngay cuoi cung ma khong noi gi (JA-26).
+      - Chuoi sai hoac `date_from > date_to` tra 422 chu khong phai 500 hay
+        200-rong (JA-43, JA-T5): mot khoang dao nguoc luon tra 0 dong, va admin
+        doc thanh "ky nay khong co alert nao".
+    """
+    def _doc(v: str | None, ten: str) -> datetime | None:
+        if not v:
+            return None
+        try:
+            dt = datetime.fromisoformat(v)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"{ten} khong phai ngay hop le (can YYYY-MM-DD): {v!r}",
+            )
+        return dt.replace(tzinfo=VN_TZ) if dt.tzinfo is None else dt
+
+    tu = _doc(date_from, "date_from")
+    den = _doc(date_to, "date_to")
+
+    # Chuoi chi co ngay ("2026-08-02") ra 00:00 — nghia la loai ca ngay do khoi
+    # bo loc "den ngay". Keo den cuoi ngay.
+    if den is not None and (den.hour, den.minute, den.second) == (0, 0, 0):
+        den = den.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    if tu is not None and den is not None and tu > den:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="date_from phai truoc date_to",
+        )
+    return tu, den
 
 
 @router.get("/stats", response_model=AdminStats)
@@ -230,10 +281,11 @@ async def retry_failed_alerts(
         AlertLog.channel == "email",
         AlertLog.status == "failed",
     ]
-    if date_from:
-        where_clause.append(AlertLog.sent_at >= datetime.fromisoformat(date_from))
-    if date_to:
-        where_clause.append(AlertLog.sent_at <= datetime.fromisoformat(date_to))
+    tu, den = _khoang_ngay(date_from, date_to)
+    if tu:
+        where_clause.append(AlertLog.sent_at >= tu)
+    if den:
+        where_clause.append(AlertLog.sent_at <= den)
     if user_id:
         where_clause.append(AlertLog.user_id == uuid.UUID(user_id))
 
@@ -319,12 +371,13 @@ async def get_dispatch_stats(
     """Get dispatch statistics for monitoring."""
     where_clause = ["1=1"]
     params: dict = {}
-    if date_from:
+    tu, den = _khoang_ngay(date_from, date_to)
+    if tu:
         where_clause.append("sent_at >= :date_from")
-        params["date_from"] = datetime.fromisoformat(date_from)
-    if date_to:
+        params["date_from"] = tu
+    if den:
         where_clause.append("sent_at <= :date_to")
-        params["date_to"] = datetime.fromisoformat(date_to)
+        params["date_to"] = den
     where_sql = " AND ".join(where_clause)
 
     # Total dispatched by channel
@@ -374,12 +427,13 @@ async def get_dispatch_history(
 
     where_clause = ["1=1"]
     params: dict = {"limit": per_page, "offset": offset}
-    if date_from:
-        where_clause.append(f"{_VN_DATE} >= :date_from")
-        params["date_from"] = datetime.fromisoformat(date_from).date()
-    if date_to:
-        where_clause.append(f"{_VN_DATE} <= :date_to")
-        params["date_to"] = datetime.fromisoformat(date_to).date()
+    tu, den = _khoang_ngay(date_from, date_to)
+    if tu:
+        where_clause.append("sent_at >= :date_from")
+        params["date_from"] = tu
+    if den:
+        where_clause.append("sent_at <= :date_to")
+        params["date_to"] = den
     where_sql = " AND ".join(where_clause)
 
     # Total distinct (date, source) groups for pagination.

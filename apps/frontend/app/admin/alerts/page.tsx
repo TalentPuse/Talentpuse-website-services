@@ -45,6 +45,7 @@ export default function AdminAlertsPage() {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [channelFilter, setChannelFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [users, setUsers] = useState<{ id: string; email: string; full_name: string }[]>([]);
   const [userSearch, setUserSearch] = useState("");
   const [dispatching, setDispatching] = useState(false);
@@ -97,13 +98,13 @@ export default function AdminAlertsPage() {
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
         channel: channelFilter !== "all" ? channelFilter : undefined,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
       });
       setData(res);
     } catch (err) {
       console.error("Failed to load alert logs:", err);
     }
-  }, [token, page, selectedUserId, dateFrom, dateTo, channelFilter, search]);
+  }, [token, page, selectedUserId, dateFrom, dateTo, channelFilter, debouncedSearch]);
 
   const loadDispatchHistory = useCallback(async () => {
     if (!token) return;
@@ -177,21 +178,42 @@ export default function AdminAlertsPage() {
     }
   }
 
+  /**
+   * Debounce THẬT SỰ: timer đặt `debouncedSearch`, và chỉ state đó mới nằm
+   * trong deps của `load()`.
+   *
+   * Bản cũ có timer nhưng callback rỗng — nó không làm gì cả, trong khi
+   * `load()` lại phụ thuộc thẳng vào `search`. Nên gõ "engineer" (8 ký tự)
+   * bắn 32 request, 16 trong đó là GROUP BY toàn bảng. Không request nào bị
+   * huỷ, nên kết quả của một tiền tố cũ về sau có thể ghi đè kết quả mới
+   * (JA-32).
+   */
   const onSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearch(value);
     setPage(1);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      // Search will trigger via useEffect dependency on search
-    }, 300);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(value), 300);
   };
 
   const totalPages = data ? Math.ceil(data.total / PER_PAGE) : 0;
   const hasFilters = dateFrom || dateTo || selectedUserId || channelFilter !== "all" || search;
-  const successRate = stats && stats.todayTotal > 0
-    ? Math.round((stats.todayTotal - (stats.failed_emails || 0)) / stats.todayTotal * 100)
-    : 100;
+  /**
+   * Mẫu số chỉ gồm các kênh THỰC SỰ GỬI ĐI (telegram, email).
+   *
+   * Bản cũ chia cho `todayTotal` — tổng mọi kênh, kể cả `website` vốn chỉ là
+   * dấu mốc dedup. Vì mỗi job sinh 1 dòng website + 1 dòng kênh thật, 100 email
+   * fail sạch vẫn ra "50%". Con số đó không đo cái gì cả (JA-34).
+   *
+   * Không có lần gửi nào thì hiện "—" chứ không phải 100%: chưa gửi gì không
+   * phải là thành công.
+   */
+  const daGui = stats
+    ? (stats.channel_breakdown?.telegram || 0) + (stats.channel_breakdown?.email || 0)
+    : 0;
+  const successRate = daGui > 0
+    ? Math.round((daGui - (stats?.failed_emails || 0)) / daGui * 100)
+    : null;
 
   return (
     <AdminLayout>
@@ -204,7 +226,7 @@ export default function AdminAlertsPage() {
         <StatCard label="Alerts hôm nay" value={stats?.todayTotal || 0} icon="🔔" />
         <StatCard label="Tuần này" value={stats?.weekTotal || 0} icon="📊" />
         <StatCard label="Email failed" value={stats?.failed_emails || 0} icon="❌" color="red" />
-        <StatCard label="Success rate" value={`${successRate}%`} icon="✅" color="green" />
+        <StatCard label="Tỷ lệ gửi thành công" value={successRate === null ? "—" : `${successRate}%`} icon="✅" color="green" />
       </motion.div>
 
       <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-end sm:justify-between">
@@ -360,14 +382,26 @@ export default function AdminAlertsPage() {
                   <td className="px-4 py-3 text-slate-700">{log.job_title || "—"}</td>
                   <td className="px-4 py-3 text-slate-600">{log.company_name || "—"}</td>
                   <td className="px-4 py-3">
-                    <a
-                      href={`https://www.vietnamworks.com/--${log.source_job_id}-jd`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-brand-600 hover:text-brand-700 text-xs font-medium"
-                    >
-                      {log.source_job_id}
-                    </a>
+                    {/*
+                      Dùng link THẬT của tin. Bản cũ ghép cứng mẫu URL
+                      VietnamWorks cho mọi dòng, nên Job ID của tin
+                      ITviec/LinkedIn dẫn tới một trang không tồn tại — trình
+                      bày y như một link bình thường (JA-48).
+                      Không có link thì hiện chữ, không bịa ra đích đến.
+                    */}
+                    {log.source_url ? (
+                      <a
+                        href={log.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-brand-600 hover:text-brand-700 text-xs font-medium"
+                        title={log.job_source || undefined}
+                      >
+                        {log.source_job_id}
+                      </a>
+                    ) : (
+                      <span className="text-xs font-medium text-slate-400">{log.source_job_id}</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
