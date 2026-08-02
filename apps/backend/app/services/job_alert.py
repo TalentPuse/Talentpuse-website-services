@@ -96,10 +96,16 @@ async def _dispatch_alerts_locked(db: AsyncSession, source: str) -> int:
             # Truyen `source` xuong: log_and_send ghi cac dong website/telegram,
             # tuc la 2/3 so alert. Bo qua tham so nay la ly do 63% ban ghi that
             # co source = NULL va trang admin dispatch-history khong doc duoc.
-            sent = await matcher.log_and_send(user, jobs, chat_id, _send_message, source=source)
-
-            # Send email if user subscribed
+            # Kiem email TRUOC khi goi log_and_send: no can biet user co bat
+            # ky kenh gui nao khong. Khong co kenh nao thi khong duoc ghi dau
+            # moc dedup — xem JA-52 trong job_matcher.log_and_send.
             email_enabled = await _is_email_enabled(db, user.id)
+
+            sent = await matcher.log_and_send(
+                user, jobs, chat_id, _send_message,
+                source=source, email_enabled=email_enabled,
+            )
+
             if email_enabled and user.email:
                 try:
                     email_result = await send_job_alert_email(
@@ -111,6 +117,7 @@ async def _dispatch_alerts_locked(db: AsyncSession, source: str) -> int:
                         for j in jobs:
                             db.add(AlertLog(
                                 user_id=user.id,
+                                job_source=j.source,
                                 source_job_id=j.source_job_id,
                                 channel="email",
                                 status="sent",
@@ -121,6 +128,7 @@ async def _dispatch_alerts_locked(db: AsyncSession, source: str) -> int:
                         for j in jobs:
                             db.add(AlertLog(
                                 user_id=user.id,
+                                job_source=j.source,
                                 source_job_id=j.source_job_id,
                                 channel="email",
                                 status="failed",
@@ -133,6 +141,7 @@ async def _dispatch_alerts_locked(db: AsyncSession, source: str) -> int:
                     for j in jobs:
                         db.add(AlertLog(
                             user_id=user.id,
+                            job_source=j.source,
                             source_job_id=j.source_job_id,
                             channel="email",
                             status="failed",
@@ -155,6 +164,7 @@ async def _dispatch_alerts_locked(db: AsyncSession, source: str) -> int:
 async def _upsert_email_log(
     db: AsyncSession,
     user_id,
+    job_source: str,
     source_job_id: str,
     status: str,
     error_message: str | None,
@@ -162,18 +172,27 @@ async def _upsert_email_log(
 ) -> None:
     """Insert an email-channel alert log, or update it on conflict.
 
-    alert_logs has a unique (user_id, source_job_id, channel) constraint, so a
-    re-broadcast for the same job upserts instead of raising IntegrityError.
+    Khoa xung dot phai khop DUNG unique constraint hien tai
+    `(user_id, job_source, source_job_id, channel)` (migration 017) — dung khoa
+    cu thi Postgres bao "no unique or exclusion constraint matching the ON
+    CONFLICT specification" va ca lan gui bi rollback SAU KHI mail da bay di.
     """
     await db.execute(text("""
-        INSERT INTO app.alert_logs (id, user_id, source_job_id, channel, status, error_message, source)
-        VALUES (gen_random_uuid(), :uid, :jid, 'email', :status, :err, :src)
-        ON CONFLICT (user_id, source_job_id, channel) DO UPDATE
+        INSERT INTO app.alert_logs (id, user_id, job_source, source_job_id, channel, status, error_message, source)
+        VALUES (gen_random_uuid(), :uid, :jsrc, :jid, 'email', :status, :err, :src)
+        ON CONFLICT (user_id, job_source, source_job_id, channel) DO UPDATE
         SET status = EXCLUDED.status,
             error_message = EXCLUDED.error_message,
             source = EXCLUDED.source,
             sent_at = now()
-    """), {"uid": user_id, "jid": source_job_id, "status": status, "err": error_message, "src": source})
+    """), {
+        "uid": user_id,
+        "jsrc": job_source,
+        "jid": source_job_id,
+        "status": status,
+        "err": error_message,
+        "src": source,
+    })
 
 
 async def email_all_users(db: AsyncSession, source: str = "admin_manual") -> dict:
@@ -228,7 +247,7 @@ async def _email_all_users_locked(db: AsyncSession, source: str) -> dict:
             status = "sent" if email_result.success else "failed"
             err = (email_result.error or "Unknown error")[:500] if not email_result.success else None
             for j in jobs:
-                await _upsert_email_log(db, user.id, j.source_job_id, status, err, source)
+                await _upsert_email_log(db, user.id, j.source, j.source_job_id, status, err, source)
             await db.commit()
 
             if email_result.success:

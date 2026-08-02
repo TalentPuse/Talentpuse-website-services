@@ -19,6 +19,7 @@ from sqlalchemy import (
     select,
     and_,
     not_,
+    tuple_,
     exists,
     cast,
     Float,
@@ -109,8 +110,36 @@ def _base_columns():
     ]
 
 
+# Kenh `website` la DAU MOC DEDUP, khong phai mot kenh gui.
+#
+# `log_and_send` ghi dung MOT dong `website` cho moi (user, job) khi that su co
+# kenh gui — no tra loi cau hoi "job nay da duoc bao cho user chua". Dedup phai
+# dem DUNG kenh nay, khong dem tat ca:
+#
+#   - Dem tat ca thi nut "Email tat ca" cua admin (chi ghi dong `email`, va co
+#     tinh bo qua dedup bang `include_alerted=True`) se NUOT LUON hang doi
+#     Telegram: 3 job vua email xong bi loai vinh vien khoi Telegram cua user
+#     do. Mot cu click cua admin lam giam vinh vien chat luong kenh Telegram
+#     cua toan bo user (JA-53).
+#   - Dem thieu (khong dem gi) thi gui trung moi slot.
+DEDUP_CHANNEL = "website"
+
+
 def _alerted_subquery(user_id: UUID):
-    return select(AlertLog.source_job_id).where(AlertLog.user_id == user_id)
+    """Cac (nguon, job) da bao cho user nay — dung de loai khoi lan tim ke tiep.
+
+    So theo TUPLE `(source, source_job_id)` chu khong chi theo id: id cua
+    warehouse chi duy nhat trong mot nguon, nen so theo id khong thoi se chan
+    nham job ITviec `123` chi vi user da nhan job VietnamWorks `123` (JA-05).
+
+    Dong cu (truoc migration 017) co `job_source = NULL`; chung khong khop
+    tuple nao nen khong con chan gi ca. Danh doi co chu dich: tha gui trung
+    mot lan con hon chan vinh vien mot job that su chua gui.
+    """
+    return select(AlertLog.job_source, AlertLog.source_job_id).where(
+        AlertLog.user_id == user_id,
+        AlertLog.channel == DEDUP_CHANNEL,
+    )
 
 
 def _jobs_join():
@@ -129,11 +158,15 @@ class JobMatcher:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_already_alerted_ids(self, user_id: UUID) -> set[str]:
-        result = await self.db.execute(
-            select(AlertLog.source_job_id).where(AlertLog.user_id == user_id)
-        )
-        return {r[0] for r in result.all()}
+    async def get_already_alerted_ids(self, user_id: UUID) -> set[tuple[str | None, str]]:
+        """Cac `(job_source, source_job_id)` da bao cho user nay.
+
+        Tra TUPLE chu khong phai id tran: id cua warehouse chi duy nhat trong
+        mot nguon, nen so theo id khong thoi se chan nham job cua nguon khac
+        trung id (JA-05). Chi dem kenh dedup — xem `DEDUP_CHANNEL`.
+        """
+        result = await self.db.execute(_alerted_subquery(user_id))
+        return {(r[0], r[1]) for r in result.all()}
 
     async def find_jobs(self, user: User, include_alerted: bool = False) -> list[MatchedJob]:
         if getattr(user, "experience_level", None) == "student":
@@ -157,7 +190,13 @@ class JobMatcher:
             | (fct_jobs_daily.c.job_category.ilike(any_(title_patterns))),
         ]
         if not include_alerted:
-            conditions.append(not_(fct_jobs_daily.c.source_job_id.in_(_alerted_subquery(user.id))))
+            conditions.append(
+                not_(
+                    tuple_(fct_jobs_daily.c.source, fct_jobs_daily.c.source_job_id).in_(
+                        _alerted_subquery(user.id)
+                    )
+                )
+            )
 
         # `fct_jobs_daily` la bang SNAPSHOT THEO NGAY: mot tin co nhieu dong
         # `is_active=true`, moi `snapshot_date` mot dong. Thieu `DISTINCT ON`
@@ -236,7 +275,13 @@ class JobMatcher:
         if allowed_levels:
             level_filters.append(fct_jobs_daily.c.job_level == any_(allowed_levels))
         if not include_alerted:
-            level_filters.append(not_(fct_jobs_daily.c.source_job_id.in_(_alerted_subquery(user.id))))
+            level_filters.append(
+                not_(
+                    tuple_(fct_jobs_daily.c.source, fct_jobs_daily.c.source_job_id).in_(
+                        _alerted_subquery(user.id)
+                    )
+                )
+            )
 
         # Scored CTE
         scored_cols = [
@@ -379,6 +424,7 @@ class JobMatcher:
         chat_id: int | None,
         send_fn,
         source: str | None = None,
+        email_enabled: bool = False,
     ) -> int:
         """Log new alerts to DB and send via telegram. Returns count of new jobs.
 
@@ -389,18 +435,37 @@ class JobMatcher:
         57/59 dong website va 6/7 dong telegram co source = NULL — admin khong
         biet gi ve nguon goc cua 63% so alert da gui.
         """
+        # Khong co kenh gui nao thi KHONG duoc ghi gi ca (JA-52).
+        #
+        # `dispatch_alerts` dung `outerjoin` voi TelegramConnection nen user
+        # chua noi Telegram van lot vao vong lap. Ban cu ghi dong `website` vo
+        # dieu kien, tuc la moi slot (~8 lan/ngay) he thong "dot" hang loat job
+        # vao alert_logs cho nguoi chua he duoc bao gi. Dang ky hom nay, mot
+        # tuan sau moi noi bot -> `get_already_alerted_ids` loai sach hang tram
+        # job da tich luy, ho chi nhan duoc tin dang MOI tu luc noi tro di. Mat
+        # het cac match tot nhat, va khong co gi trong UI cho biet dieu do da
+        # xay ra.
+        if not chat_id and not email_enabled:
+            logger.info(
+                "User %s chua co kenh gui nao (telegram/email) — bo qua, khong ghi alert_logs",
+                user.id,
+            )
+            return 0
+
         alerted = await self.get_already_alerted_ids(user.id)
-        new_jobs = [j for j in jobs if j.source_job_id not in alerted]
+        new_jobs = [j for j in jobs if (j.source, j.source_job_id) not in alerted]
 
         if not new_jobs:
             return 0
 
-        # Log website channel BEFORE sending telegram
+        # Ghi dau moc dedup TRUOC khi gui: gui truoc roi ghi sau thi mot lan
+        # crash o giua se gui lai y het o slot ke tiep.
         for j in new_jobs:
             self.db.add(AlertLog(
                 user_id=user.id,
+                job_source=j.source,
                 source_job_id=j.source_job_id,
-                channel="website",
+                channel=DEDUP_CHANNEL,
                 source=source,
             ))
         await self.db.flush()
@@ -429,6 +494,7 @@ class JobMatcher:
                 for j in nhom:
                     self.db.add(AlertLog(
                         user_id=user.id,
+                        job_source=j.source,
                         source_job_id=j.source_job_id,
                         channel="telegram",
                         status=status,

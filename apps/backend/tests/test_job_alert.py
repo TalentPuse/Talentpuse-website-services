@@ -15,6 +15,7 @@ from app.services.job_matcher import (
     LEVEL_MAP,
     ALERT_LIMIT,
     STUDENT_ALERT_LIMIT,
+    DEDUP_CHANNEL,
     JobMatcher,
     MatchedJob,
     _format_job_message,
@@ -417,7 +418,9 @@ async def test_log_and_send_skips_already_alerted():
         async def execute(self, sql, params=None):
             class R:
                 def all(self):
-                    return [("job-1",), ("job-2",)]
+                    # (job_source, source_job_id) — dedup so theo tuple, khong
+                    # con so theo id tran (JA-05).
+                    return [("vietnamworks", "job-1"), ("vietnamworks", "job-2")]
             return R()
 
         def add(self, obj):
@@ -526,9 +529,17 @@ class _SimDB:
         self._flush_count = 0
 
     async def execute(self, sql, params=None):
+        # Tra ve TUPLE (job_source, source_job_id) va CHI cac dong thuoc kenh
+        # dedup — dung nhu `_alerted_subquery` that. Ban cu tra ve id tran cho
+        # moi kenh, tuc la mo phong mot hanh vi ma production khong con co.
+        khoa = [
+            (r.job_source, r.source_job_id)
+            for r in self.rows
+            if r.channel == DEDUP_CHANNEL
+        ]
         class R:
             def all(self_inner):
-                return [(jid,) for jid in self.alerted]
+                return khoa
         return R()
 
     def add(self, obj):
@@ -701,8 +712,19 @@ class TestMultiDayDispatch:
         ok_fn.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_no_chat_id_still_logs_website(self):
-        """User without telegram still gets website alerts logged (chat_id=None)."""
+    async def test_khong_co_kenh_nao_thi_khong_ghi_gi(self):
+        """User chua co kenh gui nao thi KHONG duoc dot hang doi alert (JA-52).
+
+        Test nay truoc day ten la `test_no_chat_id_still_logs_website` va
+        khang dinh dieu nguoc lai — no mo ta dung code luc do, va chinh no giu
+        bug o nguyen tai cho.
+
+        Ban cu ghi dong `website` vo dieu kien, ke ca cho nguoi chua noi
+        Telegram va chua bat email. Moi slot (~8 lan/ngay) he thong danh dau
+        hang loat job la "da alert" cho nguoi chua he duoc bao gi. Dang ky hom
+        nay, mot tuan sau moi noi bot -> mat sach cac match tot nhat da tich
+        luy, va khong co gi trong UI cho biet dieu do da xay ra.
+        """
         db = _SimDB()
         user = _make_user()
         send_fn = AsyncMock()
@@ -710,9 +732,25 @@ class TestMultiDayDispatch:
         jobs = _jobs(("j1", "AI Engineer"), ("j2", "Backend Dev"))
         sent = await self._dispatch(db, user, jobs, send_fn, chat_id=None)
 
-        assert sent == 2
-        assert db.alerted["j1"] == ["website"]  # no telegram
-        assert db.alerted["j2"] == ["website"]
+        assert sent == 0
+        assert db.rows == [], "da ghi alert_logs cho user khong co kenh gui nao"
+        send_fn.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_chi_bat_email_van_duoc_ghi(self):
+        """Co email la co kenh gui — phai ghi dau moc dedup binh thuong."""
+        db = _SimDB()
+        user = _make_user()
+        send_fn = AsyncMock()
+        matcher = JobMatcher(db)
+
+        jobs = _jobs(("j1", "AI Engineer"))
+        sent = await matcher.log_and_send(
+            user, jobs, chat_id=None, send_fn=send_fn, email_enabled=True
+        )
+
+        assert sent == 1
+        assert db.alerted["j1"] == [DEDUP_CHANNEL]
         send_fn.assert_not_called()
 
     @pytest.mark.asyncio
@@ -742,8 +780,12 @@ class TestMultiDayDispatch:
                 MatchedJob(source="itviec", source_job_id="123", title="AI Engineer")]
         send_fn.reset_mock()
         sent2 = await self._dispatch(db, user, day2, send_fn)
-        # Both deduped because dedup is by source_job_id only (not source+id)
-        assert sent2 == 0
+        # Khoa thuc the cua warehouse la (source, source_job_id): job ITviec
+        # "123" la mot tin HOAN TOAN KHAC job VietnamWorks "123". Ban cu dedup
+        # theo id tran nen chan no vinh vien (JA-05) — va neu ca hai vao cung
+        # mot batch thi UniqueViolation nem ra SAU KHI tin da gui di.
+        assert sent2 == 1, "job cua nguon khac trung id bi chan nham"
+        assert ("itviec", "123") in {(r.job_source, r.source_job_id) for r in db.rows}
 
     @pytest.mark.asyncio
     async def test_message_content_varies_per_day(self):

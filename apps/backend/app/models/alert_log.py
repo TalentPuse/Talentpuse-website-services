@@ -23,6 +23,13 @@ class AlertLog(Base):
         nullable=False,
     )
     source_job_id: Mapped[str] = mapped_column(String, nullable=False)
+    # Khoa thuc the cua warehouse la `(source, source_job_id)` — id chi duy nhat
+    # TRONG MOT NGUON. Thieu cot nay, job VietnamWorks `123` va job ITviec `123`
+    # bi coi la mot: cai sau bi dedup chan vinh vien, va neu ca hai vao cung mot
+    # batch thi UniqueViolation nem ra SAU KHI tin da gui di (JA-05).
+    #
+    # nullable: cac dong cu (truoc migration 017) khong suy nguoc duoc nguon.
+    job_source: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # timezone=True (migration 016): luu thoi diem tuyet doi. Truoc day la naive
     # UTC, ma lich alert lai tinh theo gio VN — Pydantic phat ra chuoi khong co
     # mui gio nen JavaScript hieu nham la gio dia phuong va hien lech 7 tieng.
