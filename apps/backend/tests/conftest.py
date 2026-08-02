@@ -132,3 +132,35 @@ async def auth_headers(seed_user):
     """Bearer header carrying a real JWT for a real, persisted `seed_user`."""
     token = create_access_token({"sub": str(seed_user.id)})
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture
+async def admin_user(db_session):
+    """Nguoi dung `is_admin=True`, ton tai that trong DB, xoa sau moi test.
+
+    Co tinh KHONG dung lai `seed_user` roi set `is_admin=True`: nhieu test lay
+    `seed_user` lam nguoi dung THUONG de kiem tra 403. Neu bien no thanh admin
+    thi test "user thuong bi tu choi" se lang le pass vi ly do khac han — no
+    khong con test dieu no tuong minh dang test nua.
+    """
+    user = User(
+        email=f"admin-{uuid.uuid4()}@example.com",
+        hashed_password="test-hash",
+        full_name="Admin Test User",
+        is_admin=True,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    yield user
+
+    await db_session.delete(user)
+    await db_session.commit()
+
+
+@pytest_asyncio.fixture
+async def admin_auth_headers(admin_user):
+    """Bearer header cua mot admin that (token minted y het `auth_headers`)."""
+    token = create_access_token({"sub": str(admin_user.id)})
+    return {"Authorization": f"Bearer {token}"}
