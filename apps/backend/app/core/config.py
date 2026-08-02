@@ -80,7 +80,6 @@ S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "talentpulse-raw")
 MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:8080")
 
 # AI-native home (Phase 0): mount AG-UI agent endpoint khi bật.
-AGUI_ENABLED = os.getenv("AGUI_ENABLED", "0") == "1"
 
 VN_TZ = timezone(timedelta(hours=7))
 ALERT_START_TIME = time(7, 30)

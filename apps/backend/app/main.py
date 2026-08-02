@@ -12,7 +12,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import admin, applications, auth, chat, companies, cv, email, interview, jobs, overview, recommendations, salary, skills, telegram
 from app.services.interview_agent.api import interview_router as interview_agent_router
 from app.core.config import (
-    AGUI_ENABLED,
     ALERT_END_TIME,
     ALERT_START_TIME,
     CORS_ORIGINS,
@@ -85,17 +84,22 @@ async def _alert_loop() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await db_module.init_db()
-    if AGUI_ENABLED:
-        from app.api.agui import init_agui
+    # Mount VO DIEU KIEN. Truoc day gac sau `AGUI_ENABLED` (mac dinh "0"), va
+    # bien do khong he duoc ghi vao .env ma CI sinh ra tren web box — nen tren
+    # production sub-app KHONG BAO GIO duoc mount, moi `POST /api/agent/` tra
+    # 404, va dock AI o /applications im lang khong tra loi. Khong co log loi
+    # nao vi 404 la hanh vi dung cua mot route khong ton tai.
+    #
+    # Dock phia frontend gio luon bat (da go NEXT_PUBLIC_COPILOT_DOCK cung ly
+    # do), nen mot cong tac BAT BUOC phai bat moi hoat dong chi con la cho de
+    # quen — giu lai khong duoc gi.
+    from app.api.agui import close_agui, init_agui
 
-        await init_agui(app)
+    await init_agui(app)
     task = asyncio.create_task(_alert_loop())
     yield
     task.cancel()
-    if AGUI_ENABLED:
-        from app.api.agui import close_agui
-
-        await close_agui()
+    await close_agui()
     await db_module.close_db()
 
 

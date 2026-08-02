@@ -1,6 +1,8 @@
 """AG-UI endpoint — expose agent thống nhất qua giao thức AG-UI.
 
-Mount tại /api/agent khi AGUI_ENABLED. Auth: middleware của sub-app validate
+Mount vô điều kiện tại /api/agent (xem `lifespan` trong app/main.py — cổng
+`AGUI_ENABLED` cũ đã bị gỡ: nó mặc định TẮT và không hề có mặt trong .env mà CI
+sinh ra, nên production trả 404 câm lặng). Auth: middleware của sub-app validate
 JWT (cùng luật với core.security.get_current_user — không dùng Depends được
 vì ag_ui_langgraph sở hữu route handler), load User, stash profile vào
 current_agent_profile cho inject_request_user (Task 2).
