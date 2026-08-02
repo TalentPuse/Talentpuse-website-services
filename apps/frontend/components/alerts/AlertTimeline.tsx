@@ -8,7 +8,7 @@ import Monogram from "@/components/brand/Monogram";
 import CaptureButton from "@/components/applications/CaptureButton";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bell, Mail, Send, ArrowRight, ICON } from "@/lib/icons";
+import { Bell, Inbox, Mail, Send, ArrowRight, ICON } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 type AlertTimelineProps = {
@@ -64,23 +64,54 @@ function groupAlertsByDate(alerts: MyAlertRow[]): DateGroup[] {
   return Array.from(groups.values());
 }
 
-function ChannelBadge({ channel }: { channel: string }) {
-  const isTelegram = channel === "telegram";
-  const Icon = isTelegram ? Send : Mail;
-  const label = isTelegram ? "Gửi qua Telegram" : "Gửi qua Email";
+/**
+ * Một badge cho MỖI kênh alert thực sự được gửi qua.
+ *
+ * Bản cũ nhận một chuỗi `channel` và suy ra "không phải telegram ⇒ email" —
+ * nên dòng `website` (dấu mốc dedup, không phải kênh gửi) hiện thành icon thư
+ * kèm tooltip "Gửi qua Email". Vì email là opt-in thuần tuý và ít người bật,
+ * gần như MỌI dòng trong Lịch sử Alert đều mang nhãn sai (JA-54).
+ *
+ * Danh sách rỗng nghĩa là chưa gửi được qua kênh nào — phải nói thẳng như vậy
+ * thay vì im lặng bịa ra một kênh.
+ */
+function ChannelBadges({ channels }: { channels: string[] }) {
+  if (!channels.length) {
+    return (
+      <span
+        role="img"
+        aria-label="Chưa gửi qua kênh nào"
+        title="Chưa gửi qua kênh nào"
+        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-border/50 text-text-muted"
+      >
+        <Inbox size={12} strokeWidth={2} aria-hidden="true" />
+      </span>
+    );
+  }
 
   return (
-    <span
-      role="img"
-      aria-label={label}
-      title={label}
-      className={cn(
-        "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-        isTelegram ? "bg-brand-100 text-brand-600" : "bg-warning/15 text-warning"
-      )}
-    >
-      <Icon size={12} strokeWidth={2} aria-hidden="true" />
-    </span>
+    <>
+      {channels.map((channel) => {
+        const isTelegram = channel === "telegram";
+        const Icon = isTelegram ? Send : Mail;
+        const label = isTelegram ? "Gửi qua Telegram" : "Gửi qua Email";
+
+        return (
+          <span
+            key={channel}
+            role="img"
+            aria-label={label}
+            title={label}
+            className={cn(
+              "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+              isTelegram ? "bg-brand-100 text-brand-600" : "bg-warning/15 text-warning"
+            )}
+          >
+            <Icon size={12} strokeWidth={2} aria-hidden="true" />
+          </span>
+        );
+      })}
+    </>
   );
 }
 
@@ -135,6 +166,17 @@ function AlertTimelineItem({
                 Mới nhất
               </span>
             )}
+            {/*
+              Tin hết hạn giờ VẪN hiện đầy đủ tiêu đề/công ty, chỉ kèm dấu này.
+              Trước đây API lọc `f.is_active` ngay trong điều kiện JOIN nên alert
+              của tin đã hết hạn render thành dòng trắng "—" — người dùng không
+              biết đó là job gì, cũng không mở được (JA-31).
+            */}
+            {!alert.is_active && (
+              <span className="inline-flex shrink-0 items-center rounded-full bg-border/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-text-muted">
+                Đã hết hạn
+              </span>
+            )}
           </div>
           <p className="mt-0.5 line-clamp-1 text-xs text-text-muted">
             {alert.company_name || "—"}
@@ -160,7 +202,7 @@ function AlertTimelineItem({
             <span className="font-mono text-sm text-text-muted">—</span>
           )}
           <div className="flex items-center gap-1.5">
-            <ChannelBadge channel={alert.channel} />
+            <ChannelBadges channels={alert.channels} />
             <span className="font-mono text-xs text-text-muted">{formatTime(sentDate)}</span>
           </div>
         </div>

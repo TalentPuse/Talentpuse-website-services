@@ -50,7 +50,15 @@ class MyAlertRow(BaseModel):
     salary_million: float | None
     source_url: str | None
     sent_at: datetime
-    channel: str
+    # DANH SACH kenh, khong phai mot chuoi. Truoc day API tra ve MOT channel
+    # duoc chon tuy y: dong 'website' va 'telegram' ghi trong cung mot
+    # transaction nen `sent_at` bang nhau tuyet doi, khong co tiebreak, va
+    # Postgres thuong tra 'website' — UI doc ra roi gan nhan "Gửi qua Email"
+    # cho gan nhu moi alert (JA-29, JA-54). Rong = chua gui di dau ca.
+    channels: list[str] = []
+    # Tin da het han van hien trong lich su; UI danh dau thay vi render dong
+    # trang (JA-31).
+    is_active: bool = False
 
 
 class MyAlertList(BaseModel):

@@ -335,31 +335,85 @@ async def my_alerts(
     uid = str(user.id)
 
     count_result = await db.execute(
-        text("SELECT count(DISTINCT source_job_id) FROM app.alert_logs WHERE user_id = :uid"),
+        text(
+            "SELECT count(*) FROM ("
+            "  SELECT 1 FROM app.alert_logs WHERE user_id = :uid"
+            "  GROUP BY job_source, source_job_id"
+            ") t"
+        ),
         {"uid": uid},
     )
     total = count_result.scalar()
 
     offset = (page - 1) * per_page
+    # Gom theo (job_source, source_job_id) roi phan trang theo THOI GIAN.
+    #
+    # Ban cu `DISTINCT ON (al.source_job_id) ... ORDER BY al.source_job_id`
+    # phan trang theo id job — thu tu chuoi cua mot id ky thuat, khong lien
+    # quan gi toi thoi gian. Trang 1 khong phai alert moi nhat, va badge
+    # "Mới nhất" o AlertTimeline gan vao dong dau tien cung sai theo (JA-12,
+    # JA-47).
+    #
+    # `array_agg` thay cho viec chon MOT dong: dong 'website' va 'telegram'
+    # duoc ghi trong CUNG MOT transaction, ma `now()` cua Postgres la timestamp
+    # cua transaction — `sent_at` BANG NHAU TUYET DOI, khong co tiebreak nao,
+    # nen Postgres tra dong nao la tuy y (thuong la 'website'). UI doc mot
+    # channel duy nhat do roi gan nhan "Gửi qua Email" cho gan nhu moi alert
+    # (JA-29, JA-54).
+    #
+    # Loc bo 'website' khoi danh sach kenh hien thi: no la dau moc dedup, khong
+    # phai mot kenh da gui di dau ca.
     result = await db.execute(text("""
-        SELECT DISTINCT ON (al.source_job_id)
-            al.source_job_id,
-            f.source,
-            f.title,
-            f.company_name,
-            f.city_canonical,
-            round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
+        WITH goc AS (
+            SELECT
+                al.job_source,
+                al.source_job_id,
+                max(al.sent_at) AS sent_at,
+                coalesce(
+                    array_agg(DISTINCT al.channel)
+                        FILTER (WHERE al.channel <> 'website' AND al.status IS DISTINCT FROM 'failed'),
+                    ARRAY[]::varchar[]
+                ) AS channels
+            FROM app.alert_logs al
+            WHERE al.user_id = :uid
+            GROUP BY al.job_source, al.source_job_id
+            ORDER BY max(al.sent_at) DESC, al.source_job_id
+            LIMIT :limit OFFSET :offset
+        ),
+        job AS (
+            SELECT DISTINCT ON (f.source, f.source_job_id)
+                f.source, f.source_job_id, f.title, f.company_name,
+                f.city_canonical, f.is_active, f.salary_vnd_monthly_avg
+            FROM dbt_dev_gold.fct_jobs_daily f
+            WHERE f.source_job_id IN (SELECT source_job_id FROM goc)
+            ORDER BY f.source, f.source_job_id, f.snapshot_date DESC
+        )
+        SELECT
+            g.source_job_id,
+            coalesce(j.source, g.job_source) AS source,
+            j.title,
+            j.company_name,
+            j.city_canonical,
+            round((j.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
             sd.source_url,
-            al.sent_at,
-            al.channel
-        FROM app.alert_logs al
-        LEFT JOIN dbt_dev_gold.fct_jobs_daily f
-            ON f.source_job_id = al.source_job_id AND f.is_active
+            g.sent_at,
+            g.channels,
+            coalesce(j.is_active, false) AS is_active
+        FROM goc g
+        -- Join PHAI xet ca nguon: id cua warehouse chi duy nhat trong mot
+        -- nguon, nen join theo id khong thoi se keo ve tieu de/cong ty/link
+        -- cua mot job HOAN TOAN KHAC (JA-30). Dong cu co job_source = NULL
+        -- thi danh chap nhan join theo id — do la tat ca thong tin con lai.
+        LEFT JOIN job j
+            ON j.source_job_id = g.source_job_id
+            AND (g.job_source IS NULL OR j.source = g.job_source)
         LEFT JOIN dbt_dev_silver.silver_job_detail sd
-            ON sd.source = f.source AND sd.source_job_id = f.source_job_id
-        WHERE al.user_id = :uid
-        ORDER BY al.source_job_id, al.sent_at DESC
-        LIMIT :limit OFFSET :offset
+            ON sd.source = j.source AND sd.source_job_id = j.source_job_id
+        -- Khong loc `is_active`: tin da het han VAN phai hien duoc. Ban cu loc
+        -- trong dieu kien JOIN nen alert cua tin het han render thanh dong
+        -- trang "Không rõ" + ba dau gach — nguoi dung khong biet do la job gi
+        -- (JA-31). Gio tra `is_active` de UI danh dau "đã hết hạn".
+        ORDER BY g.sent_at DESC, g.source_job_id
     """), {"uid": uid, "limit": per_page, "offset": offset})
 
     alerts = [
@@ -372,7 +426,8 @@ async def my_alerts(
             salary_million=row["salary_million"],
             source_url=row["source_url"],
             sent_at=row["sent_at"],
-            channel=row["channel"],
+            channels=list(row["channels"] or []),
+            is_active=row["is_active"],
         )
         for row in result.mappings()
     ]

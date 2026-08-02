@@ -28,6 +28,7 @@ export {
   AlertCircle,
   LayoutDashboard,
   Bell,
+  Inbox,
   User,
   LogOut,
   MapPin,

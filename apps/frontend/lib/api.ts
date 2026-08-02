@@ -521,7 +521,19 @@ export type MyAlertRow = {
   salary_million: number | null;
   source_url: string | null;
   sent_at: string;
-  channel: string;
+  /**
+   * Các kênh alert này THỰC SỰ được gửi qua. Rỗng = chưa gửi đi đâu cả.
+   *
+   * Trước đây là một chuỗi `channel` duy nhất, và giá trị đó do Postgres chọn
+   * tuỳ ý: dòng 'website' (dấu mốc dedup) và 'telegram' được ghi trong cùng
+   * một transaction nên `sent_at` bằng nhau tuyệt đối, không có tiebreak.
+   * Postgres thường trả 'website', và UI mặc định mọi thứ không phải
+   * 'telegram' là email — nên gần như mọi alert đều hiện "Gửi qua Email" dù
+   * thực tế gửi bằng Telegram (JA-29, JA-54).
+   */
+  channels: string[];
+  /** Tin còn tuyển hay đã hết hạn — alert cũ vẫn hiện, chỉ đánh dấu (JA-31). */
+  is_active: boolean;
 };
 
 export type MyAlertList = {
