@@ -11,6 +11,7 @@ from datetime import datetime
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.dispatch_lock import ALERT_DISPATCH_LOCK_ID, alert_dispatch_lock  # noqa: F401
 from app.models.alert_log import AlertLog
 from app.models.telegram import AlertSubscription, TelegramConnection
 from app.models.user import User
@@ -21,7 +22,8 @@ from app.services.telegram import _send_message
 logger = logging.getLogger(__name__)
 
 EMAIL_ALERT_TYPE = "email_job_match"
-ALERT_DISPATCH_LOCK_ID = 1234567890
+# ALERT_DISPATCH_LOCK_ID tung duoc dinh nghia o day; gio re-export tu
+# `app.core.dispatch_lock` de caller cu khong gay. Nguon that su la module do.
 
 
 async def _is_email_enabled(db: AsyncSession, user_id) -> bool:
@@ -46,98 +48,100 @@ async def dispatch_alerts(db: AsyncSession, source: str = "unknown") -> int:
 
     Returns total number of new jobs alerted.
     """
-    # Acquire advisory lock to prevent concurrent dispatches
-    lock_result = await db.execute(text(f"SELECT pg_try_advisory_lock({ALERT_DISPATCH_LOCK_ID})"))
-    if not lock_result.scalar():
-        logger.warning("Alert dispatch already in progress, skipping (source=%s)", source)
-        return 0
+    # Khoa nam tren connection RIENG (app.core.dispatch_lock), khong nam tren
+    # `db`: vong lap ben duoi commit sau moi user, ma commit tra connection ve
+    # pool — khoa se troi theo connection do va khong bao gio go duoc (JA-01).
+    async with alert_dispatch_lock() as lay_duoc_khoa:
+        if not lay_duoc_khoa:
+            logger.warning("Alert dispatch already in progress, skipping (source=%s)", source)
+            return 0
+        return await _dispatch_alerts_locked(db, source)
 
-    try:
-        result = await db.execute(
-            select(User, TelegramConnection.chat_id)
-            .outerjoin(
-                TelegramConnection,
-                (TelegramConnection.user_id == User.id)
-                & (TelegramConnection.status == "active")
-                & (TelegramConnection.chat_id.isnot(None)),
-            )
-            .where(User.is_active == True)  # noqa: E712
-            .where(func.array_length(User.skills, 1) > 0)
+
+async def _dispatch_alerts_locked(db: AsyncSession, source: str) -> int:
+    """Than cua `dispatch_alerts`, chay khi da CHAC CHAN giu khoa dispatch."""
+    result = await db.execute(
+        select(User, TelegramConnection.chat_id)
+        .outerjoin(
+            TelegramConnection,
+            (TelegramConnection.user_id == User.id)
+            & (TelegramConnection.status == "active")
+            & (TelegramConnection.chat_id.isnot(None)),
         )
+        .where(User.is_active == True)  # noqa: E712
+        .where(func.array_length(User.skills, 1) > 0)
+    )
 
-        rows = result.all()
-        total_sent = 0
-        matcher = JobMatcher(db)
+    rows = result.all()
+    total_sent = 0
+    matcher = JobMatcher(db)
 
-        for row in rows:
-            user: User = row[0]
-            chat_id: int | None = row[1]
+    for row in rows:
+        user: User = row[0]
+        chat_id: int | None = row[1]
 
-            try:
-                jobs = await matcher.find_jobs(user)
-                if not jobs:
-                    continue
+        try:
+            jobs = await matcher.find_jobs(user)
+            if not jobs:
+                continue
 
-                # Truyen `source` xuong: log_and_send ghi cac dong website/telegram,
-                # tuc la 2/3 so alert. Bo qua tham so nay la ly do 63% ban ghi that
-                # co source = NULL va trang admin dispatch-history khong doc duoc.
-                sent = await matcher.log_and_send(user, jobs, chat_id, _send_message, source=source)
+            # Truyen `source` xuong: log_and_send ghi cac dong website/telegram,
+            # tuc la 2/3 so alert. Bo qua tham so nay la ly do 63% ban ghi that
+            # co source = NULL va trang admin dispatch-history khong doc duoc.
+            sent = await matcher.log_and_send(user, jobs, chat_id, _send_message, source=source)
 
-                # Send email if user subscribed
-                email_enabled = await _is_email_enabled(db, user.id)
-                if email_enabled and user.email:
-                    try:
-                        email_result = await send_job_alert_email(
-                            to=user.email,
-                            user_name=user.full_name,
-                            jobs=jobs,
-                        )
-                        if email_result.success:
-                            for j in jobs:
-                                db.add(AlertLog(
-                                    user_id=user.id,
-                                    source_job_id=j.source_job_id,
-                                    channel="email",
-                                    status="sent",
-                                    source=source,
-                                ))
-                        else:
-                            # Log failed email for potential retry
-                            for j in jobs:
-                                db.add(AlertLog(
-                                    user_id=user.id,
-                                    source_job_id=j.source_job_id,
-                                    channel="email",
-                                    status="failed",
-                                    error_message=email_result.error[:500] if email_result.error else "Unknown error",
-                                    source=source,
-                                ))
-                    except Exception as exc:
-                        logger.exception("Email send failed for user %s", user.id)
-                        # Log failed entries
+            # Send email if user subscribed
+            email_enabled = await _is_email_enabled(db, user.id)
+            if email_enabled and user.email:
+                try:
+                    email_result = await send_job_alert_email(
+                        to=user.email,
+                        user_name=user.full_name,
+                        jobs=jobs,
+                    )
+                    if email_result.success:
+                        for j in jobs:
+                            db.add(AlertLog(
+                                user_id=user.id,
+                                source_job_id=j.source_job_id,
+                                channel="email",
+                                status="sent",
+                                source=source,
+                            ))
+                    else:
+                        # Log failed email for potential retry
                         for j in jobs:
                             db.add(AlertLog(
                                 user_id=user.id,
                                 source_job_id=j.source_job_id,
                                 channel="email",
                                 status="failed",
-                                error_message=str(exc)[:500],
+                                error_message=email_result.error[:500] if email_result.error else "Unknown error",
                                 source=source,
                             ))
+                except Exception as exc:
+                    logger.exception("Email send failed for user %s", user.id)
+                    # Log failed entries
+                    for j in jobs:
+                        db.add(AlertLog(
+                            user_id=user.id,
+                            source_job_id=j.source_job_id,
+                            channel="email",
+                            status="failed",
+                            error_message=str(exc)[:500],
+                            source=source,
+                        ))
 
-                await db.commit()
+            await db.commit()
 
-                total_sent += sent
-                logger.info("Sent %d alerts to user %s (telegram=%s, email=%s)", sent, user.id, bool(chat_id), email_enabled)
+            total_sent += sent
+            logger.info("Sent %d alerts to user %s (telegram=%s, email=%s)", sent, user.id, bool(chat_id), email_enabled)
 
-            except Exception:
-                logger.exception("Failed to dispatch alerts for user %s", user.id)
-                await db.rollback()
+        except Exception:
+            logger.exception("Failed to dispatch alerts for user %s", user.id)
+            await db.rollback()
 
-        return total_sent
-    finally:
-        # Release advisory lock
-        await db.execute(text(f"SELECT pg_advisory_unlock({ALERT_DISPATCH_LOCK_ID})"))
+    return total_sent
 
 
 async def _upsert_email_log(
@@ -174,65 +178,68 @@ async def email_all_users(db: AsyncSession, source: str = "admin_manual") -> dic
 
     Returns {"emailed", "skipped_no_jobs", "failed", "total_users"}.
     """
-    lock_result = await db.execute(text(f"SELECT pg_try_advisory_lock({ALERT_DISPATCH_LOCK_ID})"))
-    if not lock_result.scalar():
-        logger.warning("email_all_users: dispatch lock busy, skipping (source=%s)", source)
-        return {"emailed": 0, "skipped_no_jobs": 0, "failed": 0, "total_users": 0, "locked": True}
+    # Cung ly do nhu `dispatch_alerts`: vong lap ben duoi commit sau moi user
+    # nen khoa khong duoc nam tren `db` (JA-01).
+    async with alert_dispatch_lock() as lay_duoc_khoa:
+        if not lay_duoc_khoa:
+            logger.warning("email_all_users: dispatch lock busy, skipping (source=%s)", source)
+            return {"emailed": 0, "skipped_no_jobs": 0, "failed": 0, "total_users": 0, "locked": True}
+        return await _email_all_users_locked(db, source)
 
-    try:
-        result = await db.execute(
-            select(User).where(
-                User.is_active == True,  # noqa: E712
-                User.is_admin == False,  # noqa: E712
-            )
+
+async def _email_all_users_locked(db: AsyncSession, source: str) -> dict:
+    """Than cua `email_all_users`, chay khi da CHAC CHAN giu khoa dispatch."""
+    result = await db.execute(
+        select(User).where(
+            User.is_active == True,  # noqa: E712
+            User.is_admin == False,  # noqa: E712
         )
-        users: list[User] = result.scalars().all()
+    )
+    users: list[User] = result.scalars().all()
 
-        emailed = 0
-        skipped = 0
-        failed = 0
-        matcher = JobMatcher(db)
+    emailed = 0
+    skipped = 0
+    failed = 0
+    matcher = JobMatcher(db)
 
-        for user in users:
-            if not user.email:
+    for user in users:
+        if not user.email:
+            continue
+        try:
+            # include_alerted=True so the blast always finds current top matches
+            jobs = await matcher.find_jobs(user, include_alerted=True)
+            if not jobs:
+                skipped += 1
                 continue
-            try:
-                # include_alerted=True so the blast always finds current top matches
-                jobs = await matcher.find_jobs(user, include_alerted=True)
-                if not jobs:
-                    skipped += 1
-                    continue
 
-                email_result = await send_job_alert_email(
-                    to=user.email,
-                    user_name=user.full_name,
-                    jobs=jobs,
-                )
-                status = "sent" if email_result.success else "failed"
-                err = (email_result.error or "Unknown error")[:500] if not email_result.success else None
-                for j in jobs:
-                    await _upsert_email_log(db, user.id, j.source_job_id, status, err, source)
-                await db.commit()
+            email_result = await send_job_alert_email(
+                to=user.email,
+                user_name=user.full_name,
+                jobs=jobs,
+            )
+            status = "sent" if email_result.success else "failed"
+            err = (email_result.error or "Unknown error")[:500] if not email_result.success else None
+            for j in jobs:
+                await _upsert_email_log(db, user.id, j.source_job_id, status, err, source)
+            await db.commit()
 
-                if email_result.success:
-                    emailed += 1
-                else:
-                    failed += 1
-                    logger.error("email_all_users: send failed for user %s: %s", user.id, email_result.error)
-            except Exception:
-                logger.exception("email_all_users: error for user %s", user.id)
-                await db.rollback()
+            if email_result.success:
+                emailed += 1
+            else:
                 failed += 1
+                logger.error("email_all_users: send failed for user %s: %s", user.id, email_result.error)
+        except Exception:
+            logger.exception("email_all_users: error for user %s", user.id)
+            await db.rollback()
+            failed += 1
 
-        logger.info(
-            "email_all_users done (source=%s): emailed=%d skipped=%d failed=%d total=%d",
-            source, emailed, skipped, failed, len(users),
-        )
-        return {
-            "emailed": emailed,
-            "skipped_no_jobs": skipped,
-            "failed": failed,
-            "total_users": len(users),
-        }
-    finally:
-        await db.execute(text(f"SELECT pg_advisory_unlock({ALERT_DISPATCH_LOCK_ID})"))
+    logger.info(
+        "email_all_users done (source=%s): emailed=%d skipped=%d failed=%d total=%d",
+        source, emailed, skipped, failed, len(users),
+    )
+    return {
+        "emailed": emailed,
+        "skipped_no_jobs": skipped,
+        "failed": failed,
+        "total_users": len(users),
+    }

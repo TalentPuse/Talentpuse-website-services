@@ -5,6 +5,7 @@ All queries use SQLAlchemy Core for type safety — no raw SQL strings.
 """
 from __future__ import annotations
 
+import html
 import logging
 from dataclasses import dataclass
 from datetime import datetime
@@ -345,31 +346,35 @@ class JobMatcher:
         await self.db.flush()
 
         if chat_id:
-            try:
-                msg = _format_job_message(new_jobs)
-                await send_fn(chat_id, msg)
-                status, err = "sent", None
-            except Exception as exc:
-                # KHONG duoc nuot that bai roi di tiep. Cac dong 'website' o tren
-                # DA duoc ghi, tuc la nhung job nay da bi danh dau la da-alert —
-                # lan chay sau `get_already_alerted_ids` se loai chung ra VINH VIEN.
-                # Neu khong ghi lai that bai o day thi push Telegram mat han ma
-                # khong de lai dau vet, va co che retry (admin.py) khong the tim
-                # thay de gui lai. Do la ly do 100/100 dong trong DB that deu
-                # status='sent' va retry_count=0: khong phai vi hoan hao, ma vi
-                # that bai chua bao gio duoc ghi.
-                logger.exception("Telegram send failed for user %s", user.id)
-                status, err = "failed", str(exc)[:500]
+            # Gui theo TUNG KHOI va ghi status rieng cho tung khoi: mot khoi
+            # hong khong duoc keo cac job da gui thanh cong o khoi khac thanh
+            # 'failed', va nguoc lai.
+            for msg, nhom in _format_job_messages(new_jobs):
+                try:
+                    await send_fn(chat_id, msg)
+                    status, err = "sent", None
+                except Exception as exc:
+                    # KHONG duoc nuot that bai roi di tiep. Cac dong 'website' o
+                    # tren DA duoc ghi, tuc la nhung job nay da bi danh dau la
+                    # da-alert — lan chay sau `get_already_alerted_ids` se loai
+                    # chung ra VINH VIEN. Neu khong ghi lai that bai o day thi
+                    # push Telegram mat han ma khong de lai dau vet, va co che
+                    # retry (admin.py) khong the tim thay de gui lai. Do la ly do
+                    # 100/100 dong trong DB that deu status='sent' va
+                    # retry_count=0: khong phai vi hoan hao, ma vi that bai chua
+                    # bao gio duoc ghi.
+                    logger.exception("Telegram send failed for user %s", user.id)
+                    status, err = "failed", str(exc)[:500]
 
-            for j in new_jobs:
-                self.db.add(AlertLog(
-                    user_id=user.id,
-                    source_job_id=j.source_job_id,
-                    channel="telegram",
-                    status=status,
-                    error_message=err,
-                    source=source,
-                ))
+                for j in nhom:
+                    self.db.add(AlertLog(
+                        user_id=user.id,
+                        source_job_id=j.source_job_id,
+                        channel="telegram",
+                        status=status,
+                        error_message=err,
+                        source=source,
+                    ))
 
         return len(new_jobs)
 
@@ -379,53 +384,141 @@ class JobMatcher:
 SOURCE_LABEL: dict[str, str] = {
     "vietnamworks": "VietnamWorks",
     "itviec": "ITviec",
+    # linkedin la crawler thu ba dang chay (~64% kho job) nhung truoc day khong
+    # co trong bang nay -> tin hien nhan tho "Xem trên linkedin" (JA-E1).
+    "linkedin": "LinkedIn",
 }
 
 FALLBACK_URL: dict[str, str] = {
     "vietnamworks": "https://www.vietnamworks.com",
     "itviec": "https://itviec.com",
+    "linkedin": "https://www.linkedin.com/jobs",
 }
+
+# Telegram gioi han 4096 don vi ma UTF-16 moi tin. Chua toi han muc de con cho
+# cho header/footer va cho phan phinh ra sau khi escape HTML.
+TELEGRAM_MAX_LEN = 4096
+CHUNK_BUDGET = 3500
+
+_ALERT_HEADER = "\U0001f4cb <b>TalentPuse Alert</b>"
+_ALERT_FOOTER = (
+    "\n✏️ Cập nhật hồ sơ tại <b>talentpuse.io.vn/profile</b> để nhận alert chính xác hơn."
+)
+
+
+def _do_dai_utf16(s: str) -> int:
+    """Do do dai theo don vi ma UTF-16 — dung don vi Telegram dem.
+
+    `len()` cua Python dem code point, nen emoji ngoai BMP (moi entry co vai
+    cai) bi dem thieu mot nua. Do bang `len()` roi ket luan "chua cham gioi
+    han" chinh la cach vuot gioi han ma khong biet.
+    """
+    return len(s.encode("utf-16-le")) // 2
+
+
+def _esc(v: str | None) -> str:
+    """Escape du lieu crawl truoc khi nhet vao HTML cua Telegram (JA-07).
+
+    Tieu de kieu `R&D Engineer (C++/C#)` hay cong ty `Tuyen dung <Urgent>` lam
+    Telegram tra 400 `can't parse entities` va tu choi CA BATCH. `quote=False`
+    vi day la noi dung text, khong nam trong attribute.
+    """
+    return html.escape(v or "", quote=False)
 
 
 def _build_job_url(job: MatchedJob) -> str:
-    if job.source_url:
-        return job.source_url
-    return FALLBACK_URL.get(job.source, "https://www.vietnamworks.com")
+    """URL cua job, hoac chuoi rong neu khong co dich den dang tin cay.
+
+    Truoc day nguon khong biet + thieu `source_url` -> tra ve trang chu
+    VietnamWorks: mot dich den SAI duoc trinh bay nhu link binh thuong. Tha
+    khong co link con hon dan user di nham cho (JA-E1).
+    """
+    url = job.source_url or FALLBACK_URL.get(job.source, "")
+    if not url.startswith(("http://", "https://")):
+        return ""
+    return url
+
+
+def _format_entry(i: int, j: MatchedJob) -> str:
+    title = _esc(j.title) or "Không rõ"
+    company = _esc(j.company_name) or "Không rõ"
+    city = _esc(j.city_raw_vi or j.city_canonical)
+    level = _esc(j.job_level)
+    address = _esc(j.address)
+    salary = j.salary_m
+    source_label = _esc(SOURCE_LABEL.get(j.source, j.source))
+    url = _build_job_url(j)
+
+    score_text = f"  ·  ⭐ {j.score:.0f}%" if j.score else ""
+
+    entry = f"<b>{i}. {title}</b>"
+    entry += f"\n   \U0001f3e2 {company}"
+    if city:
+        entry += f"  ·  \U0001f4cd {city}"
+    if address:
+        entry += f"\n   \U0001f4cd {address}"
+    if level:
+        entry += f"\n   \U0001f4ca {level}"
+    if salary:
+        entry += f"  ·  \U0001f4b0 ~{salary:.0f} triệu/tháng"
+    entry += score_text
+    if url:
+        # quote=True o day: chuoi nam TRONG attribute href, mot dau " chua
+        # escape se thoat ra khoi attribute va chen markup tuy y.
+        entry += f'\n   \U0001f517 <a href="{html.escape(url, quote=True)}">Xem trên {source_label}</a>'
+    return entry
+
+
+def _format_job_messages(jobs: list[MatchedJob]) -> list[tuple[str, list[MatchedJob]]]:
+    """Chia danh sach job thanh nhieu tin, moi tin duoi gioi han Telegram.
+
+    Tra ve (noi_dung, cac_job_trong_tin_do) de `log_and_send` ghi status THEO
+    TUNG KHOI: khoi 1 gui duoc ma khoi 2 hong thi chi job cua khoi 2 la
+    'failed'.
+
+    Vi sao can: nhanh student dung `STUDENT_ALERT_LIMIT = 50`, tuc ~3 lan gioi
+    han 4096 ky tu -> Telegram tra 400 `message is too long` -> cong voi JA-03
+    thi ca 50 job bi danh dau da-gui va bien mat vinh vien. Nhanh thuong dung
+    `ALERT_LIMIT = 3` nen khong bao gio cham gioi han — them mot ly do nua
+    khien loi nay vo hinh voi nguoi dung binh thuong.
+    """
+    if not jobs:
+        return []
+
+    tong = len(jobs)
+    header = f"{_ALERT_HEADER}\nTìm thấy <b>{tong}</b> việc làm mới phù hợp với bạn.\n"
+
+    khoi: list[tuple[str, list[MatchedJob]]] = []
+    cur_entries: list[str] = []
+    cur_jobs: list[MatchedJob] = []
+
+    for i, j in enumerate(jobs, 1):
+        entry = _format_entry(i, j)
+        # Mot entry don le van co the vuot ngan sach (dia chi rat dai). Cat bot
+        # con hon de Telegram tu choi ca khoi.
+        if _do_dai_utf16(entry) > CHUNK_BUDGET:
+            entry = entry[: CHUNK_BUDGET // 2] + "…"
+
+        thu = "\n\n".join([header, *cur_entries, entry, _ALERT_FOOTER])
+        if cur_jobs and _do_dai_utf16(thu) > CHUNK_BUDGET:
+            khoi.append(("\n\n".join([header, *cur_entries]), list(cur_jobs)))
+            cur_entries, cur_jobs = [], []
+
+        cur_entries.append(entry)
+        cur_jobs.append(j)
+
+    if cur_jobs:
+        khoi.append(("\n\n".join([header, *cur_entries]), list(cur_jobs)))
+
+    # Footer chi gan vao tin cuoi: lap lai o moi tin chi lam nhieu.
+    noi_dung, nhom = khoi[-1]
+    khoi[-1] = (f"{noi_dung}\n\n{_ALERT_FOOTER}", nhom)
+    return khoi
 
 
 def _format_job_message(jobs: list[MatchedJob]) -> str:
-    count = len(jobs)
-    lines = [
-        f"\U0001f4cb <b>TalentPuse Alert</b>",
-        f"Tìm thấy <b>{count}</b> việc làm mới phù hợp với bạn.\n",
-    ]
+    """Giu lai cho cac goi/test cu mong doi MOT chuoi duy nhat.
 
-    for i, j in enumerate(jobs, 1):
-        title = j.title or "Không rõ"
-        company = j.company_name or "Không rõ"
-        city = j.city_raw_vi or j.city_canonical or ""
-        level = j.job_level or ""
-        salary = j.salary_m
-        source_label = SOURCE_LABEL.get(j.source, j.source)
-        url = _build_job_url(j)
-
-        score_text = f"  ·  ⭐ {j.score:.0f}%" if j.score else ""
-
-        entry = f"<b>{i}. {title}</b>"
-        entry += f"\n   \U0001f3e2 {company}"
-        if city:
-            entry += f"  ·  \U0001f4cd {city}"
-        if j.address:
-            entry += f"\n   \U0001f4cd {j.address}"
-        if level:
-            entry += f"\n   \U0001f4ca {level}"
-        if salary:
-            entry += f"  ·  \U0001f4b0 ~{salary:.0f} triệu/tháng"
-        entry += score_text
-        entry += f'\n   \U0001f517 <a href="{url}">Xem trên {source_label}</a>'
-        lines.append(entry)
-
-    lines.append(
-        "\n✏️ Cập nhật hồ sơ tại <b>talentpuse.io.vn/profile</b> để nhận alert chính xác hơn."
-    )
-    return "\n\n".join(lines)
+    Duong gui that su dung `_format_job_messages` de con chia khoi.
+    """
+    return "\n\n".join(noi_dung for noi_dung, _ in _format_job_messages(jobs))

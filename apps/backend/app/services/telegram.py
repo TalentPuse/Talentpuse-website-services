@@ -33,18 +33,73 @@ async def _get_http() -> httpx.AsyncClient:
     return _http
 
 
+class TelegramSendError(RuntimeError):
+    """Telegram tu choi tin nhan (JA-03).
+
+    Mang theo `description` cua Telegram va `retry_after` (giay) cua loi 429 de
+    ben goi con ghi duoc nguyen nhan that vao `alert_logs.error_message` thay vi
+    mot dong "Unknown error".
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int | None = None,
+        description: str | None = None,
+        retry_after: int | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.description = description
+        self.retry_after = retry_after
+
+
 async def _send_message(chat_id: int, text: str) -> None:
+    """Gui tin toi Telegram. RAISE `TelegramSendError` khi that bai.
+
+    Ban cu goi `client.post(...)` roi vut bo response va boc ca ham trong
+    `except Exception: logger.exception(...)`. Hau qua: 400 (HTML sai), 403
+    (user chan bot), 429 (rate limit) deu ket thuc "binh thuong" ->
+    `log_and_send` di nhanh thanh cong va ghi `status='sent', error_message=NULL`.
+
+    Do la ly do 100/100 dong trong DB that deu `sent` voi `retry_count=0` —
+    khong phai vi khong co loi, ma vi loi chua bao gio duoc ghi. Va vi cac dong
+    `channel='website'` da duoc flush TRUOC khi gui, job do bi danh dau da-alert
+    nen `get_already_alerted_ids` loai no ra VINH VIEN; co che retry cua admin
+    cung khong tim thay gi vi khong co dong nao `status='failed'`.
+
+    Nhanh thieu token cung raise chu khong `return`: khong co token thi tin
+    KHONG duoc gui, ghi no la 'sent' van la noi doi.
+    """
     if not TELEGRAM_BOT_TOKEN:
-        logger.warning("TELEGRAM_BOT_TOKEN not set, skipping send")
-        return
+        raise TelegramSendError("TELEGRAM_BOT_TOKEN chua duoc cau hinh")
+
+    client = await _get_http()
     try:
-        client = await _get_http()
-        await client.post(
+        resp = await client.post(
             f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
             json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
         )
-    except Exception:
-        logger.exception("Failed to send Telegram message to chat_id=%s", chat_id)
+    except httpx.HTTPError as exc:
+        raise TelegramSendError(f"Loi mang khi goi Telegram: {exc}") from exc
+
+    try:
+        payload = resp.json()
+    except ValueError:
+        payload = {}
+
+    if resp.status_code == 200 and payload.get("ok"):
+        return
+
+    description = payload.get("description")
+    retry_after = (payload.get("parameters") or {}).get("retry_after")
+    raise TelegramSendError(
+        f"Telegram tu choi (HTTP {resp.status_code}): {description or resp.text[:200]}",
+        status_code=resp.status_code,
+        description=description,
+        retry_after=retry_after,
+    )
 
 
 async def generate_deep_link(

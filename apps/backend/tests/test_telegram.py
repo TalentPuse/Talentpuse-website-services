@@ -288,26 +288,124 @@ async def test_webhook_handler_error_still_200():
 # Service unit — _send_message
 # ─────────────────────────────────────────────
 
-@pytest.mark.asyncio
-async def test_send_message_network_error():
-    """_send_message must not raise on network failure."""
-    import httpx
+def _mock_client(*, status_code: int = 200, payload: dict | None = None, text: str = ""):
+    """httpx client gia tra ve mot response cu the."""
+    resp = MagicMock()
+    resp.status_code = status_code
+    resp.text = text
+    resp.json = MagicMock(return_value=payload if payload is not None else {"ok": True})
 
+    client = AsyncMock()
+    client.post = AsyncMock(return_value=resp)
+    client.is_closed = False
+    return client
+
+
+@pytest.mark.asyncio
+async def test_send_message_thanh_cong_khong_raise():
     from app.services.telegram import _send_message
 
-    mock_client = AsyncMock()
-    mock_client.post.side_effect = httpx.ConnectError("connection refused")
-    mock_client.is_closed = False
-
-    with patch("app.services.telegram._http", mock_client), \
+    client = _mock_client(payload={"ok": True, "result": {"message_id": 1}})
+    with patch("app.services.telegram._http", client), \
          patch("app.services.telegram.TELEGRAM_BOT_TOKEN", "fake-token"):
         await _send_message(123, "test message")
 
+    client.post.assert_awaited_once()
+
 
 @pytest.mark.asyncio
-async def test_send_message_skips_without_token():
-    """_send_message should skip silently if no bot token is set."""
-    from app.services.telegram import _send_message
+async def test_send_message_raise_khi_loi_mang():
+    """Mat mang PHAI noi ra ngoai (JA-03).
+
+    Test nay truoc day ten la `test_send_message_network_error` va khang dinh
+    dieu NGUOC LAI ("must not raise"). No khong sai luc viet — no mo ta dung
+    code luc do — nhung chinh no la thu giu bug o nguyen tai cho:
+    `_send_message` nuot moi loi, `log_and_send` di nhanh thanh cong va ghi
+    `status='sent'` cho mot tin chua bao gio toi noi. CI xanh suot.
+    """
+    import httpx
+
+    from app.services.telegram import TelegramSendError, _send_message
+
+    client = AsyncMock()
+    client.post = AsyncMock(side_effect=httpx.ConnectError("connection refused"))
+    client.is_closed = False
+
+    with patch("app.services.telegram._http", client), \
+         patch("app.services.telegram.TELEGRAM_BOT_TOKEN", "fake-token"):
+        with pytest.raises(TelegramSendError):
+            await _send_message(123, "test message")
+
+
+@pytest.mark.asyncio
+async def test_send_message_raise_khi_thieu_token():
+    """Thieu token = tin KHONG duoc gui, nen phai raise chu khong `return`.
+
+    Ban cu log warning roi return em — ben goi khong phan biet duoc voi gui
+    thanh cong, va ghi `sent` vao alert_logs cho mot tin khong ton tai.
+    """
+    from app.services.telegram import TelegramSendError, _send_message
 
     with patch("app.services.telegram.TELEGRAM_BOT_TOKEN", ""):
-        await _send_message(123, "test message")
+        with pytest.raises(TelegramSendError):
+            await _send_message(123, "test message")
+
+
+@pytest.mark.asyncio
+async def test_send_message_raise_khi_telegram_tra_400():
+    """HTTP 200 khong con la dieu kien du — phai doc ca `ok` trong body.
+
+    400 `can't parse entities` la thu xay ra khi tieu de crawl ve co `<` hoac
+    `&` chua escape (JA-07): Telegram tu choi CA BATCH.
+    """
+    from app.services.telegram import TelegramSendError, _send_message
+
+    client = _mock_client(
+        status_code=400,
+        payload={"ok": False, "description": "Bad Request: can't parse entities"},
+    )
+    with patch("app.services.telegram._http", client), \
+         patch("app.services.telegram.TELEGRAM_BOT_TOKEN", "fake-token"):
+        with pytest.raises(TelegramSendError) as exc:
+            await _send_message(123, "<Urgent> & co")
+
+    assert exc.value.status_code == 400
+    assert "parse entities" in (exc.value.description or "")
+
+
+@pytest.mark.asyncio
+async def test_send_message_giu_lai_retry_after_cua_429():
+    """429 phai mang theo `retry_after` de con biet cho bao lau (JA-18)."""
+    from app.services.telegram import TelegramSendError, _send_message
+
+    client = _mock_client(
+        status_code=429,
+        payload={"ok": False, "description": "Too Many Requests", "parameters": {"retry_after": 17}},
+    )
+    with patch("app.services.telegram._http", client), \
+         patch("app.services.telegram.TELEGRAM_BOT_TOKEN", "fake-token"):
+        with pytest.raises(TelegramSendError) as exc:
+            await _send_message(123, "test")
+
+    assert exc.value.retry_after == 17
+
+
+@pytest.mark.asyncio
+async def test_send_message_raise_khi_body_khong_phai_json():
+    """502 tu proxy tra HTML: `.json()` no, khong duoc de no thanh 'sent'."""
+    from app.services.telegram import TelegramSendError, _send_message
+
+    resp = MagicMock()
+    resp.status_code = 502
+    resp.text = "<html>Bad Gateway</html>"
+    resp.json = MagicMock(side_effect=ValueError("not json"))
+    client = AsyncMock()
+    client.post = AsyncMock(return_value=resp)
+    client.is_closed = False
+
+    with patch("app.services.telegram._http", client), \
+         patch("app.services.telegram.TELEGRAM_BOT_TOKEN", "fake-token"):
+        with pytest.raises(TelegramSendError) as exc:
+            await _send_message(123, "test")
+
+    assert exc.value.status_code == 502
