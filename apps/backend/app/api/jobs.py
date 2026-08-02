@@ -229,7 +229,29 @@ async def list_jobs(
             jobs=jobs, total=total, page=page, per_page=per_page, scored_pool=scored_pool,
         )
 
+    # DISTINCT ON (source, source_job_id) BAT BUOC — cung ly do da ap o nhanh
+    # rerank va o _DETAIL_SQL, nhung nhanh nay truoc day bi bo sot.
+    #
+    # `fct_jobs_daily` la bang SNAPSHOT HANG NGAY va mot tin giu NHIEU dong
+    # is_active cung luc (do duoc: 4301/4383 tin tren prod). Truoc day khong
+    # sinh ban trung vi moi snapshot cua mot tin deu mang Y HET gia tri, nen
+    # GROUP BY gop chung lai — mot su may man, khong phai mot bao dam.
+    #
+    # May man do vo NGAY khi seed phan loai doi: `dbt run` chi dung lai snapshot
+    # cua HOM NAY, nen mot tin chuyen tu 'Other' sang 'Cyber Security' se co
+    # snapshot hom qua mang nhan cu va hom nay mang nhan moi — hai gia tri khac
+    # nhau, GROUP BY khong gop duoc nua, va tin do hien HAI LAN tren trang.
+    # Cau count o tren dung count(DISTINCT ...) nen tong so cung khong con khop
+    # voi so dong tra ve.
+    #
+    # Lay snapshot MOI NHAT cua moi tin, truoc khi join va gop.
     result = await db.execute(text(f"""
+        WITH moi_nhat AS (
+            SELECT DISTINCT ON (f.source, f.source_job_id) f.*
+            FROM dbt_dev_gold.fct_jobs_daily f
+            WHERE f.is_active {where_extra}
+            ORDER BY f.source, f.source_job_id, f.snapshot_date DESC
+        )
         SELECT
             f.source,
             f.source_job_id,
@@ -243,11 +265,10 @@ async def list_jobs(
             {_logo_sql("sd")},
             f.posted_at,
             {skills_select}
-        FROM dbt_dev_gold.fct_jobs_daily f
+        FROM moi_nhat f
         LEFT JOIN dbt_dev_silver.silver_job_detail sd
             ON sd.source = f.source AND sd.source_job_id = f.source_job_id
         {skills_join}
-        WHERE f.is_active {where_extra}
         GROUP BY f.source, f.source_job_id, f.title, f.company_name,
                  f.city_canonical, f.job_level, f.job_category,
                  f.salary_vnd_monthly_avg, sd.source_url, sd.company_logo_url,
