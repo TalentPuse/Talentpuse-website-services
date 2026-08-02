@@ -13,6 +13,7 @@ function makeJob(over: Partial<PublicJobRow> = {}): PublicJobRow {
     source_job_id: "123",
     title: "Senior Data Engineer",
     company_name: "Zalopay",
+    company_logo_url: null,
     city_canonical: "Hồ Chí Minh",
     job_level: "Senior",
     job_category: "Data",

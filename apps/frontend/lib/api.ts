@@ -438,6 +438,9 @@ export type PublicJobRow = {
   source_job_id: string;
   title: string | null;
   company_name: string | null;
+  /** Logo cong ty (URL tuyet doi tu CDN cua nguon). Phu ~99% tin; null thi
+   *  frontend roi ve Monogram chu cai dau. */
+  company_logo_url: string | null;
   city_canonical: string | null;
   job_level: string | null;
   job_category: string | null;

@@ -10,6 +10,10 @@ class PublicJobRow(BaseModel):
     source_job_id: str
     title: str | None
     company_name: str | None
+    # Logo cong ty, lay tu silver_job_detail. Phu 923/931 tin (99%) tren ca 4
+    # nguon, nen bo cuc danh sach co the lay logo lam neo thi giac; so con lai
+    # roi ve chu cai dau (Monogram) o phia frontend.
+    company_logo_url: str | None = None
     city_canonical: str | None
     job_level: str | None
     job_category: str | None

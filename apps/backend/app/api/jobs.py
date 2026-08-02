@@ -146,6 +146,7 @@ async def list_jobs(
                 f.job_category,
                 round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
                 sd.source_url,
+                sd.company_logo_url,
                 f.posted_at,
                 {skills_select}
             FROM pool f
@@ -154,7 +155,8 @@ async def list_jobs(
             {skills_join}
             GROUP BY f.source, f.source_job_id, f.title, f.company_name,
                      f.city_canonical, f.job_level, f.job_category,
-                     f.salary_vnd_monthly_avg, sd.source_url, f.posted_at
+                     f.salary_vnd_monthly_avg, sd.source_url, sd.company_logo_url,
+                     f.posted_at
             ORDER BY f.posted_at DESC NULLS LAST
             LIMIT :pool
         """), pool_params)
@@ -219,6 +221,7 @@ async def list_jobs(
             f.job_category,
             round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
             sd.source_url,
+            sd.company_logo_url,
             f.posted_at,
             {skills_select}
         FROM dbt_dev_gold.fct_jobs_daily f
@@ -228,7 +231,8 @@ async def list_jobs(
         WHERE f.is_active {where_extra}
         GROUP BY f.source, f.source_job_id, f.title, f.company_name,
                  f.city_canonical, f.job_level, f.job_category,
-                 f.salary_vnd_monthly_avg, sd.source_url, f.posted_at
+                 f.salary_vnd_monthly_avg, sd.source_url, sd.company_logo_url,
+                 f.posted_at
         ORDER BY f.posted_at DESC NULLS LAST
         LIMIT :limit OFFSET :offset
     """), params)
@@ -239,6 +243,7 @@ async def list_jobs(
             source_job_id=row["source_job_id"],
             title=row["title"],
             company_name=row["company_name"],
+            company_logo_url=row["company_logo_url"],
             city_canonical=row["city_canonical"],
             job_level=row["job_level"],
             job_category=row["job_category"],
