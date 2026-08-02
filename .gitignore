@@ -2,7 +2,12 @@ node_modules/
 .venv/
 __pycache__/
 *.pyc
-.env
+# Moi bien the .env, KHONG chi `.env`. Truoc day chi co dong `.env` nen
+# `.env.bak-before-dburl-fix` (chua JWT_SECRET, token Telegram, khoa Resend,
+# khoa Tailscale, webhook secret) nam untracked — chi cach mot lenh
+# `git add .` la bi commit. Xem JA-04 trong docs/superpowers/bugs/.
+.env*
+!.env.example
 .next/
 .pytest_cache/
 .ruff_cache/

@@ -47,9 +47,27 @@ def _next_alert_slot() -> datetime:
 
     interval_hours = get_alert_interval_hours()
 
+    # So bang MOC THOI GIAN TUYET DOI, khong phai gio-trong-ngay.
+    #
+    # Dieu kien cu `while t.time() <= ALERT_END_TIME` chi so GIO: moi interval
+    # ma boi so cua no roi lai vao khung 07:30-21:30 cua NGAY SAU deu khong bao
+    # gio thoat. Do duoc: 6h/12h/24h chay toi khi datetime tran nam 9999 roi
+    # chet bang `OverflowError: date value out of range`.
+    #
+    # Vong lap nay DONG BO, khong co `await` nao ben trong, va chay tren event
+    # loop chinh. Nen no vua chen ca process nhieu giay (toan bo API dung, ke ca
+    # health check), vua phinh `slots` len hang trieu phan tu, roi ket thuc bang
+    # mot exception khong ai bat — giet luon `_alert_loop`: alert ngung han cho
+    # toi lan restart, khong log, khong metric.
+    #
+    # Sua nay dong thoi xu ly JA-19: interval 20h truoc day sinh slot 03:30 sang
+    # (07:30 + 20h), tuc push Telegram + email luc 3h sang — dung thu ma
+    # ALERT_START_TIME/END_TIME sinh ra de chan. Gio slot do vuot `end_dt` nen
+    # bi loai.
+    end_dt = datetime.combine(today, ALERT_END_TIME, tzinfo=VN_TZ)
     slots: list[datetime] = []
     t = datetime.combine(today, ALERT_START_TIME, tzinfo=VN_TZ)
-    while t.time() <= ALERT_END_TIME:
+    while t <= end_dt:
         slots.append(t)
         t += timedelta(hours=interval_hours)
 

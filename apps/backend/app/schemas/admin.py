@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TimeSeriesPoint(BaseModel):
@@ -100,7 +100,20 @@ class SystemConfig(BaseModel):
 
 
 class ConfigUpdate(BaseModel):
-    alert_interval_seconds: int | None = None
+    # Chan tai bien gioi API. Truoc day truong nay khong co rang buoc nao, nen
+    # mot cu chon "2 lan/ngay" tren /admin/alerts gui 43200 -> API tra 200 ->
+    # lan thuc day ke tiep cua `_alert_loop` sinh vong lap nuot ca event loop
+    # (JA-02). Sua o main.py da lam vong lap an toan, nhung van chan o day:
+    # gia tri vo nghia khong nen di duoc toi scheduler.
+    #
+    # Can duoi 1800s (30 phut) chu khong phai 1s: `get_alert_interval_hours` co
+    # `max(..., 0.5)` nen moi gia tri nho hon deu bi lam tron len 30 phut trong
+    # im lang, trong khi API xac nhan dung con so admin vua gui — admin doi
+    # xuong 60s de test roi ket luan nham la alert hong (JA-T4).
+    #
+    # Can tren 86400s (24h): xa hon mot ngay thi khai niem "slot trong ngay" het
+    # y nghia, chi con dung mot slot 07:30 moi ngay.
+    alert_interval_seconds: int | None = Field(None, ge=1800, le=86400)
     alert_loop_active: bool | None = None
 
 
