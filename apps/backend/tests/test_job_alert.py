@@ -429,6 +429,9 @@ async def test_log_and_send_skips_already_alerted():
         async def flush(self):
             pass
 
+        async def commit(self):
+            pass
+
     send_fn = AsyncMock()
     matcher = JobMatcher(FakeDB())
     sent = await matcher.log_and_send(_make_user(), jobs, chat_id=123, send_fn=send_fn)
@@ -455,6 +458,11 @@ class _EmptyAlertDB:
         self.added.append(obj)
 
     async def flush(self):
+        pass
+
+    async def commit(self):
+        # `log_and_send` commit truoc moi lan goi mang de tra connection ve
+        # pool trong luc cho Telegram/Resend (JA-15).
         pass
 
 
@@ -550,6 +558,13 @@ class _SimDB:
 
     async def flush(self):
         self._flush_count += 1
+
+    async def commit(self):
+        # `log_and_send` COMMIT (khong phai flush) truoc moi lan goi mang, de
+        # tra connection ve pool trong luc cho Telegram/Resend (JA-15). Fake
+        # phai co ham nay, neu khong test do vi ly do khong lien quan gi toi
+        # hanh vi dang kiem.
+        self._commit_count = getattr(self, "_commit_count", 0) + 1
 
 
 def _jobs(*ids_and_titles: tuple[str, str]) -> list[MatchedJob]:

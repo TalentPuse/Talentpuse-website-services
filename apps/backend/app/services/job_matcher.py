@@ -485,7 +485,19 @@ class JobMatcher:
                 channel=DEDUP_CHANNEL,
                 source=source,
             ))
-        await self.db.flush()
+        # COMMIT chu khong phai flush — hai ly do, deu quan trong:
+        #
+        # (1) Pool. `flush()` giu transaction mo, ma transaction mo nghia la
+        #     connection bi GHIM suot cac lan goi mang ben duoi (Telegram toi
+        #     10s, Resend toi 15s). Pool chi co 5 connection, `max_overflow=0`,
+        #     `pool_timeout=10` — vai chuc user la moi request dashboard chet
+        #     voi `QueuePool limit reached` (JA-15). Commit tra connection ve
+        #     pool trong luc cho mang.
+        #
+        # (2) Gui trung. Voi flush, mot loi bat ky sau day lam rollback xoa
+        #     sach dau moc dedup — trong khi tin Telegram DA BAY DI. Slot sau
+        #     gui lai y het va nguoi dung nhan hai lan (JA-27).
+        await self.db.commit()
 
         if chat_id:
             # Gui theo TUNG KHOI va ghi status rieng cho tung khoi: mot khoi
@@ -518,6 +530,12 @@ class JobMatcher:
                         error_message=err,
                         source=source,
                     ))
+
+            # Chot ket qua Telegram TRUOC khi ben goi di gui email (toi 15s
+            # nua). Neu de treo o day thi cac dong nay bi flush cung transaction
+            # voi nhanh email, va connection lai bi ghim suot lan goi Resend —
+            # dung cai JA-15 noi toi.
+            await self.db.commit()
 
         return len(new_jobs)
 

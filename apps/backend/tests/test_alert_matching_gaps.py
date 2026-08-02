@@ -224,3 +224,93 @@ async def test_ty_le_skill_dem_theo_skill_khac_nhau():
 
     sql = captured["sqls"][-1]
     assert "count(distinct" in sql.lower(), f"van dem dong tho, khong DISTINCT:\n{sql}"
+
+
+# ─── JA-15 / JA-27: khong ghim connection qua lan goi mang ─────────
+
+
+@pytest.mark.asyncio
+async def test_commit_truoc_khi_goi_mang():
+    """`log_and_send` phai COMMIT truoc khi gui, khong phai `flush`.
+
+    Transaction mo = connection bi ghim. Pool chi co 5, `max_overflow=0`,
+    `pool_timeout=10`, trong khi moi user ton toi 10s (Telegram) + 15s
+    (Resend). Vai chuc user la moi request dashboard chet voi
+    `QueuePool limit reached` (JA-15).
+
+    Kem theo JA-27: voi `flush`, mot loi bat ky sau do lam rollback xoa sach
+    dau moc dedup TRONG KHI tin da bay di — slot sau gui lai y het.
+
+    Kiem THU TU THAT bang cach ghi lai cac su kien, chu khong doc source code:
+    cau hoi la "commit co xay ra TRUOC lan gui dau tien khong".
+    """
+    from app.services.job_matcher import JobMatcher, MatchedJob
+
+    su_kien: list[str] = []
+
+    class DB:
+        async def execute(self, sql, params=None):
+            class R:
+                def all(self_inner):
+                    return []
+            return R()
+
+        def add(self, obj):
+            pass
+
+        async def flush(self):
+            su_kien.append("flush")
+
+        async def commit(self):
+            su_kien.append("commit")
+
+    async def send_fn(chat_id, msg):
+        su_kien.append("gui")
+
+    jobs = [MatchedJob(source="vietnamworks", source_job_id="1", title="Dev")]
+    await JobMatcher(DB()).log_and_send(_user(), jobs, chat_id=123, send_fn=send_fn)
+
+    assert "gui" in su_kien
+    assert su_kien.index("commit") < su_kien.index("gui"), (
+        f"van giu transaction mo trong luc goi mang: {su_kien}"
+    )
+
+
+# ─── JA-24: retry lay lai dung job ─────────────────────────────────
+
+
+def test_retry_lay_job_theo_nguon_va_snapshot_moi_nhat():
+    """Truy van lay lai job phai xet nguon, snapshot moi nhat, va con hieu luc.
+
+    Ban cu: `WHERE source_job_id = :id LIMIT 1` — khong loc `source` nen co
+    the keo ve job cua nguon khac trung id; khong `ORDER BY` nen lay mot
+    snapshot bat ky (luong/cap bac co the la ban cu); khong loc `is_active`
+    nen gui lai ca tin da het han (JA-24).
+    """
+    import inspect
+
+    from app.api import admin
+
+    src = inspect.getsource(admin._get_matched_job_details)
+
+    assert "DISTINCT ON" in src
+    assert "snapshot_date DESC" in src
+    assert "f.is_active" in src
+    assert "job_source" in src
+
+
+def test_retry_gui_mot_email_moi_nguoi():
+    """Gom theo NGUOI, khong lap theo DONG (JA-23).
+
+    Ban cu: moi dong fail = 1 query user + 1 query job + 1 lan goi Resend,
+    tuan tu. 300 dong ≈ 600 query + 300 lan goi mang (~5 phut) chay noi tuyen
+    trong request. Va mot user co 3 job fail nhan 3 EMAIL RIENG.
+    """
+    import inspect
+
+    from app.api import admin
+
+    src = inspect.getsource(admin.retry_failed_alerts)
+
+    assert "theo_user" in src, "van lap theo tung dong alert_log"
+    assert "User.id.in_(" in src, "van query user tung dong (N+1)"

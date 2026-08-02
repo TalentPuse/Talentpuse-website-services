@@ -245,42 +245,68 @@ async def retry_failed_alerts(
     if not failed_logs:
         return {"retried": 0, "total": 0, "message": "Không có failed alerts nào để retry"}
 
-    retried = 0
+    # Gom theo NGUOI, khong lap theo DONG (JA-23).
+    #
+    # Ban cu: moi dong fail -> mot query user + mot query job + mot lan goi
+    # Resend, tuan tu. 300 dong = 600 query + 300 lan goi mang (~5 phut) chay
+    # NOI TUYEN trong request => vuot timeout cua proxy, trinh duyet bao that
+    # bai trong khi mail van dang bay, va ket qua chi commit o CUOI nen mot loi
+    # giua chung xoa sach tien do.
+    #
+    # Va mot user co 3 job fail nhan 3 EMAIL RIENG — dung kieu gui khien nguoi
+    # ta bam Report spam.
+    theo_user: dict = {}
     for log in failed_logs:
-        # Get user email
-        user_result = await db.execute(select(User).where(User.id == log.user_id))
-        user = user_result.scalar_one_or_none()
+        theo_user.setdefault(log.user_id, []).append(log)
+
+    # Mot query cho tat ca user thay vi mot query moi dong.
+    users_result = await db.execute(select(User).where(User.id.in_(list(theo_user.keys()))))
+    users = {u.id: u for u in users_result.scalars().all()}
+
+    retried = 0
+    for user_id, logs in theo_user.items():
+        user = users.get(user_id)
         if not user or not user.email:
             continue
 
-        # Re-fetch job details
-        job = await _get_matched_job_details(db, log.source_job_id)
-        if not job:
+        # Lay lai chi tiet job THEO (nguon, id) — xem JA-24 o
+        # `_get_matched_job_details`.
+        cap_job = []
+        for log in logs:
+            job = await _get_matched_job_details(db, log.source_job_id, log.job_source)
+            if job:
+                cap_job.append((log, job))
+        if not cap_job:
             continue
 
-        # Retry sending
+        # MOT email cho tat ca job fail cua user nay.
         email_result = await send_job_alert_email(
             to=user.email,
             user_name=user.full_name,
-            jobs=[job],
+            jobs=[job for _, job in cap_job],
             user_id=user.id,
         )
-        if email_result.success:
-            log.status = "sent"
-            log.retry_count += 1
-            # `utcnow()` tra datetime KHONG mang mui gio — ghi vao cot timestamptz
-            # thi Postgres dien giai no theo TimeZone cua phien, khong phai UTC.
-            # `now(timezone.utc)` noi ro thoi diem nen khong phu thuoc cau hinh.
-            log.last_retry_at = datetime.now(timezone.utc)
-            log.error_message = None
-            retried += 1
-        else:
-            log.status = "failed"
-            log.error_message = (email_result.error or "Unknown error")[:500]
-            log.retry_count += 1
 
-    await db.commit()
-    return {"retried": retried, "total": len(failed_logs)}
+        for log, _ in cap_job:
+            log.retry_count += 1
+            if email_result.success:
+                log.status = "sent"
+                # `utcnow()` tra datetime KHONG mang mui gio — ghi vao cot
+                # timestamptz thi Postgres dien giai no theo TimeZone cua phien,
+                # khong phai UTC. `now(timezone.utc)` noi ro thoi diem nen khong
+                # phu thuoc cau hinh.
+                log.last_retry_at = datetime.now(timezone.utc)
+                log.error_message = None
+                retried += 1
+            else:
+                log.status = "failed"
+                log.error_message = (email_result.error or "Unknown error")[:500]
+
+        # Commit sau MOI user: mot loi o user thu 50 khong duoc xoa tien do cua
+        # 49 nguoi truoc do — nhung email do da gui that roi.
+        await db.commit()
+
+    return {"retried": retried, "total": len(failed_logs), "users": len(theo_user)}
 
 
 @router.get("/alerts/dispatch-stats")
@@ -402,10 +428,25 @@ async def get_dispatch_history(
     }
 
 
-async def _get_matched_job_details(db: AsyncSession, source_job_id: str) -> MatchedJob | None:
-    """Re-fetch job details for retry by source_job_id."""
+async def _get_matched_job_details(
+    db: AsyncSession, source_job_id: str, job_source: str | None = None
+) -> MatchedJob | None:
+    """Lay lai chi tiet job de gui retry.
+
+    Ban cu truy van theo mot minh `source_job_id`, khong loc `source`, khong
+    loc `is_active`, va `LIMIT 1` KHONG kem `ORDER BY` (JA-24). Ba he qua:
+
+      - id cua warehouse chi duy nhat trong mot nguon, nen email retry co the
+        mang tieu de/luong/link cua mot job HOAN TOAN KHAC;
+      - `fct_jobs_daily` la bang snapshot theo ngay, nen `LIMIT 1` khong
+        `ORDER BY` lay mot snapshot bat ky — luong va cap bac co the la ban cu;
+      - tin da het han van duoc gui lai nhu tin dang tuyen.
+
+    `job_source` co the None voi cac dong ghi truoc migration 017 — luc do danh
+    chap nhan doan theo id, nhung van chon snapshot MOI NHAT.
+    """
     result = await db.execute(text("""
-        SELECT
+        SELECT DISTINCT ON (f.source, f.source_job_id)
             f.source, f.source_job_id, f.title, f.company_name,
             f.city_canonical, f.job_level, f.job_category,
             round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_m,
@@ -415,8 +456,11 @@ async def _get_matched_job_details(db: AsyncSession, source_job_id: str) -> Matc
         LEFT JOIN dbt_dev_silver.silver_job_detail sd
             ON sd.source = f.source AND sd.source_job_id = f.source_job_id
         WHERE f.source_job_id = :source_job_id
+          AND (:job_source::text IS NULL OR f.source = :job_source)
+          AND f.is_active
+        ORDER BY f.source, f.source_job_id, f.snapshot_date DESC
         LIMIT 1
-    """), {"source_job_id": source_job_id})
+    """), {"source_job_id": source_job_id, "job_source": job_source})
 
     row = result.mappings().first()
     if not row:
