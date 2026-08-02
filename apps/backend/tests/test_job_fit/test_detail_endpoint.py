@@ -18,7 +18,7 @@ async def _token(c: AsyncClient) -> str:
 
 
 @pytest.mark.asyncio
-async def test_job_khong_ton_tai_tra_404_chu_khong_phai_500():
+async def test_job_khong_ton_tai_tra_404_chu_khong_phai_500(warehouse):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
         tok = await _token(c)
         r = await c.get("/api/jobs/linkedin/khong-ton-tai-9999",
@@ -34,7 +34,7 @@ async def test_can_dang_nhap():
 
 
 @pytest.mark.asyncio
-async def test_tra_ve_jd_va_match_null_khi_ho_so_rong():
+async def test_tra_ve_jd_va_match_null_khi_ho_so_rong(warehouse):
     await db_module.init_db()
     async with db_module.async_session_factory() as db:
         row = (await db.execute(text(

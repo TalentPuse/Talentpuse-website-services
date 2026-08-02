@@ -29,7 +29,7 @@ def _user() -> User:
 
 
 @pytest.mark.asyncio
-async def test_diem_trung_binh_khong_lech_theo_nguon():
+async def test_diem_trung_binh_khong_lech_theo_nguon(warehouse):
     await db_module.init_db()
     async with db_module.async_session_factory() as db:
         keys: list[tuple[str, str]] = []
@@ -69,7 +69,7 @@ async def test_diem_trung_binh_khong_lech_theo_nguon():
 
 
 @pytest.mark.asyncio
-async def test_tin_linkedin_van_co_diem_ky_nang():
+async def test_tin_linkedin_van_co_diem_ky_nang(warehouse):
     """LinkedIn khong co dong nao trong silver_skill_long, nen neu tin LinkedIn
     nao cung co skill_basis='none' thi nhanh quet JD text da hong."""
     await db_module.init_db()

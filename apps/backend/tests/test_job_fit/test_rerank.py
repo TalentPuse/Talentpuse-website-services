@@ -9,7 +9,7 @@ from app.main import app
 
 
 @pytest.mark.asyncio
-async def test_sort_match_tra_ve_da_sap_giam_dan():
+async def test_sort_match_tra_ve_da_sap_giam_dan(warehouse):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
         email = "jobfit-rerank@local.dev"
         await c.post("/api/auth/signup", json={
