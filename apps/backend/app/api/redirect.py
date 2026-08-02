@@ -19,6 +19,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import PUBLIC_BASE_URL
 from app.core.database import get_db
 from app.models.alert_log import AlertLog
 
@@ -26,7 +27,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["redirect"])
 
-HOME_URL = "https://talentpuse.io.vn/jobs"
+# Doc tu config: hardcode thi mot cu bam nham o staging se day nguoi dung
+# sang production.
+HOME_URL = f"{PUBLIC_BASE_URL}/jobs"
 
 
 @router.get("/r/{alert_log_id}")

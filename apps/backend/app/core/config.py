@@ -98,3 +98,13 @@ UMAMI_BASE_URL = os.getenv("UMAMI_BASE_URL", "http://umami:3000")
 UMAMI_API_KEY = os.getenv("UMAMI_API_KEY", "")
 UMAMI_WEBSITE_ID = os.getenv("UMAMI_WEBSITE_ID", "")
 
+
+# Dia chi cong khai cua san pham — dung de dung link trong tin alert va link
+# fallback cua /r/{id}.
+#
+# CO default la prod de khong doi gi o production, nhung PHAI doc duoc tu env:
+# hardcode thi moi tin alert gui tu local/staging deu tro ve PRODUCTION. Nguoi
+# test o staging bam vao se nhay sang prod, va bo dem click cua prod nhan cac id
+# khong ton tai. Du an nay da bi dung mot lop loi do hai lan (NEXT_PUBLIC_COPILOT_DOCK,
+# AGUI_ENABLED) — cai gia cua mot dong os.getenv la khong dang ke so voi viec do.
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://talentpuse.io.vn").rstrip("/")

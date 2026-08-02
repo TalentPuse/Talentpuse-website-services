@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.alert_log import AlertLog
 from app.models.analytics import fct_jobs_daily, silver_job_detail, silver_skill_long
 from app.models.user import User
+from app.core.config import PUBLIC_BASE_URL
 from app.services.recommendations import _canon_cities
 
 logger = logging.getLogger(__name__)
@@ -637,7 +638,8 @@ def _build_job_url(job: MatchedJob) -> str:
     return url
 
 
-TRACKING_BASE_URL = "https://talentpuse.io.vn/r"
+# Doc tu config chu khong hardcode — xem PUBLIC_BASE_URL o app/core/config.py.
+TRACKING_BASE_URL = f"{PUBLIC_BASE_URL}/r"
 
 
 def _tracking_url(j: MatchedJob, link_ids: LinkIds | None) -> str:
