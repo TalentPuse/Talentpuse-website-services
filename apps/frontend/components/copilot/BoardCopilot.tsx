@@ -42,7 +42,7 @@ function removeNoteLine(text: string | null, line: string): string | null {
 /**
  * Null-render: chỉ đăng ký context + tool cho agent, không vẽ gì.
  *
- * CHỈ được render khi `COPILOT_DOCK` bật — nó gọi hook của CopilotKit nên
+ * Phải nằm TRONG <CopilotDockProvider> — nó gọi hook của CopilotKit nên
  * phải nằm trong `<CopilotKit>` mà CopilotDockProvider chỉ dựng khi flag bật.
  */
 export default function BoardCopilot({ board }: { board: BoardData }): null {

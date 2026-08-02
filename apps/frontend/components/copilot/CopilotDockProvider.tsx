@@ -2,7 +2,6 @@
 import { useEffect } from "react";
 import { CopilotKit, useCopilotKit } from "@copilotkit/react-core/v2";
 import { useAuth } from "@/context/AuthContext";
-import { COPILOT_DOCK } from "@/lib/flags";
 import CopilotDock from "./CopilotDock";
 
 /** setHeaders GHI ĐÈ — phải spread headers hiện có (CopilotChatSurface.tsx:100-110). */
@@ -48,7 +47,6 @@ function DockStyles() {
 export default function CopilotDockProvider({
   page, insight, children,
 }: { page: "jobs" | "applications"; insight?: React.ReactNode; children: React.ReactNode }) {
-  if (!COPILOT_DOCK) return <>{children}</>;
   return (
     // showDevConsole={false}: cho khop CopilotChatSurface.tsx:73, von da tat tu
     // dau. Mac dinh cua CopilotKit la "auto" (tu quyet theo NODE_ENV), va o

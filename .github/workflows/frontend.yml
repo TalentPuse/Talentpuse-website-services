@@ -97,7 +97,7 @@ jobs:
           # day. Dat chung o `environment:` trong compose khong co tac dung —
           # image da nuong xong gia tri roi.
           #
-          # AI_HOME / COPILOT_DOCK la kill-switch cua bo mat AI (lib/flags.ts).
+          # AI_HOME la kill-switch cua bo mat AI (lib/flags.ts).
           # Thieu hai dong nay thi MOI image tu CI deu build voi AI TAT CUNG:
           # dock o /applications khong bao gio hien tren prod, du local bat duoc.
           #
@@ -108,7 +108,6 @@ jobs:
             NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }}
             NEXT_PUBLIC_DOMAIN=${{ secrets.NEXT_PUBLIC_DOMAIN }}
             NEXT_PUBLIC_AI_HOME=${{ vars.NEXT_PUBLIC_AI_HOME }}
-            NEXT_PUBLIC_COPILOT_DOCK=${{ vars.NEXT_PUBLIC_COPILOT_DOCK }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

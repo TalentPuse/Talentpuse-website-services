@@ -3,7 +3,18 @@
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "jsdom",
-  moduleNameMapper: { "^@/(.*)$": "<rootDir>/$1" },
+  moduleNameMapper: {
+    // CSS phai dung TRUOC alias "@/". moduleNameMapper xet theo THU TU va dung
+    // o luat khop dau tien: de sau thi `import("@/app/copilotkit-theme.css")`
+    // khop `^@/(.*)$` truoc, tra ve file CSS that, va Jest chet voi
+    // "SyntaxError: Unexpected token '.'". Da vap dung loi do.
+    //
+    // Jest khong doc duoc CSS (Next/webpack co loader rieng nen san pham khong
+    // sao). CopilotDockProvider nap ca hai file CSS bang import DONG trong
+    // effect, nen moi test mount dock deu cham vao chung.
+    "\\.(css|scss|sass)$": "<rootDir>/test/style-mock.js",
+    "^@/(.*)$": "<rootDir>/$1",
+  },
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   testPathIgnorePatterns: ["<rootDir>/node_modules/", "<rootDir>/.next/"],
   // tsconfig.json has "jsx": "preserve" (required for Next.js's own build

@@ -9,7 +9,6 @@ import CopilotDockProvider from "@/components/copilot/CopilotDockProvider";
 import BoardCopilot from "@/components/copilot/BoardCopilot";
 import DockInsight from "@/components/copilot/DockInsight";
 import JobDetailSheet from "@/components/jobs/JobDetailSheet";
-import { COPILOT_DOCK } from "@/lib/flags";
 import type { Application, ApplicationStatus } from "@/lib/api";
 import { useBoardData, type BoardData } from "./use-board-data";
 
@@ -47,7 +46,7 @@ function Content({ board }: { board: BoardData }) {
     <div className="mx-auto flex h-full max-w-[1600px] flex-col p-6">
       {/* Chỉ render khi flag bật: component này gọi hook CopilotKit nên phải
           nằm trong <CopilotKit>, mà provider chỉ dựng <CopilotKit> khi flag bật. */}
-      {COPILOT_DOCK && <BoardCopilot board={board} />}
+      <BoardCopilot board={board} />
 
       <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
         <div>

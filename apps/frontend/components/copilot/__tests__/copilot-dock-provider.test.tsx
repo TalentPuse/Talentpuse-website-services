@@ -1,68 +1,51 @@
 import { render, screen } from "@testing-library/react";
 
+import CopilotDockProvider from "../CopilotDockProvider";
+
 // CopilotDockProvider.tsx và CopilotDock.tsx (qua DockChat.tsx) import tĩnh
 // "@copilotkit/react-core/v2" — package thật kéo theo @segment/analytics-node,
 // một gói ESM mà transform ts-jest hiện tại không biên dịch được (lỗi
-// "Unexpected token 'export'"). Các test copilot khác né được vấn đề này vì
-// không test trực tiếp CopilotDockProvider/CopilotDock. Ở đây stub tối thiểu
-// đúng những export mà 2 file trên thực sự dùng, để require() qua được mà
-// KHÔNG cần chạm vào code sản xuất.
+// "Unexpected token 'export'"). Stub tối thiểu đúng những export mà 2 file trên
+// thực sự dùng, để import qua được mà KHÔNG cần chạm vào code sản xuất.
 jest.mock("@copilotkit/react-core/v2", () => ({
   CopilotKit: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useCopilotKit: () => ({ copilotkit: { headers: {}, setHeaders: jest.fn() } }),
   CopilotChat: () => null,
 }));
 
-// Theo dõi useAuth để chứng minh khi flag tắt, cả nhánh CopilotKit (AuthHeaders
-// nằm bên trong <CopilotKit>) lẫn CopilotDock đều KHÔNG được render — nếu
-// chúng có render, useAuth sẽ bị gọi (AuthHeaders và DockChat đều gọi nó).
+// AuthHeaders (nam trong <CopilotKit>) va DockChat deu goi useAuth. Theo doi no
+// de chung minh nhanh CopilotKit CO duoc mount, thay vi doan qua DOM.
 const mockUseAuth = jest.fn(() => ({ token: null, user: null }));
 jest.mock("@/context/AuthContext", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-describe("CopilotDockProvider / ranh giới flag NEXT_PUBLIC_COPILOT_DOCK", () => {
-  const OLD = process.env.NEXT_PUBLIC_COPILOT_DOCK;
+// File nay TRUOC DAY kiem "ranh gioi flag NEXT_PUBLIC_COPILOT_DOCK": dock chi
+// bat khi bien env == "1" luc BUILD. Co che do da bi go bo.
+//
+// Ly do go: no phu thuoc mot GitHub Variable, va khi bien do khong ton tai thi
+// `${{ vars.X }}` no ra CHUOI RONG — dock im lang bien mat tren production
+// trong khi CI van xanh va khong co mot tin hieu nao. Da xay ra that. Mot
+// kill-switch co trang thai mac dinh la TAT, lai chi doi duoc bang mot lan
+// rebuild toan bo anh, thi hai nhieu hon loi no chan.
+//
+// Gio dock LUON bat, nen khong con truong hop "tat" de kiem — cac khang dinh
+// duoi day la NGUOC lai voi ban cu, co chu dich.
+describe("CopilotDockProvider", () => {
+  beforeEach(() => mockUseAuth.mockClear());
 
-  beforeEach(() => {
-    mockUseAuth.mockClear();
-  });
-
-  afterEach(() => {
-    process.env.NEXT_PUBLIC_COPILOT_DOCK = OLD;
-    jest.resetModules();
-  });
-
-  it("flag tắt (unset) → /applications chỉ render children, không có dock chrome hay CopilotKit provider", () => {
-    delete process.env.NEXT_PUBLIC_COPILOT_DOCK;
-    jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const CopilotDockProvider = require("../CopilotDockProvider").default;
-
+  it("luon boc children trong CopilotKit — khong con dieu kien env nao", () => {
     render(
       <CopilotDockProvider page="applications">
         <div data-testid="page-content">Nội dung trang /applications</div>
       </CopilotDockProvider>,
     );
 
-    // Trang gốc render y nguyên...
     expect(screen.getByTestId("page-content")).toBeInTheDocument();
-    // ...và KHÔNG có bất kỳ chrome nào của dock (nút mở/thu gọn, panel trợ lý).
-    expect(screen.queryByLabelText("Mở trợ lý AI")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Trợ lý AI")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Thu gọn trợ lý")).not.toBeInTheDocument();
-    // ...và nhánh <CopilotKit> (AuthHeaders/DockStyles/CopilotDock) chưa từng
-    // được mount — nếu nó có mount, useAuth (được cả AuthHeaders lẫn DockChat
-    // gọi) sẽ bị gọi ít nhất 1 lần.
-    expect(mockUseAuth).not.toHaveBeenCalled();
+    expect(mockUseAuth).toHaveBeenCalled();
   });
 
-  it('flag tắt với bất kỳ giá trị nào khác "1" (an toàn khi lỡ set sai)', () => {
-    process.env.NEXT_PUBLIC_COPILOT_DOCK = "true";
-    jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const CopilotDockProvider = require("../CopilotDockProvider").default;
-
+  it("bat tren ca trang /jobs, khong rieng /applications", () => {
     render(
       <CopilotDockProvider page="jobs">
         <div data-testid="page-content">Nội dung trang /jobs</div>
@@ -70,7 +53,6 @@ describe("CopilotDockProvider / ranh giới flag NEXT_PUBLIC_COPILOT_DOCK", () =
     );
 
     expect(screen.getByTestId("page-content")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Mở trợ lý AI")).not.toBeInTheDocument();
-    expect(mockUseAuth).not.toHaveBeenCalled();
+    expect(mockUseAuth).toHaveBeenCalled();
   });
 });
