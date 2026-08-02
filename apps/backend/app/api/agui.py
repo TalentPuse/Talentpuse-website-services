@@ -22,7 +22,7 @@ from copilotkit import CopilotKitMiddleware, LangGraphAGUIAgent
 from fastapi import Depends, FastAPI, HTTPException
 from jose import JWTError, jwt
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
@@ -37,6 +37,7 @@ from app.models.user import User
 from app.services.agent.chains.skill_advisor_chain import build_agent
 from app.services.agent.context import current_agent_user_id, require_agent_user_id
 from app.services.agent.middleware.request_user import current_agent_profile
+from app.core.thread_guard import thread_has_checkpoint
 
 logger = logging.getLogger(__name__)
 
@@ -100,11 +101,7 @@ async def _thread_belongs_to(thread_id: str, user: User, db: AsyncSession) -> bo
     if room is not None:
         return room.user_id == user.id
 
-    existing_checkpoint = await db.execute(
-        text("SELECT 1 FROM public.checkpoints WHERE thread_id = :tid LIMIT 1"),
-        {"tid": thread_id},
-    )
-    if existing_checkpoint.first() is not None:
+    if await thread_has_checkpoint(db, thread_id):
         return False
 
     db.add(ChatRoom(id=room_id, user_id=user.id, title=DEFAULT_ROOM_TITLE))

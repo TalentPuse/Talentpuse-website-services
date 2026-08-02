@@ -8,7 +8,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessageChunk
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +27,7 @@ from app.schemas.chat import (
 from app.services.agent import AgentContext, get_agent
 from app.services.agent.chains.skill_advisor_chain import build_agent
 from app.services.agent.context import current_agent_user_id, current_cv_update_flag
+from app.core.thread_guard import thread_has_checkpoint
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -163,13 +164,8 @@ async def create_room(
     # room hop le va cho doc/ghi tiep toan bo lich su. Day la duong vong qua
     # guard cua `_thread_belongs_to`: no chan POST /api/agent/, nhung endpoint
     # nay thi khong. Da khai thac that trong kiem thu.
-    if body.id is not None:
-        orphan = await db.execute(
-            text("SELECT 1 FROM public.checkpoints WHERE thread_id = :tid LIMIT 1"),
-            {"tid": str(body.id)},
-        )
-        if orphan.first() is not None:
-            raise HTTPException(404, "Room not found")
+    if body.id is not None and await thread_has_checkpoint(db, str(body.id)):
+        raise HTTPException(404, "Room not found")
 
     room = ChatRoom(
         user_id=current_user.id,
