@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ARRAY, Boolean, Integer, SmallInteger, String, Text, func
+from sqlalchemy import ARRAY, Boolean, DateTime, Integer, SmallInteger, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -36,6 +36,12 @@ class User(Base):
     cv_file_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     cv_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    # timezone=True BAT BUOC: ghi naive datetime vao cot timestamp khong co tz se bi
+    # dien giai theo TimeZone cua session Postgres chu khong phai UTC — repo da dinh
+    # loi nay 3 lan (JA-25/JA-T1/JA-T2). Sai o day = DAU/WAU lech 7 tieng.
+    last_active_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
     )
