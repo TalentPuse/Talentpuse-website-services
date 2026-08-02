@@ -39,7 +39,7 @@
   - `async fetch_sources(start: datetime, end: datetime) -> list[SourceRow]` where `SourceRow` is `name: str`, `visitors: int`
   - `UmamiUnavailable(Exception)` — raised on timeout, non-2xx, or malformed payload. Task 3 catches it and renders an error state.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `apps/backend/tests/test_umami_client.py`:
 
@@ -123,12 +123,12 @@ async def test_fetch_traffic_raises_on_malformed_payload(monkeypatch):
         await fetch_traffic(START, END)
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/test_umami_client.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'app.services.analytics'`
 
-- [ ] **Step 3: Add config settings**
+- [x] **Step 3: Add config settings**
 
 In `apps/backend/app/core/config.py`, next to the other `os.getenv` settings:
 
@@ -140,7 +140,9 @@ UMAMI_WEBSITE_ID = os.getenv("UMAMI_WEBSITE_ID", "")
 
 Add the same three keys (empty) to `.env.example`. `UMAMI_API_KEY` is created in the Umami UI under Settings → API keys.
 
-- [ ] **Step 4: Write the client**
+> CHUA LAM: phan `.env.example` bi bo qua co y trong lan chay nay (file do dang bi mot agent khac sua song song). Van con phai them 3 key vao `.env.example`.
+
+- [x] **Step 4: Write the client**
 
 Create `apps/backend/app/services/analytics/__init__.py` (empty file), then `apps/backend/app/services/analytics/umami_client.py`:
 
@@ -247,12 +249,12 @@ async def fetch_sources(start: datetime, end: datetime) -> list[SourceRow]:
         raise UmamiUnavailable(f"unexpected metrics rows: {data!r}") from exc
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `pytest tests/test_umami_client.py -v`
-Expected: all five PASS.
+Expected: all five PASS. (Ket qua thuc te: 5 passed.)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/backend/app/services/analytics/ apps/backend/app/core/config.py apps/backend/tests/test_umami_client.py .env.example
@@ -274,7 +276,7 @@ git commit -m "feat(analytics): client doc Umami API, moi loi thanh UmamiUnavail
   - `async retention_cohorts(db, weeks: int = 8) -> list[CohortRow]` where `CohortRow` is `cohort_week: date`, `size: int`, `d1: float`, `d7: float`, `d30: float`
   - `async activation_funnel(db) -> FunnelSteps` with `signed_up: int`, `profile_completed: int`, `channel_enabled: int`, `alerted: int`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `apps/backend/tests/test_product_metrics.py`:
 
@@ -347,12 +349,12 @@ async def test_funnel_counts_are_monotonically_non_increasing(db_session, seed_u
     assert funnel.channel_enabled >= 0
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/test_product_metrics.py -v`
 Expected: FAIL — `product_metrics` does not exist.
 
-- [ ] **Step 3: Write the metrics module**
+- [x] **Step 3: Write the metrics module**
 
 Create `apps/backend/app/services/analytics/product_metrics.py`:
 
@@ -505,12 +507,12 @@ async def activation_funnel(db: AsyncSession) -> FunnelSteps:
     )
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `pytest tests/test_product_metrics.py -v`
 Expected: all five PASS. If `test_stickiness_is_zero_when_nobody_is_active` raises `ZeroDivisionError`, the guard on `mau` was dropped.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/backend/app/services/analytics/product_metrics.py apps/backend/tests/test_product_metrics.py
@@ -544,11 +546,11 @@ git commit -m "feat(analytics): DAU/WAU/MAU, cohort retention, activation funnel
 
 Every block carries `source` and `status`. `status: "error"` means the number is unknown — **not** zero. This shape is what stops the dashboard from lying.
 
-- [ ] **Step 1: Add the `admin_auth_headers` fixture**
+- [x] **Step 1: Add the `admin_auth_headers` fixture**
 
 In `apps/backend/tests/conftest.py`, read the existing `seed_user` and `auth_headers` fixtures first, then add a fixture that seeds a user with `is_admin=True` and mints a token the same way `auth_headers` does. Name it `admin_auth_headers`.
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Create `apps/backend/tests/test_analytics_api.py`:
 
@@ -590,12 +592,12 @@ async def test_umami_failure_becomes_error_status_not_zero(
     assert body["activity"]["status"] == "ok"
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `pytest tests/test_analytics_api.py -v`
 Expected: FAIL — 404 on the route.
 
-- [ ] **Step 4: Write the response schemas**
+- [x] **Step 4: Write the response schemas**
 
 Create `apps/backend/app/schemas/analytics.py`:
 
@@ -624,7 +626,7 @@ class AnalyticsOverview(BaseModel):
     cohorts: Block
 ```
 
-- [ ] **Step 5: Write the router**
+- [x] **Step 5: Write the router**
 
 Create `apps/backend/app/api/analytics.py`:
 
@@ -727,7 +729,7 @@ async def overview(
     return result
 ```
 
-- [ ] **Step 6: Register the router**
+- [x] **Step 6: Register the router**
 
 In `apps/backend/app/main.py`, next to the existing `app.include_router(...)` calls:
 
@@ -737,12 +739,12 @@ from app.api import analytics
 app.include_router(analytics.router)
 ```
 
-- [ ] **Step 7: Run tests to verify they pass**
+- [x] **Step 7: Run tests to verify they pass**
 
 Run: `pytest tests/test_analytics_api.py -v`
 Expected: all three PASS. The third is the important one — a dead Umami must produce `status: "error"`, never `0`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/backend/app/api/analytics.py apps/backend/app/schemas/analytics.py apps/backend/app/main.py apps/backend/tests/test_analytics_api.py apps/backend/tests/conftest.py
@@ -764,7 +766,7 @@ git commit -m "feat(analytics): endpoint /api/admin/analytics/overview, moi khoi
 - Consumes: `GET /api/admin/analytics/overview` (Task 3).
 - Produces: a page rendering five blocks, each showing its data source, and an explicit error panel when `status === "error"`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `apps/frontend/__tests__/admin/MetricBlock.test.tsx`:
 
@@ -801,12 +803,12 @@ describe("MetricBlock", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- MetricBlock`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Write the component**
+- [x] **Step 3: Write the component**
 
 Create `apps/frontend/components/admin/MetricBlock.tsx`:
 
@@ -851,12 +853,12 @@ export default function MetricBlock({ title, source, status, error, children }: 
 
 Match the Tailwind token names (`border`, `surface`, `text`, `muted`, `warning`) to whatever the existing admin components use — read `apps/frontend/app/admin/page.tsx` and copy its class vocabulary rather than inventing new tokens.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- MetricBlock`
 Expected: both PASS.
 
-- [ ] **Step 5: Add the API client method**
+- [x] **Step 5: Add the API client method**
 
 In `apps/frontend/lib/api.ts`, inside the `adminApi` object (starts at line 636), following the exact style of the neighbouring `stats:` entry:
 
@@ -867,7 +869,7 @@ In `apps/frontend/lib/api.ts`, inside the `adminApi` object (starts at line 636)
 
 Read the `stats:` entry first and mirror its helper name and argument order — do not assume `clientFetch` has that signature.
 
-- [ ] **Step 6: Build the page**
+- [x] **Step 6: Build the page**
 
 Create `apps/frontend/app/admin/analytics/page.tsx`:
 
@@ -1074,17 +1076,23 @@ export default function AnalyticsPage() {
 
 Before running it: confirm `AdminLayout`, `Button`, `useAuth`, and the Tailwind token names (`muted`, `warning`) match what `apps/frontend/app/admin/page.tsx` and `apps/frontend/app/admin/alerts/page.tsx` already import and use. Copy their import lines verbatim rather than trusting the ones above.
 
-- [ ] **Step 7: Add the sidebar link**
+- [x] **Step 7: Add the sidebar link**
 
 In `apps/frontend/components/admin/AdminSidebar.tsx`, add an entry pointing at `/admin/analytics`, following the shape of the existing entries.
 
-- [ ] **Step 8: Verify in the browser**
+- [~] **Step 8: Verify in the browser** — BO QUA, can con nguoi
 
 Log in as an admin, open `/admin/analytics`. Then stop Umami (`docker compose stop umami`) and reload.
 
 Expected: the Traffic and Nguồn blocks show "Umami không phản hồi"; the Hoạt động, Funnel and Cohort blocks still render real numbers. Restart Umami afterwards.
 
-- [ ] **Step 9: Commit**
+> CHUA LAM: stack duy nhat dang chay tren may nay nam sau `tp-nginx` cong 80, ma
+> cong 80 la port-forward toi PRODUCTION nen khong duoc dung. Chua co container
+> Umami chay cuc bo. Nhanh "Umami chet" da co test tu dong phu ca hai dau:
+> `tests/test_analytics_api.py::test_umami_failure_becomes_error_status_not_zero`
+> va `components/admin/__tests__/MetricBlock.test.tsx`.
+
+- [x] **Step 9: Commit**
 
 ```bash
 git add apps/frontend/app/admin/analytics/ apps/frontend/components/admin/MetricBlock.tsx apps/frontend/lib/api.ts apps/frontend/components/admin/AdminSidebar.tsx apps/frontend/__tests__/admin/MetricBlock.test.tsx
@@ -1110,7 +1118,7 @@ git commit -m "feat(analytics): trang /admin/analytics, moi khoi ghi ro nguon va
   - `GET /r/{alert_log_id}` → `302` to the job's real URL, recording the click
   - CTR = `count(clicked_at) / count(*)` per channel
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `apps/backend/tests/test_alert_click.py`:
 
@@ -1184,12 +1192,12 @@ async def test_unknown_id_redirects_home_instead_of_500(client):
     assert resp.status_code == 302
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/test_alert_click.py -v`
 Expected: FAIL — 404 on `/r/{id}` and no `clicked_at` attribute.
 
-- [ ] **Step 3: Write the migration**
+- [x] **Step 3: Write the migration**
 
 Create `apps/backend/alembic/versions/020_alert_logs_click.py`:
 
@@ -1237,7 +1245,7 @@ def downgrade() -> None:
     op.drop_column("alert_logs", "clicked_at", schema="app")
 ```
 
-- [ ] **Step 4: Add the model fields**
+- [x] **Step 4: Add the model fields**
 
 In `apps/backend/app/models/alert_log.py`, after the `source` field:
 
@@ -1248,7 +1256,7 @@ In `apps/backend/app/models/alert_log.py`, after the `source` field:
     click_count: Mapped[int] = mapped_column(Integer, server_default="0", default=0)
 ```
 
-- [ ] **Step 5: Write the redirect endpoint**
+- [x] **Step 5: Write the redirect endpoint**
 
 Create `apps/backend/app/api/redirect.py`:
 
@@ -1319,7 +1327,7 @@ async def track_click(
     return RedirectResponse(target or HOME_URL, status_code=302)
 ```
 
-- [ ] **Step 6: Register the router**
+- [x] **Step 6: Register the router**
 
 In `apps/backend/app/main.py`:
 
@@ -1329,12 +1337,12 @@ from app.api import redirect
 app.include_router(redirect.router)
 ```
 
-- [ ] **Step 7: Apply the migration and run the tests**
+- [x] **Step 7: Apply the migration and run the tests**
 
 Run: `alembic upgrade head && pytest tests/test_alert_click.py -v`
 Expected: all three PASS.
 
-- [ ] **Step 8: Point alert messages at the tracking link**
+- [x] **Step 8: Point alert messages at the tracking link**
 
 `_build_job_url` in `apps/backend/app/services/job_matcher.py:390-393` returns the raw `source_url`, and it has no access to an `AlertLog` id because the message is formatted before the ids are known.
 
@@ -1347,7 +1355,7 @@ Reorder `log_and_send` so the ids exist first:
 
 `apps/backend/tests/test_job_alert.py::test_format_uses_source_url` asserts the old behaviour and will fail — update it to assert the message now contains `/r/`.
 
-- [ ] **Step 9: Verify the whole loop by hand**
+- [~] **Step 9: Verify the whole loop by hand** — BO QUA, can con nguoi
 
 Trigger a dispatch to a test account, click the link in the received Telegram message, then run:
 
@@ -1357,7 +1365,12 @@ psql "$DATABASE_URL" -c "SELECT channel, count(*) AS sent, count(clicked_at) AS 
 
 Expected: the `telegram` row shows `clicked >= 1`. That query is the CTR number for the pitch deck.
 
-- [ ] **Step 10: Commit**
+> CHUA LAM: buoc nay bat buoc phai gui alert THAT (token Telegram/Resend that) va
+> co nguoi that bam link. DB dev dang chua ket noi Telegram cua nguoi dung that
+> nen khong duoc chay `dispatch_alerts()` o day. Cau query da chay thu va tra
+> dung dinh dang tren DB dev: `telegram | sent=156 | clicked=0 | ctr=0.0`.
+
+- [x] **Step 10: Commit**
 
 ```bash
 git add apps/backend/alembic/versions/020_alert_logs_click.py apps/backend/app/models/alert_log.py apps/backend/app/api/redirect.py apps/backend/app/main.py apps/backend/app/services/job_matcher.py apps/backend/tests/test_alert_click.py apps/backend/tests/test_job_alert.py
@@ -1368,12 +1381,12 @@ git commit -m "feat(analytics): link /r/{id} do CTR cua alert"
 
 ## Definition of Done
 
-- [ ] `pytest tests/ -q` passes; `alembic upgrade head` reaches `020` and `downgrade -1` works.
-- [ ] `GET /api/admin/analytics/overview` returns 403 for a non-admin and 200 for an admin.
-- [ ] With Umami stopped, the endpoint still returns 200 and the traffic block reads `status: "error"`, `data: null` — never `0`.
-- [ ] `/admin/analytics` renders all five blocks, each labelled with its source.
-- [ ] Clicking a job link in a real Telegram alert increments `click_count` and sets `clicked_at`.
-- [ ] The CTR query in Task 5 Step 9 returns a real percentage.
+- [x] `pytest tests/ -q`: 511 passed / 13 failed — dung 13 loi da do san tu truoc (moc: 497/13). `alembic upgrade head` -> `020`, `downgrade -1` -> `019` va upgrade lai deu sach.
+- [x] `GET /api/admin/analytics/overview` returns 403 for a non-admin and 200 for an admin. (test_analytics_api.py)
+- [x] With Umami stopped, the endpoint still returns 200 and the traffic block reads `status: "error"`, `data: null` — never `0`. (test tu dong, chua kiem tay)
+- [~] `/admin/analytics` renders all five blocks, each labelled with its source. — code + tsc + jest sach, CHUA mo trinh duyet (xem Task 4 Step 8).
+- [~] Clicking a job link in a real Telegram alert increments `click_count` and sets `clicked_at`. — CHUA, can gui alert that (xem Task 5 Step 9).
+- [~] The CTR query in Task 5 Step 9 returns a real percentage. — query chay duoc, con cho so click that.
 
 ## Spec coverage note — §6.4 "Chiều sâu sử dụng"
 
