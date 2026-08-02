@@ -9,6 +9,7 @@ import CaptureButton from "@/components/applications/CaptureButton";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Bell, Inbox, Mail, Send, ArrowRight, ICON } from "@/lib/icons";
+import { getCityLabel } from "@/lib/city-labels";
 import { cn } from "@/lib/utils";
 
 type AlertTimelineProps = {
@@ -180,7 +181,12 @@ function AlertTimelineItem({
           </div>
           <p className="mt-0.5 line-clamp-1 text-xs text-text-muted">
             {alert.company_name || "—"}
-            {alert.city_canonical ? ` · ${alert.city_canonical}` : ""}
+            {/*
+              Dùng nhãn hiển thị, không phải mã canonical của warehouse. Trang
+              /jobs đã đổi "HCMC" → "Hồ Chí Minh" nhưng trang này thì chưa, nên
+              cùng một thành phố hiện hai kiểu ở hai màn hình cạnh nhau.
+            */}
+            {alert.city_canonical ? ` · ${getCityLabel(alert.city_canonical)}` : ""}
           </p>
           <div className="mt-2">
             {alert.source ? (
