@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -23,7 +23,12 @@ class ChatRoom(Base):
         nullable=False,
     )
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    # timezone=True de khop voi cot that trong Postgres (timestamptz). Model
+    # truoc day khai bao naive nen SQLAlchemy bind sai kieu va asyncpg tu choi
+    # moi gia tri aware; ngoai ra so lieu gom theo ngay cung se lech mui gio.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
     )
@@ -43,4 +48,9 @@ class ChatMessage(Base):
     )
     role: Mapped[str] = mapped_column(String(10), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    # timezone=True de khop voi cot that trong Postgres (timestamptz). Model
+    # truoc day khai bao naive nen SQLAlchemy bind sai kieu va asyncpg tu choi
+    # moi gia tri aware; ngoai ra so lieu gom theo ngay cung se lech mui gio.
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
