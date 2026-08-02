@@ -211,6 +211,39 @@ services:
       timeout: 3s
       retries: 3
 
+  # ── Umami: do luu luong tu host, tren DATABASE RIENG ────────────────────────
+  # Chay tren cung instance Postgres nhung mot database khac (`umami`) voi role
+  # rieng (`umami_app`). Khong dung chung database voi app: Umami la phan mem
+  # ben thu ba co giao dien dang nhap mo ra Internet; mot lo hong o do ma dung
+  # chung role voi app la doc duoc thang bang `app.users`.
+  #
+  # KHONG co `ports:` — Umami chi ra ngoai qua nginx (/s/*). Publish thang mot
+  # cong nua la them mot man dang nhap nua phoi ra Internet ma khong ai nho.
+  #
+  # Cac bien nay KHONG co gia tri mac dinh nhung cung khong dung cu phap `:?`
+  # bat buoc, vi compose parse ca file ngay ca khi chi `up -d backend` — dat
+  # bat buoc se lam gay moi workflow CI hien tai (xem ghi chu o service postgres).
+  # Doi lai, quen dat bien thi Umami khong khoi dong duoc; deploy/umami/README.md
+  # ghi ro cac buoc cap phat.
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: tp-umami
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://umami_app:${UMAMI_DB_PASSWORD}@postgres:5432/umami
+      DATABASE_TYPE: postgresql
+      APP_SECRET: ${UMAMI_APP_SECRET}
+      DISABLE_TELEMETRY: "1"
+    depends_on:
+      - postgres
+    networks:
+      - talentpulse
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/heartbeat || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
   nginx:
     image: nginx:1.27-alpine
     container_name: tp-nginx
