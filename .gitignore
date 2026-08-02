@@ -11,3 +11,7 @@ __pycache__/
 .next/
 .pytest_cache/
 .ruff_cache/
+
+# Log truy cap nginx ghi ra host (docker-compose mount ./logs/nginx).
+# Day la du lieu chay that, khong bao gio duoc commit.
+logs/

@@ -225,6 +225,11 @@ services:
       - "80:80"
     volumes:
       - ./deploy/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Log truy cap phai nam ngoai container. Khong co dong nay thi no chi ton
+      # tai o lop ghi cua container va BIEN MAT moi lan redeploy — tuc la khong
+      # con ban ghi luu luong nao ben phia may chu. Day cung la nguon do luu
+      # luong duy nhat ma trinh chan quang cao khong the xoa duoc.
+      - ./logs/nginx:/var/log/nginx
     networks:
       - talentpulse
     restart: unless-stopped
