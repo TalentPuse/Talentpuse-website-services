@@ -634,13 +634,72 @@ export const jobsApi = {
   },
 };
 
-/* ───── Admin types ───── */
+/**
+ * Mot khoi metric kem NGUON va trang thai.
+ *
+ * `data` co the null CO Y: khi `status === "error"` thi con so la KHONG BIET,
+ * khong phai 0. Backend khong bao gio gui 0 thay cho mot nguon chet, va UI cung
+ * khong duoc phep bien null thanh 0 (`?? 0`) o cho hien thi.
+ */
+export type MetricSource = "umami" | "postgres" | "cloudflare";
+
+export type AnalyticsBlock<T> = {
+  source: MetricSource;
+  status: "ok" | "error";
+  data: T | null;
+  error?: string | null;
+};
+
+export type TrafficStats = {
+  pageviews: number;
+  visitors: number;
+  visits: number;
+  bounce_rate: number;
+};
+
+export type TrafficSourceRow = { name: string; visitors: number };
+
+export type ActiveUsersStats = {
+  dau: number;
+  wau: number;
+  mau: number;
+  stickiness: number;
+};
+
+export type FunnelSteps = {
+  signed_up: number;
+  profile_completed: number;
+  channel_enabled: number;
+  alerted: number;
+};
+
+export type CohortRow = {
+  cohort_week: string;
+  size: number;
+  d1: number;
+  d7: number;
+  d30: number;
+};
+
+export type AnalyticsOverview = {
+  traffic: AnalyticsBlock<TrafficStats>;
+  sources: AnalyticsBlock<TrafficSourceRow[]>;
+  activity: AnalyticsBlock<ActiveUsersStats>;
+  funnel: AnalyticsBlock<FunnelSteps>;
+  cohorts: AnalyticsBlock<CohortRow[]>;
+};
 
 export const adminApi = {
   stats: (token: string) =>
     clientFetch<AdminStats>("/api/admin/stats", {
       headers: adminHeaders(token),
     }),
+
+  analyticsOverview: (token: string, days = 30) =>
+    clientFetch<AnalyticsOverview>(
+      `/api/admin/analytics/overview?days=${days}`,
+      { headers: adminHeaders(token) },
+    ),
 
   users: (
     token: string,
