@@ -216,6 +216,12 @@ def test_format_no_level():
 
 
 def test_format_uses_source_url():
+    """Khong co `link_ids` thi van phai ra link goc.
+
+    Cac duong goi ngoai `log_and_send` (admin resend, preview, test) khong sinh
+    AlertLog nen khong co id de bam vao. Neu nhanh nay tra ve link rong thi tin
+    nhan mat luon duong dan toi tin tuyen dung.
+    """
     jobs = [MatchedJob(
         source="itviec", source_job_id="3715", title="Data Engineer",
         company_name="TechCo", city_canonical="HCMC",
@@ -223,6 +229,24 @@ def test_format_uses_source_url():
     )]
     msg = _format_job_message(jobs)
     assert "itviec.com/job/data-engineer-aws-gcp-up-to-2700-3715" in msg
+
+
+def test_format_uses_tracking_link_when_ids_are_given():
+    """Co `link_ids` thi anchor phai tro vao /r/{id}, khong phai link goc.
+
+    Day la ca duong do CTR: link goc trong tin nhan nghia la nguoi dung bam ma
+    he thong khong he biet — dung tro lai trang thai "da gui 10.000 alert,
+    khong biet co ai doc khong".
+    """
+    log_id = uuid4()
+    jobs = [MatchedJob(
+        source="itviec", source_job_id="3715", title="Data Engineer",
+        company_name="TechCo", city_canonical="HCMC",
+        source_url="https://itviec.com/job/data-engineer-aws-gcp-up-to-2700-3715",
+    )]
+    msg = _format_job_message(jobs, {("itviec", "3715"): log_id})
+    assert f"/r/{log_id}" in msg
+    assert "itviec.com/job/data-engineer" not in msg
 
 
 def test_format_fallback_without_source_url():

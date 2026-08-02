@@ -40,3 +40,13 @@ class AlertLog(Base):
     last_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
     source: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # timezone=True nhu `sent_at`: do tre "gui -> bam" tinh bang hieu hai cot
+    # nay, nen ca hai phai cung la thoi diem tuyet doi. Mot cot naive o day cho
+    # ra do tre lech 7 tieng (co the am) ma khong bao loi gi.
+    #
+    # `clicked_at` giu lan bam DAU TIEN, `click_count` dem tat ca. Gop hai thu
+    # vao mot cot thi mat vinh vien mot trong hai chi so.
+    clicked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    click_count: Mapped[int] = mapped_column(Integer, server_default="0", default=0)

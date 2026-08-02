@@ -9,7 +9,7 @@ import html
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import (
     any_,
@@ -126,6 +126,11 @@ def _base_columns():
 #     cua toan bo user (JA-53).
 #   - Dem thieu (khong dem gi) thi gui trung moi slot.
 DEDUP_CHANNEL = "website"
+
+# (source, source_job_id) -> id cua dong AlertLog dai dien cho lan gui nay.
+# Dung de dung link do CTR `/r/{id}` NGAY TRONG tin nhan, truoc khi dong do duoc
+# ghi xuong DB.
+LinkIds = dict[tuple[str, str], UUID]
 
 
 def _alerted_subquery(user_id: UUID):
@@ -512,10 +517,26 @@ class JobMatcher:
         await self.db.commit()
 
         if chat_id:
+            # Sinh SAN id cua tung dong `telegram` TRUOC khi dung tin nhan.
+            #
+            # Link do CTR la `/r/{alert_log_id}`, ma tin nhan phai dung xong moi
+            # goi duoc Telegram, con dong AlertLog thi chi ghi duoc SAU khi biet
+            # gui thanh cong hay khong. Neu khong sinh truoc id thi link chi con
+            # cach tro vao dong `website` — do la dau moc dedup dung CHUNG cho
+            # moi kenh, nen moi click se mang channel='website' va CTR theo kenh
+            # khong con tinh duoc: khong biet Telegram hay email moi la kenh keo
+            # nguoi bam, tuc la mat dung cai so lieu dinh do.
+            #
+            # An toan voi UNIQUE (user_id, job_source, source_job_id, channel):
+            # moi job chi sinh ra dung mot dong 'telegram'.
+            link_ids: LinkIds = {
+                (j.source, j.source_job_id): uuid4() for j in new_jobs
+            }
+
             # Gui theo TUNG KHOI va ghi status rieng cho tung khoi: mot khoi
             # hong khong duoc keo cac job da gui thanh cong o khoi khac thanh
             # 'failed', va nguoc lai.
-            for msg, nhom in _format_job_messages(new_jobs):
+            for msg, nhom in _format_job_messages(new_jobs, link_ids):
                 try:
                     await send_fn(chat_id, msg)
                     status, err = "sent", None
@@ -534,6 +555,10 @@ class JobMatcher:
 
                 for j in nhom:
                     self.db.add(AlertLog(
+                        # PHAI dung dung id da nhung vao link trong tin nhan,
+                        # neu khong thi /r/{id} tra 404 -> nguoi dung bi day ve
+                        # trang chu thay vi tin ho vua bam.
+                        id=link_ids[(j.source, j.source_job_id)],
                         user_id=user.id,
                         job_source=j.source,
                         source_job_id=j.source_job_id,
@@ -612,7 +637,25 @@ def _build_job_url(job: MatchedJob) -> str:
     return url
 
 
-def _format_entry(i: int, j: MatchedJob) -> str:
+TRACKING_BASE_URL = "https://talentpuse.io.vn/r"
+
+
+def _tracking_url(j: MatchedJob, link_ids: LinkIds | None) -> str:
+    """Link do CTR, hoac link goc khi chua co id de bam vao.
+
+    Fallback ve `_build_job_url` la bat buoc, khong phai phong thu thua: cac
+    duong goi khac (test, admin resend, nhanh email) khong truyen `link_ids`.
+    Neu o day tra chuoi rong thi tin nhan mat luon link — do dem CTR that bai
+    khong duoc phep keo theo viec nguoi dung khong den duoc tin tuyen dung.
+    """
+    if link_ids:
+        log_id = link_ids.get((j.source, j.source_job_id))
+        if log_id:
+            return f"{TRACKING_BASE_URL}/{log_id}"
+    return _build_job_url(j)
+
+
+def _format_entry(i: int, j: MatchedJob, link_ids: LinkIds | None = None) -> str:
     title = _esc(j.title) or "Không rõ"
     company = _esc(j.company_name) or "Không rõ"
     city = _esc(j.city_raw_vi or j.city_canonical)
@@ -620,7 +663,7 @@ def _format_entry(i: int, j: MatchedJob) -> str:
     address = _esc(j.address)
     salary = j.salary_m
     source_label = _esc(SOURCE_LABEL.get(j.source, j.source))
-    url = _build_job_url(j)
+    url = _tracking_url(j, link_ids)
 
     score_text = f"  ·  ⭐ {j.score:.0f}%" if j.score else ""
 
@@ -642,7 +685,9 @@ def _format_entry(i: int, j: MatchedJob) -> str:
     return entry
 
 
-def _format_job_messages(jobs: list[MatchedJob]) -> list[tuple[str, list[MatchedJob]]]:
+def _format_job_messages(
+    jobs: list[MatchedJob], link_ids: LinkIds | None = None
+) -> list[tuple[str, list[MatchedJob]]]:
     """Chia danh sach job thanh nhieu tin, moi tin duoi gioi han Telegram.
 
     Tra ve (noi_dung, cac_job_trong_tin_do) de `log_and_send` ghi status THEO
@@ -666,7 +711,7 @@ def _format_job_messages(jobs: list[MatchedJob]) -> list[tuple[str, list[Matched
     cur_jobs: list[MatchedJob] = []
 
     for i, j in enumerate(jobs, 1):
-        entry = _format_entry(i, j)
+        entry = _format_entry(i, j, link_ids)
         # Mot entry don le van co the vuot ngan sach (dia chi rat dai). Cat bot
         # con hon de Telegram tu choi ca khoi.
         if _do_dai_utf16(entry) > CHUNK_BUDGET:
@@ -689,9 +734,13 @@ def _format_job_messages(jobs: list[MatchedJob]) -> list[tuple[str, list[Matched
     return khoi
 
 
-def _format_job_message(jobs: list[MatchedJob]) -> str:
+def _format_job_message(
+    jobs: list[MatchedJob], link_ids: LinkIds | None = None
+) -> str:
     """Giu lai cho cac goi/test cu mong doi MOT chuoi duy nhat.
 
     Duong gui that su dung `_format_job_messages` de con chia khoi.
     """
-    return "\n\n".join(noi_dung for noi_dung, _ in _format_job_messages(jobs))
+    return "\n\n".join(
+        noi_dung for noi_dung, _ in _format_job_messages(jobs, link_ids)
+    )
