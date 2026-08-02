@@ -24,6 +24,25 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
+# Anh MAC DINH cua tung trang, khong phai logo cong ty. Tra chung ve cho UI se
+# lam hang loat dong hien Y HET mot icon xam — te hon Monogram chu cai vi
+# Monogram it nhat con phan biet duoc cong ty nay voi cong ty kia.
+#
+# Do do tren prod: linkedin co 2693 tin CO logo nhung chi DUNG MOT url
+# (static.licdn.com/aero-v1/... — anh tinh cua LinkedIn, khong phai logo). Do la
+# 61% toan bo tin. vietnamworks co them 17 tin dung company-default-logo.svg.
+#
+# Loc theo MAU URL chu khong theo tan suat: mot cong ty lon dang 50 tin cung
+# dung chung mot logo THAT, loc theo tan suat se xoa nham chinh no.
+_LOGO_MAC_DINH = r'(static\.licdn\.com|company-default-logo)'
+
+
+def _logo_sql(alias: str) -> str:
+    """Cot logo da loc anh mac dinh, tra NULL de frontend roi ve Monogram."""
+    return (f"CASE WHEN {alias}.company_logo_url ~ '{_LOGO_MAC_DINH}' THEN NULL "
+            f"ELSE {alias}.company_logo_url END AS company_logo_url")
+
+
 # Chan kich thuoc shortlist truoc khi cham diem. Quet bien tu ton ~250ms cho MOI
 # ky nang tren 6432 tin; 300 tin voi 30 ky nang la ~350ms — chap nhan duoc cho
 # mot request. Cham ca kho se mat hang chuc giay.
@@ -146,7 +165,7 @@ async def list_jobs(
                 f.job_category,
                 round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
                 sd.source_url,
-                sd.company_logo_url,
+                {_logo_sql("sd")},
                 f.posted_at,
                 {skills_select}
             FROM pool f
@@ -221,7 +240,7 @@ async def list_jobs(
             f.job_category,
             round((f.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
             sd.source_url,
-            sd.company_logo_url,
+            {_logo_sql("sd")},
             f.posted_at,
             {skills_select}
         FROM dbt_dev_gold.fct_jobs_daily f
@@ -345,7 +364,7 @@ async def my_alerts(
 # loc dung MOT tin, nhung neu khong khu trung theo snapshot_date thi LIMIT 1 lay
 # mot dong BAT KY trong so do — khong xac dinh, va co the la ban CU neu luong/cap
 # bac giua cac snapshot khac nhau. Cung cach da ap dung o job_fit/facts.py.
-_DETAIL_SQL = text("""
+_DETAIL_SQL = text(f"""
     WITH job AS (
         SELECT DISTINCT ON (f.source, f.source_job_id) f.*
         FROM dbt_dev_gold.fct_jobs_daily f
@@ -359,7 +378,7 @@ _DETAIL_SQL = text("""
         round((job.salary_vnd_monthly_avg / 1000000.0)::numeric, 1)::float AS salary_million,
         round((job.salary_vnd_monthly_min / 1000000.0)::numeric, 1)::float AS salary_min_million,
         round((job.salary_vnd_monthly_max / 1000000.0)::numeric, 1)::float AS salary_max_million,
-        d.company_logo_url, d.company_size_label, d.primary_address,
+        {_logo_sql("d")}, d.company_size_label, d.primary_address,
         d.employment_type, d.years_of_experience, d.working_days,
         d.job_description_text, d.job_requirement_text,
         d.benefits, d.skills, d.source_url

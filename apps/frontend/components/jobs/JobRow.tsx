@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import CaptureButton from "@/components/applications/CaptureButton";
 import Monogram from "@/components/brand/Monogram";
 import { getSourceLabel } from "@/lib/job-sources";
@@ -23,6 +25,38 @@ function formatPosted(postedAt: string | null): string | null {
   const d = new Date(postedAt);
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleDateString("vi-VN", { day: "numeric", month: "numeric" });
+}
+
+/**
+ * Logo cong ty, roi ve Monogram chu cai khi khong co hoac tai that bai.
+ *
+ * Hai duong lui, deu can that:
+ *  - `logoUrl` null: backend da loc anh mac dinh cua nguon (2693 tin LinkedIn
+ *    dung chung MOT icon xam — xem _LOGO_MAC_DINH ben api/jobs.py).
+ *  - onError: URL con song trong kho nhung CDN da xoa anh. Khong bat loi thi
+ *    trinh duyet ve o vuong vo, xau hon han chu cai co mau.
+ *
+ * Nen TRANG + object-contain: logo cong ty hau het la PNG nen trang, dat len
+ * nen toi cua dark mode se thanh mot khoi den. Day la cach VietnamWorks,
+ * ITviec, TopCV deu lam.
+ */
+function CompanyAvatar({ logoUrl, name }: { logoUrl: string | null; name: string }) {
+  const [hong, setHong] = useState(false);
+
+  if (!logoUrl || hong) return <Monogram name={name} size="sm" />;
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={logoUrl}
+      alt=""
+      loading="lazy"
+      width={32}
+      height={32}
+      onError={() => setHong(true)}
+      className="h-8 w-8 shrink-0 rounded-[var(--radius-sm)] border border-border bg-white object-contain p-0.5"
+    />
+  );
 }
 
 /** Nguong mau cua diem phu hop — dung token semantic de dark mode khong vo. */
@@ -81,14 +115,19 @@ export default function JobRow({ job, tracked, onTracked, onOpenDetail }: JobRow
           onOpenDetail && "cursor-pointer"
         )}
       >
-        <Monogram name={job.company_name || title} size="sm" />
+        <CompanyAvatar logoUrl={job.company_logo_url} name={job.company_name || title} />
 
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-baseline gap-2">
-            <h3 className="min-w-0 truncate text-[14px] font-semibold leading-tight text-text transition-colors group-hover:text-brand-700 dark:group-hover:text-brand-400">
+            {/* Tieu de duoc uu tien cho: `flex-1` cho no lay het phan con lai,
+                con ten cong ty bi chan o 12rem. Truoc day ca hai cung co the co
+                gian nen mot ten cong ty tieng Viet dai ("CONG TY TNHH THUONG
+                MAI VA ...") an mat tieu de — cat dung THU QUAN TRONG NHAT de
+                giu thu phu. Da thay tren trinh duyet that. */}
+            <h3 className="min-w-0 flex-1 truncate text-[14px] font-semibold leading-tight text-text transition-colors group-hover:text-brand-700 dark:group-hover:text-brand-400">
               {title}
             </h3>
-            <span className="hidden shrink-0 truncate text-[13px] text-text-muted md:block md:max-w-56">
+            <span className="hidden shrink truncate text-[13px] text-text-muted md:block md:max-w-48">
               {company}
             </span>
           </div>
