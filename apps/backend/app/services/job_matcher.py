@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.alert_log import AlertLog
 from app.models.analytics import fct_jobs_daily, silver_job_detail, silver_skill_long
 from app.models.user import User
+from app.services.recommendations import _canon_cities
 
 logger = logging.getLogger(__name__)
 
@@ -158,11 +159,33 @@ class JobMatcher:
         if not include_alerted:
             conditions.append(not_(fct_jobs_daily.c.source_job_id.in_(_alerted_subquery(user.id))))
 
-        query = (
+        # `fct_jobs_daily` la bang SNAPSHOT THEO NGAY: mot tin co nhieu dong
+        # `is_active=true`, moi `snapshot_date` mot dong. Thieu `DISTINCT ON`
+        # o day nghia la `find_jobs` tra ve cung mot job nhieu lan ->
+        # `log_and_send` add nhieu dong AlertLog giong het nhau -> `flush()`
+        # nem UniqueViolation -> `dispatch_alerts` rollback. Trang thai khong
+        # doi nen LAN DISPATCH NAO CUNG FAIL Y HET: sinh vien khong bao gio
+        # nhan duoc gi (JA-06).
+        #
+        # `ORDER BY` phai bat dau bang dung cac cot cua `DISTINCT ON` roi den
+        # `snapshot_date DESC`; thieu ve sau thi Postgres chon dong tuy y va
+        # tin da het han van co the duoc alert (JA-28).
+        moi_nhat = (
             select(*_base_columns())
             .select_from(_jobs_join())
             .where(and_(*conditions))
-            .order_by(fct_jobs_daily.c.posted_at.desc().nullslast())
+            .distinct(fct_jobs_daily.c.source, fct_jobs_daily.c.source_job_id)
+            .order_by(
+                fct_jobs_daily.c.source,
+                fct_jobs_daily.c.source_job_id,
+                fct_jobs_daily.c.snapshot_date.desc(),
+            )
+            .cte("moi_nhat_student")
+        )
+
+        query = (
+            select(moi_nhat)
+            .order_by(moi_nhat.c.posted_at.desc().nullslast())
             .limit(STUDENT_ALERT_LIMIT)
         )
 
@@ -173,7 +196,12 @@ class JobMatcher:
 
     async def _find_scored_jobs(self, user: User, include_alerted: bool = False) -> list[MatchedJob]:
         titles = [t.strip() for t in (user.desired_titles or []) if t.strip()]
-        cities = [c.strip() for c in (user.preferred_cities or []) if c.strip()]
+        # User chon pill "Hồ Chí Minh"; warehouse luu `city_canonical = 'HCMC'`.
+        # So thang hai chuoi do thi SAI 100% SO DONG — 25/100 diem cham luon
+        # bang 0, job Ha Noi va job Sai Gon xep hang y het nhau (JA-09).
+        # `recommendations.py` va `job_fit/profile.py` deu da canonical hoa;
+        # rieng matcher cua alert quen.
+        cities = _canon_cities([c.strip() for c in (user.preferred_cities or []) if c.strip()])
         skills = [s.strip().lower() for s in (user.skills or []) if s.strip()]
         min_salary = getattr(user, "desired_salary_min", None)
         experience_level = getattr(user, "experience_level", None)
@@ -220,6 +248,14 @@ class JobMatcher:
             .select_from(from_clause)
             .where(and_(*level_filters))
             .distinct(fct_jobs_daily.c.source, fct_jobs_daily.c.source_job_id)
+            # Khong co `ORDER BY` khop thi Postgres chon snapshot TUY Y trong
+            # so cac dong cua cung mot job: diem so doi giua cac lan chay va
+            # tin da het han van co the duoc alert (JA-28).
+            .order_by(
+                fct_jobs_daily.c.source,
+                fct_jobs_daily.c.source_job_id,
+                fct_jobs_daily.c.snapshot_date.desc(),
+            )
         )
 
         scored = scored_query.cte("scored")
@@ -298,17 +334,41 @@ class JobMatcher:
                 silver_skill_long.c.source,
                 silver_skill_long.c.source_job_id,
                 (
-                    func.count()
+                    # DISTINCT ca tu va mau: mot skill bi tag trung trong du
+                    # lieu crawl truoc day lam phinh ca tu lan mau va bop meo
+                    # ty le — mot di thuong du lieu khong lien quan gi toi do
+                    # khop that (JA-E2).
+                    func.count(func.distinct(silver_skill_long.c.skill_name_norm))
                     .filter(silver_skill_long.c.skill_name_norm == any_(skills))
                     .cast(Float)
-                    / func.greatest(func.count(), 1)
+                    / func.greatest(
+                        func.count(func.distinct(silver_skill_long.c.skill_name_norm)), 1
+                    )
                 ).label("skill_ratio"),
             )
             .group_by(silver_skill_long.c.source, silver_skill_long.c.source_job_id)
             .subquery("sk")
         )
 
-        return func.coalesce(skill_subq.c.skill_ratio * 15, 0), skill_subq
+        # `silver_skill_long` co coverage 0% cho LinkedIn (~64% kho job). Voi
+        # `coalesce(..., 0)` cu, user chi khai skills (khong title/city/salary)
+        # se cham 0 diem cho MOI job LinkedIn -> bi `WHERE score > 0` loai
+        # sach, tuc la mot phan lon kho viec vo hinh voi ho (JA-16).
+        #
+        # LEFT JOIN cho phep phan biet "job nay khong khop skill nao" (ratio =
+        # 0) voi "job nay khong he co du lieu skill" (ratio IS NULL). Chi
+        # nhom thu hai moi dung tieu de lam nguon thay the — cac nguon da co
+        # du lieu skill van cham diem y nhu cu, khong bi xao tron thu hang.
+        patterns = [f"%{s}%" for s in skills]
+        fallback = case(
+            (fct_jobs_daily.c.title.ilike(any_(patterns)), 15),
+            else_=0,
+        )
+        diem = case(
+            (skill_subq.c.skill_ratio.is_(None), fallback),
+            else_=skill_subq.c.skill_ratio * 15,
+        )
+        return diem, skill_subq
 
     # ── Dedup + log + send ──────────────────────────────────────────
 

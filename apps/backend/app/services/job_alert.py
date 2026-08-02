@@ -69,7 +69,15 @@ async def _dispatch_alerts_locked(db: AsyncSession, source: str) -> int:
             & (TelegramConnection.chat_id.isnot(None)),
         )
         .where(User.is_active == True)  # noqa: E712
-        .where(func.array_length(User.skills, 1) > 0)
+        # Truoc day chi xet `skills` — dieu do loai nham CA PHAN KHUC student
+        # (JA-14): nhanh student cua JobMatcher chi doc `desired_titles`, no
+        # khong dung `skills` de tim viec. Student khai title day du nhung chua
+        # nhap skills thi `find_jobs` khong bao gio duoc goi toi, va ho khong
+        # xuat hien trong bat ky log nao vi chua tung buoc vao vong lap.
+        .where(
+            (func.array_length(User.skills, 1) > 0)
+            | (func.array_length(User.desired_titles, 1) > 0)
+        )
     )
 
     rows = result.all()
