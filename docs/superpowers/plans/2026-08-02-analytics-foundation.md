@@ -33,7 +33,7 @@
 - Consumes: nothing.
 - Produces: `User.last_active_at: Mapped[datetime | None]` — nullable `TIMESTAMP WITH TIME ZONE`, and DB index `ix_users_last_active_at`. Task 2 writes it; Task 3 reads it.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `apps/backend/tests/test_user_activity.py`:
 
@@ -63,12 +63,12 @@ async def test_last_active_at_defaults_to_null_and_accepts_aware_datetime(db_ses
     assert reloaded.last_active_at == stamp
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_user_activity.py::test_last_active_at_defaults_to_null_and_accepts_aware_datetime -v`
 Expected: FAIL with `AttributeError: type object 'User' has no attribute 'last_active_at'`
 
-- [ ] **Step 3: Add the model field**
+- [x] **Step 3: Add the model field**
 
 In `apps/backend/app/models/user.py`, add after the `created_at` line. `DateTime` must be imported from `sqlalchemy` — check the existing import line and add it if missing:
 
@@ -78,7 +78,7 @@ In `apps/backend/app/models/user.py`, add after the `created_at` line. `DateTime
     )
 ```
 
-- [ ] **Step 4: Write the migration**
+- [x] **Step 4: Write the migration**
 
 Create `apps/backend/alembic/versions/018_users_last_active.py`:
 
@@ -123,17 +123,17 @@ def downgrade() -> None:
     op.drop_column("users", "last_active_at", schema="app")
 ```
 
-- [ ] **Step 5: Apply the migration and run the test**
+- [x] **Step 5: Apply the migration and run the test**
 
 Run: `alembic upgrade head && pytest tests/test_user_activity.py -v`
 Expected: migration applies cleanly, test PASSES.
 
-- [ ] **Step 6: Verify the migration is reversible**
+- [x] **Step 6: Verify the migration is reversible**
 
 Run: `alembic downgrade -1 && alembic upgrade head`
 Expected: both complete without error. This catches a broken `downgrade()` now instead of during an incident.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/backend/alembic/versions/018_users_last_active.py apps/backend/app/models/user.py apps/backend/tests/test_user_activity.py
@@ -156,7 +156,7 @@ git commit -m "feat(analytics): them cot users.last_active_at (migration 018)"
   - `app.core.cache.cache_claim(key: str, ttl_seconds: int) -> bool` — returns `True` exactly once per key per TTL window; returns `True` when Redis is unavailable (fail-open).
   - `app.services.activity.touch_user_activity(db: AsyncSession, user_id: uuid.UUID) -> bool` — returns `True` if it wrote a row, `False` if throttled.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `apps/backend/tests/test_activity_tracker.py`:
 
@@ -214,12 +214,12 @@ async def test_touch_never_raises_when_the_update_fails(db_session, seed_user, m
     assert await activity.touch_user_activity(db_session, seed_user.id) is False
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/test_activity_tracker.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'app.services.activity'`
 
-- [ ] **Step 3: Add the `cache_claim` helper**
+- [x] **Step 3: Add the `cache_claim` helper**
 
 Append to `apps/backend/app/core/cache.py`:
 
@@ -241,7 +241,7 @@ async def cache_claim(key: str, ttl_seconds: int) -> bool:
         return True
 ```
 
-- [ ] **Step 4: Write the activity service**
+- [x] **Step 4: Write the activity service**
 
 Create `apps/backend/app/services/activity.py`:
 
@@ -289,12 +289,12 @@ async def touch_user_activity(db: AsyncSession, user_id: uuid.UUID) -> bool:
         return False
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `pytest tests/test_activity_tracker.py -v`
 Expected: all three PASS.
 
-- [ ] **Step 6: Call the tracker from the auth dependency**
+- [x] **Step 6: Call the tracker from the auth dependency**
 
 In `apps/backend/app/core/security.py`, inside `get_current_user`, immediately before the `return user` at the end of the function, add:
 
@@ -308,12 +308,12 @@ And add the import at the top of the file:
 from app.services.activity import touch_user_activity
 ```
 
-- [ ] **Step 7: Verify no existing test broke**
+- [x] **Step 7: Verify no existing test broke**
 
 Run: `pytest tests/ -q`
 Expected: same pass/fail counts as before this task. `get_current_user` now performs one extra Redis call per request and at most one UPDATE per user-hour.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/backend/app/core/cache.py apps/backend/app/services/activity.py apps/backend/app/core/security.py apps/backend/tests/test_activity_tracker.py
@@ -336,7 +336,7 @@ git commit -m "feat(analytics): ghi last_active_at, throttle 1 lan/user/gio bang
 
 **Critical distinction:** `alert_logs` records what the *system sent to* the user, not what the user *did*. Counting it as activity would inflate retention with our own alerts. It goes in a separate `was_alerted` column.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `apps/backend/tests/test_user_activity_view.py`:
 
@@ -424,12 +424,12 @@ async def test_day_boundary_uses_vietnam_calendar_day(db_session, seed_user):
     assert str(row["activity_date"]) == "2026-07-04"
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pytest tests/test_user_activity_view.py -v`
 Expected: FAIL with `relation "app.user_activity_daily" does not exist`
 
-- [ ] **Step 3: Confirm the column and join names before writing SQL**
+- [x] **Step 3: Confirm the column and join names before writing SQL**
 
 Run:
 
@@ -439,7 +439,7 @@ psql "$DATABASE_URL" -c "\d app.chat_messages" -c "\d app.interview_answers" -c 
 
 The SQL below assumes the join keys `chat_messages.room_id`, `interview_answers.session_id`, `interview_messages.session_id`, and a `created_at` on each table. If a table names them differently, adjust the SQL — never adjust the tests to match a wrong query.
 
-- [ ] **Step 4: Write the migration that creates the view**
+- [x] **Step 4: Write the migration that creates the view**
 
 Create `apps/backend/alembic/versions/019_user_activity_daily_view.py`:
 
@@ -509,12 +509,12 @@ def downgrade() -> None:
     op.execute("DROP VIEW IF EXISTS app.user_activity_daily")
 ```
 
-- [ ] **Step 5: Apply and run the tests**
+- [x] **Step 5: Apply and run the tests**
 
 Run: `alembic upgrade head && pytest tests/test_user_activity_view.py -v`
 Expected: all three PASS. The third test is the important one — it proves day boundaries follow the VN calendar, which is the defect class this repo has shipped three times.
 
-- [ ] **Step 6: Sanity-check against real data**
+- [x] **Step 6: Sanity-check against real data**
 
 Run:
 
@@ -524,7 +524,7 @@ psql "$DATABASE_URL" -c "SELECT min(activity_date), max(activity_date), count(DI
 
 Expected: `min(activity_date)` is near the earliest real user activity, not today. That is the whole point of this task — if it returns today's date, the view is not reading historical tables and something is wrong.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/backend/alembic/versions/019_user_activity_daily_view.py apps/backend/tests/test_user_activity_view.py
@@ -546,7 +546,7 @@ git commit -m "feat(analytics): view user_activity_daily, dung lai retention lic
 
 **Why this task exists:** the access log currently lives only in the container's writable layer and is destroyed on every redeploy, so there is no durable server-side record of traffic. This is the one traffic source ad blockers cannot touch.
 
-- [ ] **Step 1: Add the JSON log format**
+- [x] **Step 1: Add the JSON log format**
 
 In `deploy/nginx/nginx.conf`, inside the `http { }` block and before the `server { }` block:
 
@@ -575,7 +575,7 @@ Then change the existing `access_log` directive (currently around line 40) to:
 
 `$http_cf_connecting_ip` is empty until Cloudflare is in front; it is included now so the log format does not need to change later.
 
-- [ ] **Step 2: Mount the log directory**
+- [x] **Step 2: Mount the log directory**
 
 In `docker-compose.yml`, in the `nginx` service, add a `volumes:` entry alongside the existing config mount:
 
@@ -583,7 +583,7 @@ In `docker-compose.yml`, in the `nginx` service, add a `volumes:` entry alongsid
       - ./logs/nginx:/var/log/nginx
 ```
 
-- [ ] **Step 3: Add logrotate config**
+- [x] **Step 3: Add logrotate config**
 
 Create `deploy/nginx/logrotate.conf`:
 
@@ -605,7 +605,7 @@ Create `deploy/nginx/logrotate.conf`:
 
 Install it on the host with a cron entry (`/etc/cron.daily/`) pointing at the mounted path, or copy it into the container's `/etc/logrotate.d/`. Note in the deploy runbook which one was chosen — an unrotated JSON access log fills the disk.
 
-- [ ] **Step 4: Validate the config before restarting anything**
+- [x] **Step 4: Validate the config before restarting anything**
 
 Run:
 
@@ -615,7 +615,7 @@ docker compose exec nginx nginx -t
 
 Expected: `syntax is ok` / `test is successful`. Do **not** skip this — a bad `log_format` takes the whole site down on reload.
 
-- [ ] **Step 5: Reload and verify a real line is written**
+- [x] **Step 5: Reload and verify a real line is written**
 
 Run:
 
@@ -627,7 +627,7 @@ tail -n 1 logs/nginx/access.log | python -m json.tool
 
 Expected: the last line parses as valid JSON and contains `"uri":"/"`. If `python -m json.tool` errors, the `escape=json` setting is missing or a field is unquoted.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add deploy/nginx/nginx.conf deploy/nginx/logrotate.conf docker-compose.yml
@@ -647,7 +647,11 @@ git commit -m "feat(analytics): nginx ghi access log JSON ra host, giu 30 ngay"
 - Consumes: the running `postgres` service.
 - Produces: Umami reachable at `http://umami:3000` on the compose network. Task 6 proxies to it.
 
-- [ ] **Step 1: Provision the database and role**
+> `- [!]` = BI CHAN, chua chay. Cac buoc nay can mot bi mat do con nguoi sinh ra
+> (`UMAMI_APP_SECRET`, `UMAMI_DB_PASSWORD`) va mot lan dang nhap giao dien Umami.
+> Xem `deploy/umami/README.md` — toan bo lenh da duoc viet san o do.
+
+- [!] **Step 1: Provision the database and role**
 
 Run against the existing Postgres (replace `<strong-random>` with a generated value stored in the deploy `.env`):
 
@@ -658,7 +662,7 @@ docker compose exec postgres psql -U postgres -c "CREATE DATABASE umami OWNER um
 
 `umami_app` owns only the `umami` database and has no rights on the application database. A defect in Umami must not be able to read or write `app.*`.
 
-- [ ] **Step 2: Add the service**
+- [x] **Step 2: Add the service**
 
 In `docker-compose.yml`, after the `redis` service:
 
@@ -685,7 +689,7 @@ In `docker-compose.yml`, after the `redis` service:
 
 No `ports:` entry — Umami is reachable only through nginx. Match `networks:` to the network name the other services already use; check an existing service rather than assuming `tp-net`.
 
-- [ ] **Step 3: Document the secrets**
+- [x] **Step 3: Document the secrets**
 
 Add to `.env.example`:
 
@@ -697,7 +701,7 @@ UMAMI_DB_PASSWORD=
 
 Never commit real values. This repo has already had a secret-leak finding (JA-04).
 
-- [ ] **Step 4: Start it and confirm it is healthy**
+- [!] **Step 4: Start it and confirm it is healthy**
 
 Run:
 
@@ -709,7 +713,7 @@ docker compose exec umami wget -qO- http://localhost:3000/api/heartbeat
 
 Expected: heartbeat responds. First boot runs Umami's own migrations against the `umami` database and takes 30-60s.
 
-- [ ] **Step 5: Confirm isolation actually holds**
+- [!] **Step 5: Confirm isolation actually holds**
 
 Run:
 
@@ -719,15 +723,15 @@ docker compose exec postgres psql -U umami_app -d talentpulse -c "SELECT count(*
 
 Expected: **permission denied** (or the database is not accessible at all). If this returns a number, the role has too many rights — fix before continuing.
 
-- [ ] **Step 6: Create the tracked website and record its ID**
+- [!] **Step 6: Create the tracked website and record its ID**
 
 In the Umami UI (reachable once Task 6 is done, or temporarily via `docker compose port`), log in with the default `admin` account, change the password immediately, and add a website with domain `talentpuse.io.vn`. Copy the generated website ID into the deploy `.env` as `NEXT_PUBLIC_UMAMI_WEBSITE_ID` — Task 7 needs it.
 
-- [ ] **Step 7: Write the provisioning notes**
+- [x] **Step 7: Write the provisioning notes**
 
 Create `deploy/umami/README.md` documenting: the two SQL commands from Step 1, where `UMAMI_APP_SECRET` / `UMAMI_DB_PASSWORD` live, the website ID, and that the default admin password must be changed on first login. The next person to touch this should not have to reverse-engineer it.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add docker-compose.yml .env.example deploy/umami/README.md
@@ -747,7 +751,7 @@ git commit -m "feat(analytics): them container Umami tren database rieng"
 
 **Why the odd path:** ad-block filter lists match on path substrings, not just hostnames. A path containing `umami`, `analytics`, or `track` is filtered by default rules; `/s/` is not. Serving from the site's own origin is the difference between usable numbers and numbers that are 30-40% short.
 
-- [ ] **Step 1: Add the location blocks**
+- [x] **Step 1: Add the location blocks**
 
 In `deploy/nginx/nginx.conf`, inside the `server { }` block and **above** the catch-all `location / { }` (nginx prefix matching means order matters here):
 
@@ -779,12 +783,12 @@ In `deploy/nginx/nginx.conf`, inside the `server { }` block and **above** the ca
 
 The `@analytics_down` fallback is deliberate: if Umami is down, visitors get an empty `204` instead of a `502`. Analytics failing must never surface as an error on the site.
 
-- [ ] **Step 2: Validate the config**
+- [x] **Step 2: Validate the config**
 
 Run: `docker compose exec nginx nginx -t`
 Expected: `syntax is ok` / `test is successful`
 
-- [ ] **Step 3: Reload and verify both endpoints**
+- [!] **Step 3: Reload and verify both endpoints**
 
 Run:
 
@@ -797,7 +801,7 @@ curl -s -X POST -H "Content-Type: application/json" -d '{}' \
 
 Expected: `script.js -> 200`, and `api/send` returns 200/400/204 (any of these proves it reached Umami and not the Next.js catch-all). A `404` means the location block is below `location /` and never matches.
 
-- [ ] **Step 4: Verify the fallback works**
+- [x] **Step 4: Verify the fallback works**
 
 Run:
 
@@ -809,7 +813,7 @@ docker compose start umami
 
 Expected: `204`, not `502`. This is the guarantee that a dead analytics container cannot degrade the site.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add deploy/nginx/nginx.conf
@@ -831,7 +835,7 @@ git commit -m "feat(analytics): phuc vu tracker Umami first-party qua /s/*"
 - Consumes: `/s/script.js` (Task 6); `NEXT_PUBLIC_UMAMI_WEBSITE_ID` (Task 5 Step 6).
 - Produces: pageviews in Umami for every route, and a pseudonymous `user_id` attached to sessions of logged-in users.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `apps/frontend/__tests__/analytics/UmamiIdentify.test.tsx`. Match the runner the repo already uses — check `package.json` for `vitest` or `jest` and swap `jest.fn()` for `vi.fn()` if it is vitest:
 
@@ -865,12 +869,12 @@ describe("UmamiIdentify", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- UmamiIdentify` (from `apps/frontend`)
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Write the component**
+- [x] **Step 3: Write the component**
 
 Create `apps/frontend/components/analytics/UmamiIdentify.tsx`:
 
@@ -896,12 +900,12 @@ export default function UmamiIdentify({ userId }: Props) {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- UmamiIdentify`
 Expected: all three PASS.
 
-- [ ] **Step 5: Add the tracker script to the root layout**
+- [x] **Step 5: Add the tracker script to the root layout**
 
 In `apps/frontend/app/layout.tsx`, inside `<head>` (or via `next/script` with `strategy="afterInteractive"`, matching however the file already loads scripts):
 
@@ -916,11 +920,11 @@ In `apps/frontend/app/layout.tsx`, inside `<head>` (or via `next/script` with `s
 
 `data-host-url="/s"` is required — without it the script posts to `/api/send`, which nginx routes to FastAPI, and every event is lost.
 
-- [ ] **Step 6: Mount the identify component where auth state is known**
+- [x] **Step 6: Mount the identify component where auth state is known**
 
 Render `<UmamiIdentify userId={user?.id ?? null} />` inside the component that already consumes `AuthContext` and wraps authenticated pages. Read `apps/frontend/context/AuthContext.tsx` to find the exported hook name and the shape of the user object before wiring it — do not assume `useAuth()` returns `{ user }`.
 
-- [ ] **Step 7: Document the env var**
+- [x] **Step 7: Document the env var**
 
 Add to `apps/frontend/.env.example`:
 
@@ -929,17 +933,17 @@ Add to `apps/frontend/.env.example`:
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=
 ```
 
-- [ ] **Step 8: Verify end-to-end in a browser**
+- [!] **Step 8: Verify end-to-end in a browser**
 
 Load the site, open DevTools → Network, filter on `send`. Navigating between routes must produce `POST /s/api/send` with a 2xx. Then log in and confirm the Umami UI shows the session with a user ID attached.
 
 Expected: pageviews appear in Umami within ~30 seconds. If `script.js` 404s, Task 6 Step 3 was not verified. If it loads but nothing sends, `data-host-url` is wrong.
 
-- [ ] **Step 9: Confirm no PII is leaving the browser**
+- [!] **Step 9: Confirm no PII is leaving the browser**
 
 In DevTools, inspect the request payload of `POST /s/api/send`. It must contain a UUID and page metadata only — no email, no name. If any profile field appears, stop and fix before deploying: this is the boundary the whole privacy decision rests on.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add apps/frontend/app/layout.tsx apps/frontend/components/analytics/UmamiIdentify.tsx apps/frontend/.env.example apps/frontend/__tests__/analytics/UmamiIdentify.test.tsx
