@@ -63,3 +63,22 @@ async def test_pipeline_jd_text_trong_thi_bo_qua(db_session, monkeypatch):
 
     n = await run_extract_pipeline(db_session, limit=2)
     assert n == 1
+
+
+async def test_pipeline_loi_db_generic_khong_chan_ca_lo(db_session, monkeypatch):
+    """Loi DB that (upsert fail: source qua dai VARCHAR(50)) o job dau abort
+    transaction — job sau phai van chay.
+
+    Job "a" source 60 ky tu -> real upsert_insight StringDataRightTruncationError
+    -> transaction bi abort. Neu khong rollback, job "b" chet theo
+    InFailedSQLTransactionError -> ca lo fail.
+    """
+    fake_keys = [("x" * 60, "a"), ("topcv", "b")]
+    monkeypatch.setattr("app.services.jd_pipeline.get_missing_job_keys", AsyncMock(return_value=fake_keys))
+    async def fake_extract(text, source=None, source_job_id=None):
+        return _fake_data()
+    monkeypatch.setattr("app.services.jd_pipeline.extract_insight", fake_extract)
+    monkeypatch.setattr("app.services.jd_pipeline.get_jd_text", AsyncMock(return_value="text"))
+
+    n = await run_extract_pipeline(db_session, limit=2)
+    assert n == 1  # chi job "b" thanh cong sau khi rollback session

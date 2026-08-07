@@ -36,5 +36,6 @@ async def run_extract_pipeline(db: AsyncSession, limit: int = 50) -> int:
         except ExtractError:
             logger.warning("extract fail %s/%s (sai format)", source, sjid)
         except Exception:
+            await db.rollback()
             logger.exception("extract fail %s/%s", source, sjid)
     return ok
