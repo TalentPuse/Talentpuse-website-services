@@ -46,6 +46,11 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
+        # PYTHONPATH bat buoc: pytest 9 doi import mode sang importlib, `pythonpath
+        # = .` trong pytest.ini khong an (da do 2026-08-07) — de mcp_server khong
+        # import duoc. PYTHONPATH env thi hoat dong o moi version pytest.
+        env:
+          PYTHONPATH: ${{ github.workspace }}/apps/mcp
         run: pytest tests/ -v --tb=short
 
   build-and-push:
@@ -111,8 +116,11 @@ jobs:
       # Xem ghi chu day du o backend.yml deploy job (step nay can thiet mot lan).
       - name: Clean stale logs/nginx
         run: |
+          # Xem ghi chu o backend.yml: runner khong co sudo, dung docker container
+          # chay root de xoa file root-owned (chi xoa noi dung, git clean tu rmdir).
           if [ -e "$GITHUB_WORKSPACE/logs/nginx" ]; then
-            rm -rf "$GITHUB_WORKSPACE/logs/nginx" 2>/dev/null || sudo -n rm -rf "$GITHUB_WORKSPACE/logs/nginx" 2>/dev/null || {
+            docker run --rm -v "$GITHUB_WORKSPACE/logs/nginx":/target alpine \
+              sh -c 'rm -rf /target/* /target/.[!.]* 2>/dev/null' || {
               echo "Khong xoa duoc logs/nginx. Chay tay tren box:"
               echo "  sudo rm -rf $GITHUB_WORKSPACE/logs/nginx"
               exit 1

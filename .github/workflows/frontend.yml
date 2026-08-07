@@ -130,8 +130,11 @@ jobs:
       # Xem ghi chu day du o backend.yml deploy job (step nay can thiet mot lan).
       - name: Clean stale logs/nginx
         run: |
+          # Xem ghi chu o backend.yml: runner khong co sudo, dung docker container
+          # chay root de xoa file root-owned (chi xoa noi dung, git clean tu rmdir).
           if [ -e "$GITHUB_WORKSPACE/logs/nginx" ]; then
-            rm -rf "$GITHUB_WORKSPACE/logs/nginx" 2>/dev/null || sudo -n rm -rf "$GITHUB_WORKSPACE/logs/nginx" 2>/dev/null || {
+            docker run --rm -v "$GITHUB_WORKSPACE/logs/nginx":/target alpine \
+              sh -c 'rm -rf /target/* /target/.[!.]* 2>/dev/null' || {
               echo "Khong xoa duoc logs/nginx. Chay tay tren box:"
               echo "  sudo rm -rf $GITHUB_WORKSPACE/logs/nginx"
               exit 1
