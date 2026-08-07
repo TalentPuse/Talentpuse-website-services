@@ -46,11 +46,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
-        # PYTHONPATH bat buoc: pytest 9 doi import mode sang importlib, `pythonpath
-        # = .` trong pytest.ini khong an (da do 2026-08-07) — de mcp_server khong
-        # import duoc. PYTHONPATH env thi hoat dong o moi version pytest.
-        env:
-          PYTHONPATH: ${{ github.workspace }}/apps/mcp
+        # KHONG dat PYTHONPATH=apps/mcp: apps/mcp da bo __init__.py (2026-08-07)
+        # de het dung ten voi SDK `mcp`, nhung dua apps/mcp vao sys.path van co
+        # the lam mo ho. Conftest (tests/conftest.py) tu alias mcp_server sang
+        # thu muc goc — khong can PYTHONPATH.
         run: pytest tests/ -v --tb=short
 
   build-and-push:
