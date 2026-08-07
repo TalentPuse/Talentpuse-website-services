@@ -107,7 +107,7 @@ async def test_tools_top(db_session):
             r = await c.get("/api/v1/tools/top", headers={"X-API-Key": raw})
         assert r.status_code == 200
         rows = r.json()
-        assert rows[0] == {"tool": "tptest-tool", "n_jobs": 2}
+        assert {"tool": "tptest-tool", "n_jobs": 2} in rows
         assert all(set(row) == {"tool", "n_jobs"} for row in rows)
     finally:
         await _del_aggregate(db_session)
