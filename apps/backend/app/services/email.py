@@ -23,14 +23,21 @@ class EmailResult:
     error: str | None = None
 
 
-BASE_URL = "https://talentpuse.io.vn"
-API_BASE_URL = "https://talentpuse.io.vn/api"
+# Dia chi cong khai doc TU CAU HINH (PUBLIC_BASE_URL), khong hardcode.
+#
+# Hardcode `https://talentpuse.io.vn` lam moi email gui tu local/staging deu
+# mang link huy + link profile tro ve PRODUCTION: nguoi test o staging bam huy
+# thi tat alert cua user PROD (token HMAC khac nhau nen that ra la hong, nhung
+# link tro nham cho thi moi lan gui thu deu khong huy duoc) — dung class loi
+# da gap 2 lan (NEXT_PUBLIC_COPILOT_DOCK, AGUI_ENABLED). Xem test
+# test_link_theo_doi_doc_tu_cau_hinh_khong_hardcode.
+from app.core.config import PUBLIC_BASE_URL
 
 
 def _unsubscribe_url(user_id) -> str | None:
     if user_id is None:
         return None
-    return f"{API_BASE_URL}/email/alerts/unsubscribe/one-click?token={tao_token(user_id)}"
+    return f"{PUBLIC_BASE_URL}/api/email/alerts/unsubscribe/one-click?token={tao_token(user_id)}"
 
 
 async def send_job_alert_email(
@@ -50,7 +57,7 @@ async def send_job_alert_email(
         logger.warning("RESEND_API_KEY not set, skipping email send")
         return EmailResult(success=False, error="RESEND_API_KEY not configured")
 
-    subject = f"TalentPulse Alert: {len(jobs)} viec lam moi phu hop"
+    subject = f"TalentPulse Alert: {len(jobs)} việc làm mới phù hợp với bạn"
     huy_url = _unsubscribe_url(user_id)
     html = _build_job_alert_html(user_name, jobs, huy_url)
 
@@ -107,8 +114,8 @@ def _build_job_alert_html(user_name: str, jobs: list[MatchedJob], huy_url: str |
         # Escape MOI truong du lieu crawl truoc khi noi vao HTML (JA-17).
         # `source_url` chua dau nhay se thoat khoi attribute `href` va chen
         # markup tuy y vao mail gui cho nguoi dung — nen no dung `quote=True`.
-        title = html.escape(job.title or "Khong ro", quote=False)
-        company = html.escape(job.company_name or "Khong ro", quote=False)
+        title = html.escape(job.title or "Không rõ", quote=False)
+        company = html.escape(job.company_name or "Không rõ", quote=False)
         city = html.escape(job.city_raw_vi or job.city_canonical or "", quote=False)
         level = html.escape(job.job_level or "", quote=False)
         salary = job.salary_m
@@ -118,7 +125,7 @@ def _build_job_alert_html(user_name: str, jobs: list[MatchedJob], huy_url: str |
 
         salary_html = ""
         if salary:
-            salary_html = f'<span style="background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">~{salary:.0f} trieu/thang</span>'
+            salary_html = f'<span style="background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;">~{salary:.0f} triệu/tháng</span>'
 
         job_cards += f"""
         <tr>
@@ -145,7 +152,7 @@ def _build_job_alert_html(user_name: str, jobs: list[MatchedJob], huy_url: str |
               <tr>
                 <td style="padding-top:8px;">
                   {salary_html}
-                  <a href="{url}" style="color:#2563eb;font-size:13px;text-decoration:none;margin-left:12px;">Xem chi tiet &rarr;</a>
+                  <a href="{url}" style="color:#2563eb;font-size:13px;text-decoration:none;margin-left:12px;">Xem chi tiết &rarr;</a>
                 </td>
               </tr>
             </table>
@@ -159,7 +166,7 @@ def _build_job_alert_html(user_name: str, jobs: list[MatchedJob], huy_url: str |
     # ma phai dang nhap thi phan lon se bam "Report spam" thay the (JA-22).
     huy_html = (
         f'''<p style="margin:8px 0 0;color:#94a3b8;font-size:11px;">
-                <a href="{huy_url}" style="color:#94a3b8;text-decoration:underline;">Huy nhan email nay</a>
+                <a href="{huy_url}" style="color:#94a3b8;text-decoration:underline;">Hủy nhận email này</a>
               </p>'''
         if huy_url
         else ""
@@ -178,7 +185,7 @@ def _build_job_alert_html(user_name: str, jobs: list[MatchedJob], huy_url: str |
           <tr>
             <td style="background:linear-gradient(135deg,#1e293b 0%,#334155 100%);padding:32px;border-radius:12px 12px 0 0;text-align:center;">
               <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">TalentPulse Alert</h1>
-              <p style="margin:8px 0 0;color:#94a3b8;font-size:14px;">Xin chao {ten_hien_thi}, co <strong style="color:#ffffff;">{len(jobs)}</strong> viec lam moi phu hop voi ban.</p>
+              <p style="margin:8px 0 0;color:#94a3b8;font-size:14px;">Chào bạn {ten_hien_thi}, hôm nay có <strong style="color:#ffffff;">{len(jobs)}</strong> việc làm mới rất hợp với hồ sơ của bạn:</p>
             </td>
           </tr>
           <!-- Jobs -->
@@ -192,11 +199,14 @@ def _build_job_alert_html(user_name: str, jobs: list[MatchedJob], huy_url: str |
           <!-- Footer -->
           <tr>
             <td style="background:#f1f5f9;padding:16px 24px;border-radius:0 0 12px 12px;text-align:center;">
-              <p style="margin:0;color:#64748b;font-size:12px;">
-                Cap nhat ho so tai <a href="https://talentpuse.io.vn/profile" style="color:#2563eb;">talentpuse.io.vn/profile</a> de nhan alert chinh xac hon.
+              <p style="margin:0;color:#334155;font-size:13px;font-weight:600;">
+                Chúc bạn may mắn tìm được công việc ưng ý! 🍀
+              </p>
+              <p style="margin:8px 0 0;color:#64748b;font-size:12px;">
+                Muốn gợi ý chính xác hơn? Cập nhật hồ sơ tại <a href="{PUBLIC_BASE_URL}/profile" style="color:#2563eb;">{PUBLIC_BASE_URL}/profile</a>.
               </p>
               <p style="margin:8px 0 0;color:#94a3b8;font-size:11px;">
-                &copy; 2026 TalentPulse. Ban nhan email vi dang ky nhan thong bao viec lam.
+                &copy; 2026 TalentPulse. Bạn nhận email này vì đã đăng ký nhận thông báo việc làm.
               </p>
               {huy_html}
             </td>

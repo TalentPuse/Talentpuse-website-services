@@ -46,7 +46,11 @@ LEVEL_MAP: dict[str, list[str]] = {
 }
 
 ALERT_LIMIT = 3
-STUDENT_ALERT_LIMIT = 50
+# Gioi han 10 (truoc day 50): 50 job mot lan qua tai voi sinh vien — tin nhan
+# dai, cham doc, va (truoc JA-03/JA-08) de vuot gioi han 4096 ky tu cua
+# Telegram. 10 van nhieu hon ALERT_LIMIT cua user thuong vi sinh vien can
+# nhieu lua chon (intern/fresher), nhung van doc duoc trong mot tin.
+STUDENT_ALERT_LIMIT = 10
 
 
 # ─── Result type ───────────────────────────────────────────────────
@@ -586,12 +590,16 @@ SOURCE_LABEL: dict[str, str] = {
     # linkedin la crawler thu ba dang chay (~64% kho job) nhung truoc day khong
     # co trong bang nay -> tin hien nhan tho "Xem trên linkedin" (JA-E1).
     "linkedin": "LinkedIn",
+    # topcv la crawler dang chay (~18% kho job) — thieu no thi nhan tho
+    # "Xem trên topcv" va link fallback ve trang chu VietnamWorks sai dich.
+    "topcv": "TopCV",
 }
 
 FALLBACK_URL: dict[str, str] = {
     "vietnamworks": "https://www.vietnamworks.com",
     "itviec": "https://itviec.com",
     "linkedin": "https://www.linkedin.com/jobs",
+    "topcv": "https://www.topcv.vn",
 }
 
 # Telegram gioi han 4096 don vi ma UTF-16 moi tin. Chua toi han muc de con cho
@@ -600,8 +608,13 @@ TELEGRAM_MAX_LEN = 4096
 CHUNK_BUDGET = 3500
 
 _ALERT_HEADER = "\U0001f4cb <b>TalentPuse Alert</b>"
+# Domain doc tu config, KHONG hardcode: hardcode thi tin alert tu local/staging
+# dan nguoi dung ve production (cung loai loi NEXT_PUBLIC_COPILOT_DOCK). Chu y
+# test chong hardcode chi quet chuoi co `https://` — chuoi nay viet khong co
+# scheme nen phai tu giam sat.
 _ALERT_FOOTER = (
-    "\n✏️ Cập nhật hồ sơ tại <b>talentpuse.io.vn/profile</b> để nhận alert chính xác hơn."
+    f"\n\nChúc bạn tìm được công việc ưng ý nhé! 🍀"
+    f"\n✏️ Muốn gợi ý chính xác hơn? Cập nhật hồ sơ tại <b>{PUBLIC_BASE_URL}/profile</b>."
 )
 
 
@@ -683,7 +696,7 @@ def _format_entry(i: int, j: MatchedJob, link_ids: LinkIds | None = None) -> str
     if url:
         # quote=True o day: chuoi nam TRONG attribute href, mot dau " chua
         # escape se thoat ra khoi attribute va chen markup tuy y.
-        entry += f'\n   \U0001f517 <a href="{html.escape(url, quote=True)}">Xem trên {source_label}</a>'
+        entry += f'\n   \U0001f517 <a href="{html.escape(url, quote=True)}">Xem chi tiết trên {source_label}</a>'
     return entry
 
 
@@ -706,7 +719,10 @@ def _format_job_messages(
         return []
 
     tong = len(jobs)
-    header = f"{_ALERT_HEADER}\nTìm thấy <b>{tong}</b> việc làm mới phù hợp với bạn.\n"
+    header = (
+        f"{_ALERT_HEADER}\n"
+        f"Chào bạn! Hôm nay có <b>{tong}</b> việc làm mới rất hợp với hồ sơ của bạn:\n"
+    )
 
     khoi: list[tuple[str, list[MatchedJob]]] = []
     cur_entries: list[str] = []

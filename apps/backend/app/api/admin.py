@@ -37,7 +37,7 @@ from app.services.admin import (
     update_user_tier,
 )
 from app.services.email import send_job_alert_email
-from app.services.job_alert import dispatch_alerts, email_all_users
+from app.services.job_alert import _parse_channels, dispatch_alerts, email_all_users
 from app.services.job_matcher import MatchedJob
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -238,7 +238,10 @@ async def internal_dispatch(
     if not secret or secret != cfg.TELEGRAM_WEBHOOK_SECRET:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret")
     source = request.headers.get("X-Dispatch-Source", "cron_webhook")
-    count = await dispatch_alerts(db, source=source)
+    # Cho phep webhook chon kenh: "telegram" | "email" | "both" (mac dinh).
+    # Prefect web box chay HAI pipeline rieng — moi pipeline goi mot kenh.
+    channels = _parse_channels(request.headers.get("X-Dispatch-Channels", "both"))
+    count = await dispatch_alerts(db, source=source, channels=channels)
     return {"dispatched": count}
 
 

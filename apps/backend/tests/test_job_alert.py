@@ -859,3 +859,212 @@ class TestMultiDayDispatch:
         msg2 = send_fn.call_args[0][1]
         assert "AI Engineer" not in msg2  # already alerted
         assert "DevOps Engineer" in msg2
+
+
+# ─────────────────────────────────────────────
+# Tach pipeline theo kenh (telegram / email)
+# ─────────────────────────────────────────────
+
+
+def test_parse_channels():
+    from app.services.job_alert import _parse_channels
+
+    assert _parse_channels("telegram") == ("telegram",)
+    assert _parse_channels("email") == ("email",)
+    assert _parse_channels("both") == ("telegram", "email")
+    assert _parse_channels(None) == ("telegram", "email")
+    # Gia tri la phai ve "both" chu khong duoc lam webhook chet vi header go sai.
+    assert _parse_channels("garbage") == ("telegram", "email")
+
+
+async def _purge_test_users(db_session, prefix: str) -> None:
+    """Xoa user test con sot tu nhung lan chay truoc (test DB khong tu dong
+    clean giua cac test — data cua lan fail truoc van nam do va lam hong
+    assertion cua lan chay sau, vi find_jobs bi mock tra job cho MOI user)."""
+    from sqlalchemy import select
+
+    from app.models.user import User
+
+    rows = (await db_session.execute(
+        select(User).where(User.email.like(f"{prefix}%"))
+    )).scalars().all()
+    for u in rows:
+        await db_session.delete(u)
+    if rows:
+        await db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_internal_dispatch_channels_header():
+    """Header `X-Dispatch-Channels` phai duoc truyen thanh tham so `channels`."""
+    for header, expected in [
+        ("telegram", ("telegram",)),
+        ("email", ("email",)),
+        (None, ("telegram", "email")),
+    ]:
+        with patch("app.api.admin.dispatch_alerts", new_callable=AsyncMock, return_value=3) as m:
+            headers = {"X-Webhook-Secret": TELEGRAM_WEBHOOK_SECRET}
+            if header:
+                headers["X-Dispatch-Channels"] = header
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+                r = await c.post("/api/admin/alerts/dispatch-internal", headers=headers)
+            assert r.status_code == 200
+            assert m.call_args.kwargs["channels"] == expected, (
+                f"header {header!r} -> {m.call_args.kwargs['channels']}"
+            )
+
+
+@pytest.mark.asyncio
+async def test_dispatch_telegram_only_khong_dong_email(db_session, monkeypatch):
+    """Pipeline telegram: chi gui telegram + ghi website marker, KHONG gui email.
+
+    User co ca 2 kenh dang ky nhung pipeline nay chi xu ly telegram — email
+    phai nam nguyen de pipeline email xu ly, khong duoc gui/ghen tu day.
+    """
+    from sqlalchemy import select
+
+    from app.models.alert_log import AlertLog
+    from app.models.telegram import AlertSubscription, TelegramConnection
+    from app.services.email import EmailResult
+    from app.services.job_alert import dispatch_alerts
+
+    await _purge_test_users(db_session, "tg-")
+    user = User(
+        email=f"tg-{uuid4()}@example.com", hashed_password="x",
+        full_name="Telegram Only", skills=["Python"],
+    )
+    db_session.add(user)
+    await db_session.flush()
+    db_session.add(TelegramConnection(user_id=user.id, status="active", chat_id=int(uuid4().int % 1_000_000_000)))
+    db_session.add(AlertSubscription(user_id=user.id, alert_type="email_job_match", enabled=True))
+    await db_session.commit()
+
+    jobs = [MatchedJob(source="vietnamworks", source_job_id="tg1", title="AI Engineer")]
+    monkeypatch.setattr(JobMatcher, "find_jobs", AsyncMock(return_value=jobs))
+    email_fn = AsyncMock(return_value=EmailResult(success=True))
+    monkeypatch.setattr("app.services.job_alert.send_job_alert_email", email_fn)
+    send_fn = AsyncMock()
+    monkeypatch.setattr("app.services.job_alert._send_message", send_fn)
+
+    sent = await dispatch_alerts(db_session, source="test_tg", channels=("telegram",))
+
+    assert sent == 1
+    send_fn.assert_awaited_once()  # telegram duoc gui
+    email_fn.assert_not_called()  # pipeline telegram khong gui email
+
+    rows = (await db_session.execute(
+        select(AlertLog).where(AlertLog.user_id == user.id)
+    )).scalars().all()
+    channels = {r.channel for r in rows}
+    assert {"telegram", "website"} <= channels
+    assert "email" not in channels, "pipeline telegram khong duoc ghi dong email"
+
+    await db_session.delete(user)
+    await db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_email_only_dedup_rieng_khong_chan_telegram(db_session, monkeypatch):
+    """Pipeline email: chi gui email, dedup theo email rows, KHONG ghi website marker.
+
+    - User khong co telegram van nhan duoc email (find_jobs bo qua website dedup).
+    - Chay lai lan 2: job da email roi thi khong gui lai (dedup email 'sent').
+    - Khong ghi website marker -> pipeline telegram sau do van con gui duoc job.
+    """
+    from sqlalchemy import select
+
+    from app.models.alert_log import AlertLog
+    from app.models.telegram import AlertSubscription
+    from app.services.email import EmailResult
+    from app.services.job_alert import dispatch_alerts
+
+    await _purge_test_users(db_session, "em")
+    user = User(
+        email=f"em-{uuid4()}@example.com", hashed_password="x",
+        full_name="Email Only", skills=["Python"],
+    )
+    db_session.add(user)
+    await db_session.flush()
+    db_session.add(AlertSubscription(user_id=user.id, alert_type="email_job_match", enabled=True))
+    await db_session.commit()
+
+    jobs = [MatchedJob(source="vietnamworks", source_job_id="em1", title="AI Engineer")]
+    monkeypatch.setattr(JobMatcher, "find_jobs", AsyncMock(return_value=jobs))
+    email_fn = AsyncMock(return_value=EmailResult(success=True))
+    monkeypatch.setattr("app.services.job_alert.send_job_alert_email", email_fn)
+    send_fn = AsyncMock()
+    monkeypatch.setattr("app.services.job_alert._send_message", send_fn)
+
+    sent = await dispatch_alerts(db_session, source="test_em", channels=("email",))
+
+    assert sent == 1, "pipeline email phai dem so job da gui email"
+    email_fn.assert_awaited_once()
+    send_fn.assert_not_called()
+
+    rows = (await db_session.execute(
+        select(AlertLog).where(AlertLog.user_id == user.id)
+    )).scalars().all()
+    channels = {r.channel for r in rows}
+    assert channels == {"email"}, f"chi duoc ghi dong email, co: {channels}"
+    assert rows[0].status == "sent"
+
+    # Lan chay thu 2: dedup email 'sent' -> khong gui lai, khong ghi them.
+    email_fn.reset_mock()
+    sent2 = await dispatch_alerts(db_session, source="test_em2", channels=("email",))
+    assert sent2 == 0
+    email_fn.assert_not_called()
+    count = (await db_session.execute(
+        select(AlertLog).where(
+            AlertLog.user_id == user.id, AlertLog.channel == "email"
+        )
+    )).scalars().all()
+    assert len(count) == 1, "khong duoc gui email trung cho job da gui"
+
+    await db_session.delete(user)
+    await db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_dispatch_email_only_that_bai_duoc_thu_lai(db_session, monkeypatch):
+    """Email fail ghi dong 'failed' — dedup bo qua, slot sau phai thu lai."""
+    from sqlalchemy import select
+
+    from app.models.alert_log import AlertLog
+    from app.models.telegram import AlertSubscription
+    from app.services.email import EmailResult
+    from app.services.job_alert import dispatch_alerts
+
+    await _purge_test_users(db_session, "emf-")
+    user = User(
+        email=f"emf-{uuid4()}@example.com", hashed_password="x",
+        full_name="Email Fail", skills=["Python"],
+    )
+    db_session.add(user)
+    await db_session.flush()
+    db_session.add(AlertSubscription(user_id=user.id, alert_type="email_job_match", enabled=True))
+    await db_session.commit()
+
+    jobs = [MatchedJob(source="vietnamworks", source_job_id="emf1", title="AI Engineer")]
+    monkeypatch.setattr(JobMatcher, "find_jobs", AsyncMock(return_value=jobs))
+    email_fn = AsyncMock(return_value=EmailResult(success=False, error="boom"))
+    monkeypatch.setattr("app.services.job_alert.send_job_alert_email", email_fn)
+    monkeypatch.setattr("app.services.job_alert._send_message", AsyncMock())
+
+    sent = await dispatch_alerts(db_session, source="test_emf", channels=("email",))
+    assert sent == 0, "email fail khong tinh la da gui"
+
+    # Slot sau: vao lai, gui thanh cong.
+    email_fn.return_value = EmailResult(success=True)
+    sent2 = await dispatch_alerts(db_session, source="test_emf2", channels=("email",))
+    assert sent2 == 1
+
+    rows = (await db_session.execute(
+        select(AlertLog).where(AlertLog.user_id == user.id)
+    )).scalars().all()
+    # Upsert (ON CONFLICT): cung mot dong email cho job, fail roi update thanh
+    # sent — khong tao dong thu hai (unique constraint (user, source, job, channel)).
+    assert len(rows) == 1, f"chi 1 dong email cho job, co: {[r.status for r in rows]}"
+    assert rows[0].status == "sent", f"dung phai la sent sau retry, co: {rows[0].status}"
+
+    await db_session.delete(user)
+    await db_session.commit()

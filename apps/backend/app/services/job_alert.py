@@ -37,7 +37,24 @@ async def _is_email_enabled(db: AsyncSession, user_id) -> bool:
     return result.scalar_one_or_none() is not None
 
 
-async def dispatch_alerts(db: AsyncSession, source: str = "unknown") -> int:
+def _parse_channels(channels: str | None) -> tuple[str, ...]:
+    """Doc header `X-Dispatch-Channels`: "telegram" | "email" | "both" (mac dinh).
+
+    Tra ve tuple kenh duoc giai quyet o lan dispatch nay. Gia tri la lai ve
+    "both" — khong lam chet webhook vi mot header go sai.
+    """
+    if channels == "telegram":
+        return ("telegram",)
+    if channels == "email":
+        return ("email",)
+    return ("telegram", "email")
+
+
+async def dispatch_alerts(
+    db: AsyncSession,
+    source: str = "unknown",
+    channels: tuple[str, ...] = ("telegram", "email"),
+) -> int:
     """Find matching jobs for all active users and send alerts.
 
     Args:
@@ -45,6 +62,12 @@ async def dispatch_alerts(db: AsyncSession, source: str = "unknown") -> int:
         source: Which trigger source initiated this dispatch
                 ("background_loop", "admin_manual", "cron_webhook", "etl_inline",
                  "vnw_etl", "itviec_etl", "linkedin_etl", "alert_dispatch_flow")
+        channels: subset cua ("telegram", "email") — kenh duoc giai quyet lan nay.
+            - "telegram": chi gui telegram, dedup theo website marker nhu cu.
+            - "email": chi gui email, dedup RIENG theo dong email 'sent' — khong
+              chan nham job telegram da gui, nen user co ca 2 kenh van nhan ca 2
+              khi hai pipeline chay doc lap (va dong email 'failed' duoc thu lai
+              o slot sau).
 
     Returns total number of new jobs alerted.
     """
@@ -55,11 +78,32 @@ async def dispatch_alerts(db: AsyncSession, source: str = "unknown") -> int:
         if not lay_duoc_khoa:
             logger.warning("Alert dispatch already in progress, skipping (source=%s)", source)
             return 0
-        return await _dispatch_alerts_locked(db, source)
+        return await _dispatch_alerts_locked(db, source, channels)
 
 
-async def _dispatch_alerts_locked(db: AsyncSession, source: str) -> int:
+async def _get_email_alerted_ids(db: AsyncSession, user_id) -> set[tuple[str | None, str]]:
+    """Cac (job_source, source_job_id) da GUI EMAIL thanh cong cho user.
+
+    Dedup rieng cua pipeline email. CHI dem dong 'sent': dong 'failed' phai
+    duoc thu lai o slot sau (khong giong website marker, von khong het han).
+    """
+    result = await db.execute(
+        select(AlertLog.job_source, AlertLog.source_job_id).where(
+            AlertLog.user_id == user_id,
+            AlertLog.channel == "email",
+            AlertLog.status == "sent",
+        )
+    )
+    return {(r[0], r[1]) for r in result.all()}
+
+
+async def _dispatch_alerts_locked(
+    db: AsyncSession, source: str, channels: tuple[str, ...]
+) -> int:
     """Than cua `dispatch_alerts`, chay khi da CHAC CHAN giu khoa dispatch."""
+    want_tg = "telegram" in channels
+    want_email = "email" in channels
+
     result = await db.execute(
         select(User, TelegramConnection.chat_id)
         .outerjoin(
@@ -88,72 +132,78 @@ async def _dispatch_alerts_locked(db: AsyncSession, source: str) -> int:
         user: User = row[0]
         chat_id: int | None = row[1]
 
+        email_enabled = await _is_email_enabled(db, user.id)
+        # Khong co kenh nao duoc chon ma user dang ky -> bo qua, KHONG ghi
+        # marker nao (cung tinh than JA-52: khong co kenh gui thi khong dot
+        # hang doi dedup).
+        if not ((want_tg and chat_id) or (want_email and email_enabled)):
+            continue
+
         try:
-            jobs = await matcher.find_jobs(user)
+            # Pipeline email dedup rieng theo email rows nen duoc phep bo qua
+            # website marker (find_jobs bao gom ca job da bao qua telegram).
+            # Pipeline telegram van dedup theo website marker nhu cu.
+            jobs = await matcher.find_jobs(user, include_alerted=(want_email and not want_tg))
             if not jobs:
                 continue
 
             # Truyen `source` xuong: log_and_send ghi cac dong website/telegram,
             # tuc la 2/3 so alert. Bo qua tham so nay la ly do 63% ban ghi that
             # co source = NULL va trang admin dispatch-history khong doc duoc.
-            # Kiem email TRUOC khi goi log_and_send: no can biet user co bat
-            # ky kenh gui nao khong. Khong co kenh nao thi khong duoc ghi dau
-            # moc dedup — xem JA-52 trong job_matcher.log_and_send.
-            email_enabled = await _is_email_enabled(db, user.id)
+            sent = 0
+            if want_tg:
+                sent = await matcher.log_and_send(
+                    user, jobs, chat_id, _send_message,
+                    source=source, email_enabled=(want_email and email_enabled),
+                )
 
-            sent = await matcher.log_and_send(
-                user, jobs, chat_id, _send_message,
-                source=source, email_enabled=email_enabled,
-            )
-
-            if email_enabled and user.email:
-                try:
-                    email_result = await send_job_alert_email(
-                        to=user.email,
-                        user_name=user.full_name,
-                        jobs=jobs,
-                        user_id=user.id,
-                    )
-                    if email_result.success:
-                        for j in jobs:
-                            db.add(AlertLog(
-                                user_id=user.id,
-                                job_source=j.source,
-                                source_job_id=j.source_job_id,
-                                channel="email",
-                                status="sent",
-                                source=source,
-                            ))
-                    else:
-                        # Log failed email for potential retry
-                        for j in jobs:
-                            db.add(AlertLog(
-                                user_id=user.id,
-                                job_source=j.source,
-                                source_job_id=j.source_job_id,
-                                channel="email",
-                                status="failed",
-                                error_message=email_result.error[:500] if email_result.error else "Unknown error",
-                                source=source,
-                            ))
-                except Exception as exc:
-                    logger.exception("Email send failed for user %s", user.id)
-                    # Log failed entries
-                    for j in jobs:
-                        db.add(AlertLog(
+            if want_email and email_enabled and user.email:
+                email_alerted = await _get_email_alerted_ids(db, user.id)
+                email_jobs = [
+                    j for j in jobs
+                    if (j.source, j.source_job_id) not in email_alerted
+                ]
+                if email_jobs:
+                    try:
+                        email_result = await send_job_alert_email(
+                            to=user.email,
+                            user_name=user.full_name,
+                            jobs=email_jobs,
                             user_id=user.id,
-                            job_source=j.source,
-                            source_job_id=j.source_job_id,
-                            channel="email",
-                            status="failed",
-                            error_message=str(exc)[:500],
-                            source=source,
-                        ))
+                        )
+                        # Upsert (ON CONFLICT) chu khong insert: unique constraint
+                        # (user_id, job_source, source_job_id, channel) chi cho
+                        # MOT dong email cho mot job — retry phai UPDATE dong
+                        # 'failed' cu thanh 'sent', khong duoc insert dong moi.
+                        status = "sent" if email_result.success else "failed"
+                        err = (
+                            (email_result.error or "Unknown error")[:500]
+                            if not email_result.success else None
+                        )
+                        for j in email_jobs:
+                            await _upsert_email_log(
+                                db, user.id, j.source, j.source_job_id,
+                                status, err, source,
+                            )
+                        # Chi tinh vao total khi pipeline nay la nguon duy nhat:
+                        # khi ca 2 kenh cung chay, telegram da tinh job do roi.
+                        if not want_tg and email_result.success:
+                            total_sent += len(email_jobs)
+                    except Exception as exc:
+                        logger.exception("Email send failed for user %s", user.id)
+                        for j in email_jobs:
+                            await _upsert_email_log(
+                                db, user.id, j.source, j.source_job_id,
+                                "failed", str(exc)[:500], source,
+                            )
 
             await db.commit()
 
             total_sent += sent
-            logger.info("Sent %d alerts to user %s (telegram=%s, email=%s)", sent, user.id, bool(chat_id), email_enabled)
+            logger.info(
+                "Sent %d alerts to user %s (telegram=%s, email=%s)",
+                sent, user.id, bool(chat_id and want_tg), email_enabled,
+            )
 
         except Exception:
             logger.exception("Failed to dispatch alerts for user %s", user.id)

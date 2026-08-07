@@ -272,7 +272,7 @@ class TestEmailHTML:
     def test_html_contains_salary(self):
         jobs = _sample_jobs(1)
         html = _build_job_alert_html("Test", jobs)
-        assert "35 trieu" in html
+        assert "35 triệu" in html
 
     def test_html_contains_city(self):
         jobs = _sample_jobs(1)
@@ -505,7 +505,11 @@ class TestDispatchWithEmail:
 
     @pytest.mark.asyncio
     async def test_dispatch_skips_email_when_not_subscribed(self):
-        """User without email subscription → no email sent."""
+        """User without email subscription → no email sent.
+
+        User cung khong co telegram (chat_id=None) nen khong co kenh nao de gui:
+        dispatch bo qua toan bo (JA-52) — khong gui email, khong ghi marker gi.
+        """
         user = _make_user(email="nosub@example.com")
         jobs = _sample_jobs(1)
 
@@ -544,7 +548,7 @@ class TestDispatchWithEmail:
             from app.services.job_alert import dispatch_alerts
             total = await dispatch_alerts(mock_db)
 
-        assert total == 1
+        assert total == 0, "user khong co kenh nao thi khong dispatch gi ca"
         mock_send.assert_not_called()
 
     @pytest.mark.asyncio
