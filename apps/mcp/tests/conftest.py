@@ -1,8 +1,28 @@
 from __future__ import annotations
 
+import sys
+import types
+from pathlib import Path
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+# Dockerfile lam `COPY . /app/mcp_server/` — package `mcp_server` CHI TON TAI
+# trong image, khong co trong source repo (thu muc goc la server.py + repositories/,
+# schemas/...). Test import `from mcp_server...` nen chay pytest truc tiep tren
+# source (CI, local) chet ModuleNotFoundError — da vap 2026-08-07, test gate MCP
+# chua bao gio xanh tu khi them vao CI.
+#
+# Conftest chay TRUOC khi collect test module cua thu muc nay, nen alias o day
+# ap dung cho toan bo test. `__path__` tro ve thu muc goc de `mcp_server.repositories`
+# giai ra <root>/repositories, `mcp_server.server` ra <root>/server.py — khop
+# dung layout ben trong image. Hoat dong voi moi version pytest (importlib hay khong).
+_ROOT = Path(__file__).resolve().parents[1]
+if not (_ROOT / "mcp_server").exists():
+    _pkg = types.ModuleType("mcp_server")
+    _pkg.__path__ = [str(_ROOT)]
+    sys.modules["mcp_server"] = _pkg
 
 
 def make_record(data: dict) -> MagicMock:

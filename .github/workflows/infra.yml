@@ -32,19 +32,19 @@ jobs:
 
     steps:
       # Xem ghi chu day du o backend.yml deploy job (step nay can thiet mot lan).
-      - name: Clean stale logs/nginx
+      - name: Clean stale logs
         run: |
           # Xem ghi chu o backend.yml: runner khong co sudo, dung docker container
-          # chay root de xoa file root-owned (chi xoa noi dung, git clean tu rmdir).
-          if [ -e "$GITHUB_WORKSPACE/logs/nginx" ]; then
-            docker run --rm -v "$GITHUB_WORKSPACE/logs/nginx":/target alpine \
-              sh -c 'rm -rf /target/* /target/.[!.]* 2>/dev/null' || {
-              echo "Khong xoa duoc logs/nginx. Chay tay tren box:"
-              echo "  sudo rm -rf $GITHUB_WORKSPACE/logs/nginx"
+          # chay root — mount CA worktree roi rm -rf /ws/logs (xoa ca thu muc
+          # root-owned lan noi dung).
+          if [ -e "$GITHUB_WORKSPACE/logs" ]; then
+            docker run --rm -v "$GITHUB_WORKSPACE":/ws alpine rm -rf /ws/logs || {
+              echo "Khong xoa duoc logs. Chay tay tren box:"
+              echo "  sudo rm -rf $GITHUB_WORKSPACE/logs"
               exit 1
             }
           fi
-          echo "logs/nginx trong worktree da sach"
+          echo "logs trong worktree da sach"
 
       - name: Checkout code
         uses: actions/checkout@v5

@@ -160,20 +160,20 @@ jobs:
       # do) va con sot logs/nginx root-owned tu thoi ky mount cu `./logs/nginx`
       # (truoc khi doi sang `../logs/nginx` — xem docker-compose.yml). De lai thi
       # checkout van chet o "Deleting the contents" voi EACCES.
-      - name: Clean stale logs/nginx
+      - name: Clean stale logs
         run: |
           # Runner KHONG co sudo khong-mat-khau (da do). Nhung co docker: container
-          # chay root xoa duoc file root-owned qua bind mount. Chi can xoa NOI
-          # DUNG — git clean sau do tu rmdir duoc thu muc rong.
-          if [ -e "$GITHUB_WORKSPACE/logs/nginx" ]; then
-            docker run --rm -v "$GITHUB_WORKSPACE/logs/nginx":/target alpine \
-              sh -c 'rm -rf /target/* /target/.[!.]* 2>/dev/null' || {
-              echo "Khong xoa duoc logs/nginx. Chay tay tren box:"
-              echo "  sudo rm -rf $GITHUB_WORKSPACE/logs/nginx"
+          # chay root xoa duoc ca THU MUC logs (do docker tu tao luc bind mount,
+          # root-owned) lan file ben trong. Mount CA worktree roi rm -rf /ws/logs
+          # — tu namespace cua container, logs la thu muc thuong nen rmdir duoc.
+          if [ -e "$GITHUB_WORKSPACE/logs" ]; then
+            docker run --rm -v "$GITHUB_WORKSPACE":/ws alpine rm -rf /ws/logs || {
+              echo "Khong xoa duoc logs. Chay tay tren box:"
+              echo "  sudo rm -rf $GITHUB_WORKSPACE/logs"
               exit 1
             }
           fi
-          echo "logs/nginx trong worktree da sach (hoac khong ton tai)"
+          echo "logs trong worktree da sach (hoac khong ton tai)"
 
       - name: Checkout code
         uses: actions/checkout@v5
