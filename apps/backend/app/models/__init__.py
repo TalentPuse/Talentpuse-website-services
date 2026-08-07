@@ -1,4 +1,5 @@
 from app.models.alert_log import AlertLog
+from app.models.api_key import ApiKey
 from app.models.base import Base
 from app.models.interview import InterviewAnswer, InterviewQuestion, InterviewSession
 from app.models.jd_insight import JdInsight
@@ -12,6 +13,7 @@ __all__ = [
     "TelegramConnection",
     "AlertSubscription",
     "AlertLog",
+    "ApiKey",
     "InterviewQuestion",
     "InterviewSession",
     "InterviewAnswer",
