@@ -4,19 +4,21 @@ from __future__ import annotations
 import hashlib
 import logging
 import secrets
+import time
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.cache import cache_get_json, cache_set_json
+from app.core.cache import cache_claim
 from app.models.api_key import ApiKey
 
 logger = logging.getLogger(__name__)
 
+# Budget rate limit: 60 request / phut / key (spec §6:118).
 RATE_LIMIT_PER_MINUTE = 60
-
-_rate_limiter = None  # hook cho test; thuc te dung cache claim
+# TTL moi slot giay: 61s > 1 phut nen slot cu roi khoi cua so truoc khi tai su dung.
+_RATE_SLOT_TTL_SECONDS = 61
 
 
 def generate_key() -> str:
@@ -80,16 +82,25 @@ async def list_keys(db: AsyncSession) -> list[dict]:
     ]
 
 
-def rate_limit_ok(key_hash_value: str) -> bool:
-    """Rate limit 60 req/phut theo key. Redis chet -> fail-open (True)."""
-    if _rate_limiter is None:
-        return True
+async def rate_limit_ok(key_hash_value: str) -> bool:
+    """Rate limit 60 req/phut theo key. Redis chet -> fail-open (True).
+
+    Dem theo luoi giay: moi giay trong phut la mot key claim rieng
+    `paid:rl:{key_hash}:{epoch_giay}` (TTL 61s). Moi request chiem dung slot
+    giay cua no bang `cache_claim` (SET NX EX nguyen tu) nen toi da 60 request
+    thanh cong trong mot cua so 60s — slot da chiem (request thu 2+ trong cung
+    giay) -> False.
+
+    Fail-open trong ca hai lop: `cache_claim` tra True khi Redis chet / khong
+    cau hinh, va try/except o day chan bat ky loi bat thuong nao khac — toi da
+    chi lam request chay cham hon mot chut khi khong co cache, khong bao gio
+    chan nham request hop le.
+    """
+    slot = f"paid:rl:{key_hash_value}:{int(time.time())}"
     try:
-        import time
-        from app.core.cache import cache_claim
-        # cache_claim la async — dung trample thuc te: INCR qua redis neu co
-        # Don gian: dung cache_claim 1 key/60s khong du (can dem). Vi vay:
-        # rate limit dung Redis INCR — neu _rate_limiter None thi bo qua.
-        return True
+        return await cache_claim(slot, _RATE_SLOT_TTL_SECONDS)
     except Exception:
+        # Fail-open lan nua o lop nay (ngoai hop dong cua cache_claim): loi
+        # bat thuong tu Redis khong duoc chan request cua khach.
+        logger.warning("rate limit check failed for key=%s, failing open", key_hash_value)
         return True

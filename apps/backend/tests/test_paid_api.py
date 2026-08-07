@@ -173,3 +173,32 @@ async def test_skills_top_loc_theo_category(db_session):
         assert all(set(row) == {"skill", "n_jobs"} for row in rows)
     finally:
         await _del_aggregate(db_session)
+
+
+async def test_skills_top_gop_synonym_va_hoa_thuong(db_session):
+    """"AI" / "Artificial Intelligence" / "ai" gop thanh 1 row; nodejs->node.js."""
+    await db_session.execute(text("DELETE FROM app.jd_insight WHERE source = 'tptest-syn'"))
+    await db_session.commit()
+    base = {"summary": {"role_summary": "x", "seniority_hint": "mid"},
+            "skills": {"hard": [], "soft": [], "tools": [], "languages": [], "certifications": []},
+            "requirements": {}, "responsibilities": [], "benefits": [], "keywords": [], "extras": []}
+    base["skills"]["hard"] = ["AI", "Artificial Intelligence", "nodejs"]
+    await upsert_insight(db_session, "tptest-syn", "1", base)
+    base["skills"]["hard"] = [" ai ", "NodeJS"]
+    await upsert_insight(db_session, "tptest-syn", "2", base)
+    try:
+        raw = await create_api_key(db_session, "Syn")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.get("/api/v1/skills/top", headers={"X-API-Key": raw})
+        assert r.status_code == 200
+        rows = r.json()
+        # "AI"(job1) + "Artificial Intelligence"(job1) + " ai "(job2) = 3
+        assert {"skill": "ai", "n_jobs": 3} in rows
+        # "nodejs"(job1) + "NodeJS"(job2) = 2, gop thanh node.js
+        assert {"skill": "node.js", "n_jobs": 2} in rows
+        # Khong con dang tho nao song song voi dang chuan
+        assert not any(row["skill"] in ("AI", "Artificial Intelligence", "nodejs", "NodeJS")
+                       for row in rows)
+    finally:
+        await db_session.execute(text("DELETE FROM app.jd_insight WHERE source = 'tptest-syn'"))
+        await db_session.commit()

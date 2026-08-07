@@ -55,3 +55,49 @@ async def test_extract_internal_yeu_cau_secret(client):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         r = await c.post("/api/admin/jd/extract")
     assert r.status_code == 403
+
+
+async def test_extract_happy_path(monkeypatch):
+    secret = "test-only-webhook-secret-value"
+    calls = {}
+
+    async def fake_pipeline(db, limit=50):
+        calls["limit"] = limit
+        return 7
+
+    monkeypatch.setattr("app.api.admin.run_extract_pipeline", fake_pipeline)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.post("/api/admin/jd/extract",
+                         headers={"X-Webhook-Secret": secret, "X-Extract-Limit": "200"})
+    assert r.status_code == 200
+    assert r.json() == {"extracted": 7}
+    assert calls["limit"] == 200
+
+
+async def test_extract_limit_khong_phai_so_tra_400(client):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.post(
+            "/api/admin/jd/extract",
+            headers={"X-Webhook-Secret": "test-only-webhook-secret-value",
+                     "X-Extract-Limit": "abc"},
+        )
+    assert r.status_code == 400
+    assert "X-Extract-Limit" in r.json()["detail"]
+
+
+async def test_extract_limit_qua_lon_bi_clamp(monkeypatch):
+    calls = {}
+
+    async def fake_pipeline(db, limit=50):
+        calls["limit"] = limit
+        return 3
+
+    monkeypatch.setattr("app.api.admin.run_extract_pipeline", fake_pipeline)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.post(
+            "/api/admin/jd/extract",
+            headers={"X-Webhook-Secret": "test-only-webhook-secret-value",
+                     "X-Extract-Limit": "9999"},
+        )
+    assert r.status_code == 200
+    assert calls["limit"] == 200

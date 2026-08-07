@@ -57,7 +57,25 @@ async def test_list_keys(db_session):
     assert all("key_hash" not in k for k in keys)  # khong lo key tho/hash
 
 
-def test_rate_limit_fail_open(monkeypatch):
-    # Redis chet -> True (fail-open)
-    monkeypatch.setattr("app.services.paid_quota._rate_limiter", None)
-    assert rate_limit_ok("abc") is True
+async def test_rate_limit_fail_open(monkeypatch):
+    # Redis chet -> True (fail-open): cache_claim nem loi / tra None client.
+    async def _boom(key, ttl_seconds):
+        raise RuntimeError("redis down")
+    monkeypatch.setattr("app.services.paid_quota.cache_claim", _boom)
+    assert await rate_limit_ok("abc") is True
+
+
+async def test_rate_limit_het_han_muc(monkeypatch):
+    # Slot giay cua key da bi claim -> False (chan request).
+    async def _claimed(key, ttl_seconds):
+        return False
+    monkeypatch.setattr("app.services.paid_quota.cache_claim", _claimed)
+    assert await rate_limit_ok("abc") is False
+
+
+async def test_rate_limit_con_cho_phep(monkeypatch):
+    # Slot con trong -> True.
+    async def _free(key, ttl_seconds):
+        return True
+    monkeypatch.setattr("app.services.paid_quota.cache_claim", _free)
+    assert await rate_limit_ok("abc") is True

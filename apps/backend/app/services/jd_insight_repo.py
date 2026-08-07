@@ -34,11 +34,17 @@ async def get_insight(db: AsyncSession, source: str, source_job_id: str) -> dict
 
 
 async def get_missing_job_keys(db: AsyncSession, limit: int = 100) -> list[tuple[str, str]]:
-    """Cac (source, source_job_id) co JD text nhung CHUA co insight."""
+    """Cac (source, source_job_id) co JD text nhung CHUA co insight.
+
+    Tinh ca `job_requirement_text` vao do dai: `get_jd_text` (jd_pipeline) gop
+    ca 2 truong, nhung filter cu chi nhin `job_description_text` nen job mo ta
+    ngan + yeu cau dai khong bao gio duoc extract.
+    """
     rows = await db.execute(text("""
         SELECT d.source, d.source_job_id
         FROM dbt_dev_silver.silver_job_detail d
-        WHERE length(coalesce(d.job_description_text, '')) > 100
+        WHERE length(coalesce(d.job_description_text, ''))
+            + length(coalesce(d.job_requirement_text, '')) > 100
           AND NOT EXISTS (
               SELECT 1 FROM app.jd_insight i
               WHERE i.source = d.source AND i.source_job_id = d.source_job_id

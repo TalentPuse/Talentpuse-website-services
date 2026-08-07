@@ -2,20 +2,26 @@
 
 Goi endpoint noi bo /api/admin/jd/extract (webhook secret nhu alert).
 Lich: 17:00 VN — sau khi warehouse sync job moi ve.
+
+KHONG co block __main__/serve() o day: alerts.py la entry chuan, no import
+flow nay vao chung mot `serve(...)` de tranh deployment trung lap.
 """
 from __future__ import annotations
 
 import os
+import time
 
 import httpx
 from prefect import flow, get_run_logger, task
 from prefect.artifacts import create_markdown_artifact
 from prefect.client.schemas.schedules import CronSchedule
 
-_CRON_VN = CronSchedule(cron="0 17 * * *", timezone="Asia/Ho_Chi_Minh")
+# Lich cua flow nay — alerts.py la entry chuan va serve deployment
+# jd-extract-daily voi chinh hang so nay (import lai, khong dinh nghia nua).
+_CRON_JD = CronSchedule(cron="0 17 * * *", timezone="Asia/Ho_Chi_Minh")
 
 
-@task(name="jd_extract", retries=2, retry_delay_seconds=60, timeout_seconds=1800)
+@task(name="jd_extract", timeout_seconds=1800)
 def _extract() -> dict:
     logger = get_run_logger()
     url = os.getenv("DASHBOARD_API_URL", "http://tp-backend:8001")
@@ -37,25 +43,21 @@ def _extract() -> dict:
 
 @flow(name="jd-extract")
 def jd_extract_flow() -> dict:
+    t0 = time.time()
     result = _extract()
+    dur = time.time() - t0
+    extracted = result.get("extracted", 0)
+    error = result.get("error")
+    status = "success" if not error else f"error: {error}"
     create_markdown_artifact(
-        markdown=f"## JD Extract\n| Extracted | {result.get('extracted', 0)} |",
+        markdown=(
+            f"## JD Extract\n"
+            f"| Metric | Value |\n|--------|-------|\n"
+            f"| Extracted | {extracted} |\n"
+            f"| Status | {status} |\n"
+            f"| Duration | {dur:.1f}s |"
+        ),
         key="jd-extract-result",
-        description=f"JD extract: {result.get('extracted', 0)} jobs",
+        description=f"JD extract: {extracted} jobs ({status})",
     )
     return result
-
-
-if __name__ == "__main__":
-    if os.getenv("PREFECT_DEPLOY", "0") == "1":
-        from prefect import serve
-
-        serve(
-            jd_extract_flow.to_deployment(
-                name="jd-extract-daily",
-                schedules=[_CRON_VN],
-                tags=["jdi"],
-            ),
-        )
-    else:
-        jd_extract_flow()

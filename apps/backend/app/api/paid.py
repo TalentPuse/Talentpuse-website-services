@@ -12,6 +12,21 @@ from app.services.paid_quota import hash_key, rate_limit_ok, verify_key
 
 router = APIRouter(prefix="/api/v1", tags=["paid"])
 
+# Synonym normalize cho skills/top (spec §3:71): lowercase + map cac bien the
+# pho bien ve mot dang chuan truoc khi gop. Dict nho, co chu y — chi them cap
+# nao that su xuat hien tren du lieu, khong cau bau toan bo tu dien.
+SYNONYM_MAP = {
+    "artificial intelligence": "ai",
+    "machine learning": "ml",
+    "nodejs": "node.js",
+    "reactjs": "react",
+}
+
+
+def _norm_skill(raw: str) -> str:
+    key = (raw or "").strip().lower()
+    return SYNONYM_MAP.get(key, key)
+
 
 async def require_api_key(
     x_api_key: str | None = Header(None, alias="X-API-Key"),
@@ -19,7 +34,7 @@ async def require_api_key(
 ) -> None:
     if not x_api_key:
         raise HTTPException(401, "Thieu X-API-Key")
-    if not rate_limit_ok("x"):  # fail-open, placeholder hash
+    if not await rate_limit_ok(hash_key(x_api_key)):
         raise HTTPException(429, "Qua nhieu request trong 1 phut")
     if not await verify_key(db, x_api_key):
         # verify_key chi tra False: key sai/revoked HOAC het quota — phan biet
@@ -53,17 +68,22 @@ async def skills_top(
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     extra, params = _filter_sql(category, city)
-    params["limit"] = limit
+    # SQL gop da hoa thuong (lower+trim), Python gop synonym — khong map trong
+    # DB de giu SQL de doc. LIMIT phai tinh SAU gop nen fetch toan bo roi loc.
     rows = await db.execute(text(f"""
-        SELECT s.skill, count(*)::int AS n_jobs
+        SELECT lower(btrim(s.skill)) AS skill, count(*)::int AS n_jobs
         FROM app.jd_insight i
         CROSS JOIN LATERAL jsonb_array_elements_text(i.data->'skills'->'hard') AS s(skill)
         WHERE 1=1 {extra}
-        GROUP BY s.skill
+        GROUP BY 1
         ORDER BY n_jobs DESC
-        LIMIT :limit
     """), params)
-    return [dict(r) for r in rows.mappings()]
+    merged: dict[str, int] = {}
+    for r in rows.mappings():
+        norm = _norm_skill(r["skill"])
+        merged[norm] = merged.get(norm, 0) + r["n_jobs"]
+    top = sorted(merged.items(), key=lambda kv: kv[1], reverse=True)[:limit]
+    return [{"skill": skill, "n_jobs": n} for skill, n in top]
 
 
 @router.get("/tools/top")

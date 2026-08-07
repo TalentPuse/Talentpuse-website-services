@@ -29,8 +29,10 @@ from prefect import flow, get_run_logger, task
 from prefect.artifacts import create_markdown_artifact
 from prefect.client.schemas.schedules import CronSchedule
 
+# Lich cua flow JD lay tu flows.jd_extract — nguon duy nhat, tranh lech cron.
+from flows.jd_extract import _CRON_JD
+
 _CRON_VN = CronSchedule(cron="0 7,12 * * *", timezone="Asia/Ho_Chi_Minh")
-_CRON_JD = CronSchedule(cron="0 17 * * *", timezone="Asia/Ho_Chi_Minh")
 
 
 @task(name="dispatch_alerts", retries=2, retry_delay_seconds=30, timeout_seconds=180)

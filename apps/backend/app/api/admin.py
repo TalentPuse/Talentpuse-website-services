@@ -293,8 +293,16 @@ async def admin_jd_extract(
     secret = request.headers.get("X-Webhook-Secret", "")
     if not secret or secret != cfg.TELEGRAM_WEBHOOK_SECRET:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret")
-    limit = int(request.headers.get("X-Extract-Limit", "50"))
-    n = await run_extract_pipeline(db, limit=min(limit, 200))
+    raw_limit = request.headers.get("X-Extract-Limit", "50")
+    try:
+        limit = int(raw_limit)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"X-Extract-Limit phai la so nguyen, nhan duoc {raw_limit!r}",
+        )
+    limit = max(0, min(limit, 200))
+    n = await run_extract_pipeline(db, limit=limit)
     return {"extracted": n}
 
 
