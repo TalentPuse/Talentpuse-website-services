@@ -157,7 +157,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        # `clean: false` BAT BUOC: self-hosted runner khong xoa duoc
+        # `logs/nginx` (nginx container chay root, tao file root-owned trong
+        # thu muc checkout qua bind mount ./logs/nginx). Checkout mac dinh
+        # `git clean` untracked -> EACCES -> "repository will be recreated"
+        # -> van EACCES o logs/nginx -> deploy chet ngay tu buoc dau.
+        # Deploy chi can file hien tai, khong can xoa logs, nen bo qua clean.
+        with:
+          clean: false
 
       - name: Create runtime .env
         run: |
