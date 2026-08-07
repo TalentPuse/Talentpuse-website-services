@@ -33,6 +33,8 @@ Ban trich xuat du lieu co cau truc tu noi dung tin tuyen dung (JD) tieng Viet/An
 Tra VE JSON DUNG SCHEMA sau (khong them giai thich):
 
 {
+  "job": {"title": "tu tieu de", "company_name": "...", "job_level": "...", "job_category": "...",
+          "city_canonical": "..."},
   "summary": {"role_summary": "1-2 cau", "seniority_hint": "intern|fresher|junior|mid|senior|lead|manager|null"},
   "skills": {"hard": ["ky nang ky thuat"], "soft": ["ky nang mem"], "tools": ["cong cu/framework"],
              "languages": [{"lang": "Tieng Nhat", "level": "N2"}], "certifications": ["AWS Certified"]},
@@ -53,33 +55,50 @@ Quy tac:
 - extras.aspect: snake_case lowercase (deadline, working_hours, probation, team_size, report_to, salary_note, location_detail...)
 - extras toi da 10 items
 - Salary trong JD chi duoc ghi vao extras voi aspect "salary_note", KHONG co field salary rieng
+- job.source/source_job_id do he thong dien, KHONG tra trong JSON
 """
 
 
-def _call_llm(text: str) -> str:
+def _call_llm(text: str, *, json_mode: bool = True) -> str:
     """Sync goi OpenAI (chay trong thread) — tra raw content tu LLM."""
     client = _get_chat()
-    resp = client.chat.completions.create(
-        model=OPENAI_MODEL,
-        temperature=0,
-        response_format={"type": "json_object"},
-        timeout=120,
-        messages=[
+    kwargs = {
+        "model": OPENAI_MODEL,
+        "temperature": 0,
+        "timeout": 120,
+        "messages": [
             {"role": "system", "content": _PROMPT},
-            {"role": "user", "content": text[:8000]},
+            {"role": "user", "content": text},
         ],
-    )
+    }
+    if json_mode:
+        kwargs["response_format"] = {"type": "json_object"}
+    resp = client.chat.completions.create(**kwargs)
     return (resp.choices[0].message.content or "").strip()
 
 
-async def extract_insight(text: str) -> dict:
-    """Goi LLM extract JD text -> dict JSON da validate theo JdInsight."""
+async def extract_insight(
+    text: str, source: str | None = None, source_job_id: str | None = None
+) -> dict:
+    """Goi LLM extract JD text -> dict JSON da validate theo JdInsight.
+
+    source/source_job_id la metadata DB, merge vao job sau khi LLM tra ve.
+    """
     try:
-        content = await asyncio.to_thread(_call_llm, text[:8000])
+        try:
+            content = await asyncio.to_thread(_call_llm, text[:8000])
+        except Exception:
+            logger.warning("json_mode call failed, retry khong response_format", exc_info=True)
+            content = await asyncio.to_thread(_call_llm, text[:8000], json_mode=False)
         data = json.loads(content)
     except Exception as exc:
         raise ExtractError(f"llm_extract_failed: {exc}") from exc
     try:
+        job = data.setdefault("job", {})
+        if source is not None:
+            job["source"] = source
+        if source_job_id is not None:
+            job["source_job_id"] = source_job_id
         return JdInsight.model_validate(data).model_dump(mode="json")
     except Exception as exc:
         raise ExtractError(f"llm_parse_error: {exc}") from exc
