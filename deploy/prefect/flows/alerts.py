@@ -30,6 +30,7 @@ from prefect.artifacts import create_markdown_artifact
 from prefect.client.schemas.schedules import CronSchedule
 
 _CRON_VN = CronSchedule(cron="0 7,12 * * *", timezone="Asia/Ho_Chi_Minh")
+_CRON_JD = CronSchedule(cron="0 17 * * *", timezone="Asia/Ho_Chi_Minh")
 
 
 @task(name="dispatch_alerts", retries=2, retry_delay_seconds=30, timeout_seconds=180)
@@ -95,6 +96,8 @@ if __name__ == "__main__":
     if os.getenv("PREFECT_DEPLOY", "0") == "1":
         from prefect import serve
 
+        from flows.jd_extract import jd_extract_flow
+
         serve(
             alert_telegram_flow.to_deployment(
                 name="alert-telegram-daily",
@@ -105,6 +108,11 @@ if __name__ == "__main__":
                 name="alert-email-daily",
                 schedules=[_CRON_VN],
                 tags=["alerts", "email"],
+            ),
+            jd_extract_flow.to_deployment(
+                name="jd-extract-daily",
+                schedules=[_CRON_JD],
+                tags=["jdi"],
             ),
         )
     else:
