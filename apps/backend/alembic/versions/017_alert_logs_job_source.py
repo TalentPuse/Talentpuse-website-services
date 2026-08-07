@@ -50,17 +50,29 @@ def upgrade() -> None:
 
     # Chi backfill khi id XAC DINH duy nhat mot nguon. `HAVING count(DISTINCT
     # source) = 1` chinh la cho chan viec doan bua.
-    op.execute("""
-        UPDATE app.alert_logs al
-        SET job_source = m.source
-        FROM (
-            SELECT source_job_id, min(source) AS source
-            FROM dbt_dev_gold.fct_jobs_daily
-            GROUP BY source_job_id
-            HAVING count(DISTINCT source) = 1
-        ) m
-        WHERE al.source_job_id = m.source_job_id
-    """)
+    #
+    # Gioi han `to_regclass` BAT BUOC: `dbt_dev_gold.fct_jobs_daily` la bang cua
+    # kho du lieu, KHONG ton tai tren DB moi (CI, box moi, DB test). Backfill
+    # khong dieu kien thi `alembic upgrade head` chet ngay voi "relation
+    # dbt_dev_gold.fct_jobs_daily does not exist" — CI test job do -> deploy bi
+    # chan -> box van chay image cu ma khong ai hay. Thieu bang thi khong co
+    # gi de suy nguoc, de NULL (dung y nghia duoc ghi o docstring).
+    conn = op.get_bind()
+    co_bang_kho = conn.execute(
+        sa.text("SELECT to_regclass('dbt_dev_gold.fct_jobs_daily') IS NOT NULL")
+    ).scalar()
+    if co_bang_kho:
+        op.execute("""
+            UPDATE app.alert_logs al
+            SET job_source = m.source
+            FROM (
+                SELECT source_job_id, min(source) AS source
+                FROM dbt_dev_gold.fct_jobs_daily
+                GROUP BY source_job_id
+                HAVING count(DISTINCT source) = 1
+            ) m
+            WHERE al.source_job_id = m.source_job_id
+        """)
 
     op.drop_constraint(
         "uq_alert_log_user_job_channel", "alert_logs", schema="app", type_="unique"

@@ -19,6 +19,22 @@ import uuid
 os.environ["JWT_SECRET"] = "test-only-jwt-secret-not-used-in-any-real-env"
 os.environ["TELEGRAM_WEBHOOK_SECRET"] = "test-only-webhook-secret-value"
 
+# Phai set TRUOC khi bat ky loop nao duoc tao (khi chay tren Windows).
+#
+# Python >=3.8 tren Windows mac dinh dung ProactorEventLoop, ma psycopg (async
+# mode) tu choi chay tren no: `Psycopg cannot use the 'ProactorEventLoop'`.
+# TestClient (starlette) chay lifespan cua app trong mot loop rieng cua anyio,
+# va `init_agui` (app/main.py) mo AsyncPostgresSaver -> 3 test (agui_config,
+# alert_click) chet voi InterfaceError. Fixture `setup_event_loop` ben duoi chi
+# set policy o SESSION START — qua muon cho nhung loop do. Set o module level
+# la ngay khi conftest duoc import, truoc khi pytest-asyncio / TestClient tao
+# bat ky loop nao. Tren Linux day la no-op.
+if sys.platform == "win32":
+    import asyncio
+    import asyncio.windows_events
+
+    asyncio.set_event_loop_policy(asyncio.windows_events.WindowsSelectorEventLoopPolicy())
+
 import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402

@@ -55,6 +55,9 @@ services:
       # duoc khi no chet, nen tro sai hoac khong co redis chi lam mat cache chu
       # khong gay tinh nang. Xem app/core/cache.py.
       REDIS_URL: ${REDIS_URL:-redis://tp-redis:6379/0}
+      # Prefect la scheduler cua alert (tp-prefect-server + tp-alert-worker) —
+      # loop 2h trong process phai tat mac dinh. Bat lai = 1 khi can luoi an toan.
+      ALERT_LOOP_ENABLED: ${ALERT_LOOP_ENABLED:-0}
     networks:
       - talentpulse
     restart: unless-stopped
@@ -136,6 +139,54 @@ services:
       timeout: 5s
       retries: 3
 
+  # ── Prefect cua WEB BOX (rieng, khong lien quan warehouse box) ─────────────
+  # Chi lo alert dispatch: scheduler + UI + worker, khong keo theo stack crawl.
+  # Warehouse box chay prefect cua no (repo pipeline_data) — hai ben doc lap.
+  #
+  # ⚠️ Prefect 2 OSS khong co auth: port 4200 chi bind loopback, khong bao gio
+  # publish ra ngoai. Muon xem UI tu xa thi di qua tailscale serve.
+  tp-prefect-server:
+    image: prefecthq/prefect:2.16.5-python3.10
+    container_name: tp-prefect-server
+    command: ["prefect", "server", "start", "--host", "0.0.0.0", "--port", "4200"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PREFECT_UI_API_URL: http://127.0.0.1:4200/api
+      # Ten bien DUNG cua 2.16 la PREFECT_API_DATABASE_CONNECTION_URL (khong
+      # phai PREFECT_SERVER_...). Ten sai bi bo qua lang le va server roi ve
+      # sqlite — da vuong dung loi nay luc dung 2.20.
+      PREFECT_API_DATABASE_CONNECTION_URL: "postgresql+asyncpg://talentpulse:${APP_POSTGRES_PASSWORD:-change-me-before-migration}@tp-postgres:5432/prefect"
+    ports:
+      - "127.0.0.1:4200:4200"
+    networks:
+      - talentpulse
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4200/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  tp-alert-worker:
+    # Image rieng cua web box, chi chua cac flow alert (deploy/prefect).
+    build:
+      context: ./deploy/prefect
+    image: tp-alert-worker:local
+    container_name: tp-alert-worker
+    command: ["python", "-m", "flows.alerts"]
+    environment:
+      PREFECT_DEPLOY: "1"
+      PREFECT_API_URL: http://tp-prefect-server:4200/api
+      DASHBOARD_API_URL: http://tp-backend:8001
+      ALERT_DISPATCH_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+    depends_on:
+      - tp-prefect-server
+    networks:
+      - talentpulse
+    restart: unless-stopped
+
   # Postgres RIENG cho du lieu van hanh cua app (schema `app`: user, ung tuyen,
   # chat, alert log). KHAC HAN kho phan tich dbt tren warehouse box.
   #
@@ -175,6 +226,10 @@ services:
       POSTGRES_DB: ${APP_POSTGRES_DB:-talentpulse}
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      # Tao database `prefect` khi volume MOI (docker-entrypoint-initdb.d chi
+      # chay mot lan dau). Prefect server can DB rieng de khong dap vao schema
+      # public cua app.
+      - ./deploy/postgres-init:/docker-entrypoint-initdb.d:ro
     networks:
       - talentpulse
     restart: unless-stopped

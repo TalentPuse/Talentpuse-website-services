@@ -38,7 +38,15 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-alert_loop_active = True
+# Loop trong process gio la TUY CHON, bat bang env (JA-38): Prefect web box
+# da la scheduler cua alert (2 deployment rieng telegram/email), nen loop nay
+# phai TAT BEN VUNG qua restart — truoc day admin tat bang API ma restart phat
+# sinh lai, vi no la bien global.
+#
+# Bat lai (ALERT_LOOP_ENABLED=1) chi khi nao Prefect chet va can loop lam
+# luoi an toan. Admin van tat/bat duoc runtime qua PUT /api/admin/config —
+# nhung gia tri do chi song toi lan restart ke tiep, roi ve theo env.
+alert_loop_active = os.getenv("ALERT_LOOP_ENABLED", "1") == "1"
 
 
 def _next_alert_slot() -> datetime:

@@ -8,9 +8,32 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
-from sqlalchemy import select
+import pytest_asyncio
+from sqlalchemy import select, text
 
 from app.models.alert_log import AlertLog
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _tao_bang_kho(db_session):
+    """`/r/{id}` query `dbt_dev_silver.silver_job_detail` — tao bang truoc.
+
+    Bang nay thuoc kho du lieu (dbt build), alembic khong tao, nen KHONG ton
+    tai tren DB test moi. Endpoint chi can bang TON TAI: khong co hang -> tra
+    NULL -> redirect ve HOME_URL, test van kiem duoc 302 + dem click. Du lieu
+    that khong lien quan gi toi dieu test nay dang kiem.
+    """
+    await db_session.execute(text("""
+        CREATE SCHEMA IF NOT EXISTS dbt_dev_silver
+    """))
+    await db_session.execute(text("""
+        CREATE TABLE IF NOT EXISTS dbt_dev_silver.silver_job_detail (
+            source varchar,
+            source_job_id varchar,
+            source_url varchar
+        )
+    """))
+    await db_session.commit()
 
 
 @pytest.mark.asyncio
@@ -101,8 +124,12 @@ def test_link_theo_doi_doc_tu_cau_hinh_khong_hardcode():
     assert jm.TRACKING_BASE_URL == f"{config.PUBLIC_BASE_URL}/r"
     assert rd.HOME_URL == f"{config.PUBLIC_BASE_URL}/jobs"
 
-    # Va khong con chuoi domain viet cung nao trong hai cho do.
-    for mod in (jm, rd):
+    # Va khong con chuoi domain viet cung nao trong ba cho do. (email.py cung
+    # vay: link huy nhan mail + link profile deu phai doc tu PUBLIC_BASE_URL —
+    # hardcode thi email tu staging tro ve production, dung loai loi da gap.)
+    import app.services.email as em
+
+    for mod in (jm, rd, em):
         src = inspect.getsource(mod)
         dong_hardcode = [
             d for d in src.splitlines()

@@ -24,7 +24,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
-def test_agui_duoc_mount_khong_can_bien_moi_truong():
+def test_agui_duoc_mount_khong_can_bien_moi_truong(monkeypatch):
     """`/api/agent` phai ton tai, khong doi bien moi truong nao.
 
     Dung TestClient nhu context manager de CHAY THAT lifespan — mount nam trong
@@ -32,13 +32,18 @@ def test_agui_duoc_mount_khong_can_bien_moi_truong():
     se luon truot (chinh la loi cua ban dau tien cua test nay).
 
     Chay lifespan con kiem luon mot thu quan trong hon: `init_agui` phai khoi
-    dong duoc trong moi truong KHONG co OPENAI_API_KEY (CI la vay). Truoc day
-    nhanh nay bi cong tac chan nen chua bao gio duoc chay trong test.
+    dong duoc trong moi truong KHONG co OPENAI_API_KEY that (CI la vay). Voi
+    openai SDK >=2, `ChatOpenAI` construct client ngay trong __init__ va tu choi
+    khi khong co credentials, nen phai tam dat mot key gia — chi de cho
+    constructor qua; khong goi LLM that o day, va assertion chinh van la mount
+    + 401, khong phai la chay duoc model.
 
     Khang dinh 401 chu khong phai 200: request khong kem token PHAI bi middleware
     auth cua sub-app tu choi. 401 chung minh route ton tai VA duoc bao ve; 404
     la trieu chung cu tren production.
     """
+    monkeypatch.setenv("OPENAI_API_KEY", "test-only-key-not-used-in-any-call")
+
     with TestClient(app) as client:
         r = client.post("/api/agent/", json={})
 
