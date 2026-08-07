@@ -711,3 +711,44 @@ class TestAlertLogEmailChannel:
             channel="website",
         )
         assert log.channel == "website"
+
+@pytest.mark.asyncio
+async def test_signup_tu_dong_bat_email_alert(client, db_session):
+    """Email alert mac dinh ON khi dang ky (quyet dinh 2026-08-07).
+
+    Truoc day la opt-in: user moi khong co subscription email_job_match nao
+    nen khong bao gio nhan email. Gio create_user phai tao san dong enabled=true.
+    """
+    from sqlalchemy import select
+
+    from app.models.telegram import AlertSubscription
+    from app.models.user import User
+
+    email = f"default-on-{uuid4()}@example.com"
+    r = await client.post("/api/auth/signup", json={
+        "email": email,
+        "password": "strongpass123",
+        "full_name": "Nguyen Mac Dinh",
+    })
+    assert r.status_code == 201
+
+    try:
+        user = (await db_session.execute(
+            select(User).where(User.email == email)
+        )).scalar_one()
+        sub = (await db_session.execute(
+            select(AlertSubscription).where(
+                AlertSubscription.user_id == user.id,
+                AlertSubscription.alert_type == "email_job_match",
+            )
+        )).scalar_one_or_none()
+        assert sub is not None, "signup phai tao san subscription email"
+        assert sub.enabled is True, "subscription phai bat san"
+    finally:
+        row = (await db_session.execute(
+            select(User).where(User.email == email)
+        )).scalar_one_or_none()
+        if row is not None:
+            await db_session.delete(row)
+            await db_session.commit()
+

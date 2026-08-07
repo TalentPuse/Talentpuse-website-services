@@ -255,6 +255,7 @@ async def test_top_companies_invalid_limit():
 # ─────────────────────────────────────────────
 
 @pytest.mark.asyncio
+@pytest.mark.asyncio
 async def test_signup_success():
     fake_user = _make_fake_user()
 
@@ -641,7 +642,11 @@ async def test_service_create_user():
     assert user.email == "service@test.com"
     assert user.hashed_password != "password123"
     assert isinstance(token, str) and len(token) > 0
-    fake_db.add.assert_called_once()
+    # 2 lan add: user + AlertSubscription(email_job_match, enabled=True) mac dinh
+    assert fake_db.add.call_count == 2
+    sub = fake_db.add.call_args_list[1][0][0]
+    assert sub.alert_type == 'email_job_match'
+    assert sub.enabled is True
     fake_db.commit.assert_awaited_once()
 
 

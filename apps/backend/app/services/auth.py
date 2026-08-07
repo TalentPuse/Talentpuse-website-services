@@ -4,8 +4,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, hash_password, verify_password
+from app.models.telegram import AlertSubscription
 from app.models.user import User
 from app.schemas.auth import UserCreate
+
+# Email alert BAT MAC DINH khi dang ky (quyet dinh san pham 2026-08-07):
+# user moi tu dong nhan alert email, muon tat thi vao profile. Truoc day la
+# opt-in thuan tuy — nhung nguoi dung khong biet phai bat nen khong nhan duoc gi.
+# User da tung UNSUBSCRIBE (dong enabled=false) khong bi anh huong boi backfill
+# migration 021 (chi tao cho user CHUA co dong nao).
+EMAIL_ALERT_TYPE = "email_job_match"
 
 
 async def create_user(db: AsyncSession, data: UserCreate) -> tuple[User, str]:
@@ -25,6 +33,13 @@ async def create_user(db: AsyncSession, data: UserCreate) -> tuple[User, str]:
         part_time_ok=data.part_time_ok,
     )
     db.add(user)
+    await db.flush()
+    # Email alert mac dinh ON — user co the tat trong /profile.
+    db.add(AlertSubscription(
+        user_id=user.id,
+        alert_type=EMAIL_ALERT_TYPE,
+        enabled=True,
+    ))
     await db.commit()
     await db.refresh(user)
     token = create_access_token({"sub": str(user.id), "is_admin": user.is_admin})
