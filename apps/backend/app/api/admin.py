@@ -4,6 +4,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel
 from sqlalchemy import and_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,8 +38,10 @@ from app.services.admin import (
     update_user_tier,
 )
 from app.services.email import send_job_alert_email
+from app.services.jd_pipeline import run_extract_pipeline
 from app.services.job_alert import _parse_channels, dispatch_alerts, email_all_users
 from app.services.job_matcher import MatchedJob
+from app.services.paid_quota import create_api_key, list_keys, revoke_key
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -243,6 +246,56 @@ async def internal_dispatch(
     channels = _parse_channels(request.headers.get("X-Dispatch-Channels", "both"))
     count = await dispatch_alerts(db, source=source, channels=channels)
     return {"dispatched": count}
+
+
+# ——— JDI — ban API key + trigger extract noi bo ———————————
+
+class ApiKeyCreate(BaseModel):
+    name: str
+    quota_month: int = 10000
+
+
+@router.post("/api-keys")
+async def admin_create_api_key(
+    data: ApiKeyCreate,
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Tao key ban hang — key tho chi tra 1 lan duy nhat, admin tu gui cho khach."""
+    raw = await create_api_key(db, data.name, data.quota_month)
+    return {"api_key": raw, "name": data.name, "quota_month": data.quota_month}
+
+
+@router.get("/api-keys")
+async def admin_list_api_keys(
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return {"keys": await list_keys(db)}
+
+
+@router.post("/api-keys/{key_hash_value}/revoke")
+async def admin_revoke_api_key(
+    key_hash_value: str,
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    await revoke_key(db, key_hash_value)
+    return {"ok": True}
+
+
+@router.post("/jd/extract")
+async def admin_jd_extract(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Trigger extract JD insight noi bo — Prefect goi hang ngay (webhook secret)."""
+    secret = request.headers.get("X-Webhook-Secret", "")
+    if not secret or secret != cfg.TELEGRAM_WEBHOOK_SECRET:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid secret")
+    limit = int(request.headers.get("X-Extract-Limit", "50"))
+    n = await run_extract_pipeline(db, limit=min(limit, 200))
+    return {"extracted": n}
 
 
 @router.put("/users/{user_id}/email-alert")
