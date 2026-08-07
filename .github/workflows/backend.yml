@@ -156,6 +156,21 @@ jobs:
     timeout-minutes: 20
 
     steps:
+      # Don dẹp 1 lan: worktree dang bi xoa do (lan fail truoc de lai trang thai
+      # do) va con sot logs/nginx root-owned tu thoi ky mount cu `./logs/nginx`
+      # (truoc khi doi sang `../logs/nginx` — xem docker-compose.yml). De lai thi
+      # checkout van chet o "Deleting the contents" voi EACCES.
+      - name: Clean stale logs/nginx
+        run: |
+          if [ -e "$GITHUB_WORKSPACE/logs/nginx" ]; then
+            rm -rf "$GITHUB_WORKSPACE/logs/nginx" 2>/dev/null || sudo -n rm -rf "$GITHUB_WORKSPACE/logs/nginx" 2>/dev/null || {
+              echo "Khong xoa duoc logs/nginx (root-owned). Chay tay tren box:"
+              echo "  sudo rm -rf $GITHUB_WORKSPACE/logs/nginx"
+              exit 1
+            }
+          fi
+          echo "logs/nginx trong worktree da sach (hoac khong ton tai)"
+
       - name: Checkout code
         uses: actions/checkout@v5
         # `clean: false` BAT BUOC: self-hosted runner khong xoa duoc

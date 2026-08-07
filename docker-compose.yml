@@ -317,7 +317,13 @@ services:
       # tai o lop ghi cua container va BIEN MAT moi lan redeploy — tuc la khong
       # con ban ghi luu luong nao ben phia may chu. Day cung la nguon do luu
       # luong duy nhat ma trinh chan quang cao khong the xoa duoc.
-      - ./logs/nginx:/var/log/nginx
+      #
+      # `../logs/nginx` (NGAI worktree, khong phai `./logs/nginx`): nginx chay
+      # root nen file log ben trong la root-owned. De trong worktree thi moi lan
+      # self-hosted runner checkout (`git clean` untracked) chet voi EACCES va
+      # deploy bi chan — da vap that (2026-08-07). Ngoai worktree thi runner
+      # khong bao gio dong toi.
+      - ../logs/nginx:/var/log/nginx
     networks:
       - talentpulse
     restart: unless-stopped

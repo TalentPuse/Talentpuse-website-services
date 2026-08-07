@@ -127,6 +127,18 @@ jobs:
     timeout-minutes: 20
 
     steps:
+      # Xem ghi chu day du o backend.yml deploy job (step nay can thiet mot lan).
+      - name: Clean stale logs/nginx
+        run: |
+          if [ -e "$GITHUB_WORKSPACE/logs/nginx" ]; then
+            rm -rf "$GITHUB_WORKSPACE/logs/nginx" 2>/dev/null || sudo -n rm -rf "$GITHUB_WORKSPACE/logs/nginx" 2>/dev/null || {
+              echo "Khong xoa duoc logs/nginx. Chay tay tren box:"
+              echo "  sudo rm -rf $GITHUB_WORKSPACE/logs/nginx"
+              exit 1
+            }
+          fi
+          echo "logs/nginx trong worktree da sach"
+
       - name: Checkout code
         uses: actions/checkout@v5
         # `clean: false`: runner khong xoa duoc logs/nginx (root-owned qua bind
