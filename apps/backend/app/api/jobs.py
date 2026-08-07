@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
@@ -52,6 +53,49 @@ def _logo_sql(alias: str) -> str:
 RERANK_POOL = 300
 
 
+# Escape LIKE wildcard tu dau vao nguoi dung (JA-45): `%`/`_` trong query
+# phai la ky tu thuong, khong duoc thanh wildcard SQL.
+_SEARCH_ESC = str.maketrans({"\\": "\\\\", "%": "\\%", "_": "\\_"})
+
+
+def _build_search_score(search: str, params: dict) -> tuple[str, str]:
+    """Tokenize query roi xay (where_sql, score_sql) tim kiem theo do lien quan.
+
+    WHERE: BAT KY token nao xuat hien o title / job_category / company_name.
+    Diem (cao hon = lien quan hon):
+      - token trong title = 30, job_category = 20, company_name = 10
+      - ca cau lien mach (phrase) trong title = +60
+
+    Token dai (>=4 ky tu) hoac chua ky tu dac biet: ILIKE %token% — de khop
+    "engineer" voi "engineers". Token ngan (2-3 chu cai, vd "ai", "ml"): regex
+    bien tu (\mai\M) — de "ai" khong khop nham "email"/"training" (cung van de
+    job_fit da gap trong facts.py).
+
+    Tra ve (where_sql, score_sql); params duoc do day bang cac gia tri token.
+    """
+    tokens = [t for t in re.split(r"\s+", search.strip().lower()) if len(t) >= 2]
+    where_parts: list[str] = []
+    score_parts: list[str] = []
+    cols = (("f.title", 30), ("f.job_category", 20), ("f.company_name", 10))
+    for i, tok in enumerate(tokens):
+        if len(tok) >= 4 or not tok.isalpha():
+            params[f"tok{i}"] = f"%{tok.translate(_SEARCH_ESC)}%"
+            match = f"ILIKE :tok{i}"
+        else:
+            params[f"tok{i}"] = f"\\m{tok}\\M"
+            match = f"~* :tok{i}"
+        where_parts.append("(" + " OR ".join(f"{col} {match}" for col, _ in cols) + ")")
+        score_parts.extend(
+            f"(CASE WHEN {col} {match} THEN {w} ELSE 0 END)" for col, w in cols
+        )
+    if len(tokens) > 1:
+        params["phrase"] = f"%{search.strip().lower().translate(_SEARCH_ESC)}%"
+        score_parts.append("(CASE WHEN f.title ILIKE :phrase THEN 60 ELSE 0 END)")
+    if not score_parts:
+        return "(1=0)", "0"
+    return "(" + " OR ".join(where_parts) + ")", "(" + " + ".join(score_parts) + ")"
+
+
 @router.get("", response_model=PublicJobList)
 async def list_jobs(
     page: int = Query(1, ge=1),
@@ -68,10 +112,14 @@ async def list_jobs(
 ) -> PublicJobList:
     conditions: list[str] = []
     params: dict = {}
+    # Diem tim kiem (search_score) — chi khac 0 khi co query, mac dinh 0 de
+    # cau SQL giu nguyen cau truc (sap theo posted_at nhu cu).
+    search_score = "0"
 
     if search:
-        conditions.append("(f.title ILIKE :search OR f.company_name ILIKE :search)")
-        params["search"] = f"%{search}%"
+        where_search, search_score = _build_search_score(search, params)
+        conditions.append(where_search)
+
     if city:
         conditions.append("f.city_canonical = :city")
         params["city"] = city
@@ -247,7 +295,8 @@ async def list_jobs(
     # Lay snapshot MOI NHAT cua moi tin, truoc khi join va gop.
     result = await db.execute(text(f"""
         WITH moi_nhat AS (
-            SELECT DISTINCT ON (f.source, f.source_job_id) f.*
+            SELECT DISTINCT ON (f.source, f.source_job_id) f.*,
+                   {search_score} AS search_score
             FROM dbt_dev_gold.fct_jobs_daily f
             WHERE f.is_active {where_extra}
             ORDER BY f.source, f.source_job_id, f.snapshot_date DESC
@@ -264,6 +313,7 @@ async def list_jobs(
             sd.source_url,
             {_logo_sql("sd")},
             f.posted_at,
+            f.search_score,
             {skills_select}
         FROM moi_nhat f
         LEFT JOIN dbt_dev_silver.silver_job_detail sd
@@ -272,8 +322,8 @@ async def list_jobs(
         GROUP BY f.source, f.source_job_id, f.title, f.company_name,
                  f.city_canonical, f.job_level, f.job_category,
                  f.salary_vnd_monthly_avg, sd.source_url, sd.company_logo_url,
-                 f.posted_at
-        ORDER BY f.posted_at DESC NULLS LAST
+                 f.posted_at, f.search_score
+        ORDER BY f.search_score DESC, f.posted_at DESC NULLS LAST
         LIMIT :limit OFFSET :offset
     """), params)
 
