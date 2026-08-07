@@ -66,8 +66,9 @@ job** — nên phải extract lại từ text bằng LLM để ra một schema �
 - Field đóng (seniority, work_type, remote, education.level) là **enum** → aggregate được; text tự do nằm ở `raw`/`other`
 - `requirements.years_experience.raw` giữ câu gốc — LLM sai còn bằng chứng đối chiếu
 - `benefits`/`responsibilities` giữ nguyên văn, chỉ chuẩn hóa nhóm cho benefits
-- `extras` là **catch-all**: LLM tự đặt `aspect` (snake_case, lowercase) + `value` (nguyên văn), giới hạn **tối đa 10 items** — nhặt thứ ngoài các field cố định (deadline, giờ làm, team size, report-to, probation, salary_note, địa điểm...)
-- Skill **normalize lowercase + synonym map** (tận dụng kinh nghiệm job_fit/facts.py: "ai" ↔ "artificial intelligence")
+- Ranh giới rõ giữa 2 field "khác": `requirements.other` = **yêu cầu tuyển dụng đặc thù** không thuộc enum (vd "ưu tiên kinh nghiệm ngân hàng"); `extras` = **thông tin KHÔNG phải yêu cầu tuyển dụng** (deadline, giờ làm, team size, report-to, probation, salary_note, địa điểm) — tránh LLM nhét lung tung vào một chỗ
+- `extras` là **catch-all**: LLM tự đặt `aspect` (snake_case, lowercase) + `value` (nguyên văn), giới hạn **tối đa 10 items**
+- Skill **normalize lowercase + synonym map** — synonym map là **dict hằng số trong code** (tận dụng kinh nghiệm job_fit/facts.py: "ai" ↔ "artificial intelligence"), không phải bảng DB
 - `keywords` — LLM nhặt từ khóa đặc thù ngành mà rule không làm nổi
 
 ## 4. Extraction pipeline
@@ -112,6 +113,8 @@ CREATE TABLE app.api_keys (
 3. `used_count >= quota_month` → **429**
 4. Tăng `used_count` (best-effort, không chặn request khi update fail)
 
+**Quota reset:** theo **đầu tháng** (quota_reset_at = ngày 1 tháng kế tiếp lúc tạo key; khi hết hạn → reset used_count=0, quota_reset_at = đầu tháng sau). Không dùng rolling window — khách dễ hiểu "mỗi tháng X request".
+
 **Rate limit:** đơn giản theo key (vd 60 req/phút) — Redis đã có sẵn.
 
 **Endpoints:**
@@ -123,7 +126,7 @@ CREATE TABLE app.api_keys (
 | `GET /api/v1/languages/top` | Ngoại ngữ phổ biến (kèm level) |
 | `GET /api/v1/benefits/top` | Phúc lợi phổ biến (đã chuẩn hóa nhóm) |
 | `GET /api/v1/requirements/experience?category=` | Phân bố YOE |
-| `GET /api/v1/jobs/{id}/insight` | Chi tiết extract 1 job |
+| `GET /api/v1/jobs/{source}/{source_job_id}/insight` | Chi tiết extract 1 job (giống path style /api/jobs hiện có) |
 
 - Aggregate: **SQL on-the-fly over JSONB** (8k rows nhỏ) + cache Redis 1h — chưa cần materialized views
 - Filter theo category/city/level đọc từ `data.job.*`
