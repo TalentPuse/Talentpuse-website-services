@@ -1,8 +1,14 @@
-# Ghim cung combo voi backend (fastmcp 2.11.2 + mcp 1.28.1) — da kiem chung
-# chay duoc. Unpinned (`fastmcp>=2.0`) thi pip cai bAN MOI NHAT: mcp SDK moi
-# xoa `mcp.shared` -> test chet ModuleNotFoundError va fastmcp import cung co
-# the vo (da vap 2026-08-07, CI MCP test job). Nang version thi ghim lai ca cap.
-fastmcp==2.11.2
+# Ghim DUNG combo dang chay o production (tp-mcp container):
+# fastmcp 3.4.2 + mcp 1.28.1. Code mcp_server viet cho fastmcp 3.x
+# (`from fastmcp.tools import tool` + `@tool(...)`), va mcp 1.28.1 la ban mcp SDK
+# cuoi cung con giu `mcp.shared`/`mcp.types`.
+#
+# Truoc day unpinned (`fastmcp>=2.0`) thi pip cai ban moi nhat: mcp SDK moi
+# xoa `mcp.shared` -> test chet ModuleNotFoundError (vap 2026-08-07). Ghim
+# fastmcp 2.11.2 (combo cua backend) thi loi khac: 2.x co `fastmcp/tools/tool.py`
+# la SUBMODULE nen `from fastmcp.tools import tool` tra ve module, khong phai
+# decorator -> `@tool(...)` chet. Nang version thi kiem tra lai ca cap.
+fastmcp==3.4.2
 mcp==1.28.1
 asyncpg>=0.30
 httpx>=0.27
