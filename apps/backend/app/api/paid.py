@@ -33,7 +33,7 @@ async def require_api_key(
     return None
 
 
-def _filter_sql(category: str | None, city: str | None, alias: str = "i") -> tuple[str, dict]:
+def _filter_sql(category: str | None, city: str | None = None, alias: str = "i") -> tuple[str, dict]:
     conds, params = [], {}
     if category:
         conds.append(f"{alias}.data->'job'->>'job_category' = :category")
@@ -98,11 +98,13 @@ async def languages_top(
     extra, params = _filter_sql(category)
     params["limit"] = limit
     rows = await db.execute(text(f"""
-        SELECT l->>'lang' AS lang, count(*)::int AS n_jobs
+        SELECT l->>'lang' AS lang, l->>'level' AS level, count(*)::int AS n_jobs
         FROM app.jd_insight i
         CROSS JOIN LATERAL jsonb_array_elements(i.data->'skills'->'languages') AS l
         WHERE 1=1 {extra}
-        GROUP BY 1 ORDER BY n_jobs DESC LIMIT :limit
+        GROUP BY 1, 2
+        ORDER BY n_jobs DESC, level NULLS LAST
+        LIMIT :limit
     """), params)
     return [dict(r) for r in rows.mappings()]
 
