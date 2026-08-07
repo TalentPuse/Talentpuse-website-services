@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, analytics, applications, auth, chat, companies, cv, email, interview, jobs, overview, recommendations, redirect, salary, skills, telegram
+from app.api import admin, analytics, applications, auth, chat, companies, cv, email, interview, jobs, overview, paid, recommendations, redirect, salary, skills, telegram
 from app.services.interview_agent.api import interview_router as interview_agent_router
 from app.core.config import (
     ALERT_END_TIME,
@@ -159,6 +159,7 @@ app.include_router(chat.router)
 app.include_router(cv.router)
 app.include_router(recommendations.router)
 app.include_router(applications.router)
+app.include_router(paid.router)
 app.include_router(interview.router)  # OLD interview API (Q&A based)
 app.include_router(interview_agent_router)  # NEW chatbot-based interview (prefix already in router)
 
