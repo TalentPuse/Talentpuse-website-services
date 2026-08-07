@@ -1,6 +1,7 @@
 """Extract insight tu JD text bang LLM (OpenRouter qua OPENAI_API_KEY)."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 
@@ -55,21 +56,26 @@ Quy tac:
 """
 
 
+def _call_llm(text: str) -> str:
+    """Sync goi OpenAI (chay trong thread) — tra raw content tu LLM."""
+    client = _get_chat()
+    resp = client.chat.completions.create(
+        model=OPENAI_MODEL,
+        temperature=0,
+        response_format={"type": "json_object"},
+        timeout=120,
+        messages=[
+            {"role": "system", "content": _PROMPT},
+            {"role": "user", "content": text[:8000]},
+        ],
+    )
+    return (resp.choices[0].message.content or "").strip()
+
+
 async def extract_insight(text: str) -> dict:
     """Goi LLM extract JD text -> dict JSON da validate theo JdInsight."""
-    client = _get_chat()
     try:
-        resp = client.chat.completions.create(
-            model=OPENAI_MODEL,
-            temperature=0,
-            response_format={"type": "json_object"},
-            timeout=120,
-            messages=[
-                {"role": "system", "content": _PROMPT},
-                {"role": "user", "content": text[:8000]},
-            ],
-        )
-        content = (resp.choices[0].message.content or "").strip()
+        content = await asyncio.to_thread(_call_llm, text[:8000])
         data = json.loads(content)
     except Exception as exc:
         raise ExtractError(f"llm_extract_failed: {exc}") from exc
