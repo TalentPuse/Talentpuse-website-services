@@ -74,7 +74,7 @@ def _call_llm(text: str, *, json_mode: bool = True) -> str:
     kwargs = {
         "model": model,
         "temperature": 0,
-        "timeout": 120,
+        "timeout": 600,
         "messages": [
             {"role": "system", "content": _PROMPT},
             {"role": "user", "content": text},
