@@ -52,16 +52,17 @@ async def run_extract_pipeline(db: AsyncSession, limit: int = 50, concurrency: i
             logger.exception("extract fail %s/%s", source, sjid)
             return None
 
-    results = await asyncio.gather(*(_extract_one(r) for r in rows))
-
     ok = 0
-    for (source, sjid, _), data in zip(rows, results):
-        if data is None:
-            continue
-        try:
-            await upsert_insight(db, source, sjid, data)
-            ok += 1
-        except Exception:
-            await db.rollback()
-            logger.exception("upsert fail %s/%s", source, sjid)
+    for i in range(0, len(rows), concurrency):
+        chunk = rows[i:i + concurrency]
+        results = await asyncio.gather(*(_extract_one(r) for r in chunk))
+        for (source, sjid, _), data in zip(chunk, results):
+            if data is None:
+                continue
+            try:
+                await upsert_insight(db, source, sjid, data)
+                ok += 1
+            except Exception:
+                await db.rollback()
+                logger.exception("upsert fail %s/%s", source, sjid)
     return ok
