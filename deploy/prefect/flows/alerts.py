@@ -34,8 +34,9 @@ from flows.jd_extract import _CRON_JD
 
 # Sync du lieu tu warehouse box chay ~11:00-17:00 VN (da do nhieu ngay:
 # max loaded 08-03 16:56 VN). Cron 7,12 VN chay TRUOC sync nen alert luon
-# 0 job moi. Doi sang SAU sync: 18:00 + 21:00 VN.
-_CRON_VN = CronSchedule(cron="0 18,21 * * *", timezone="Asia/Ho_Chi_Minh")
+# 0 job moi. Doi sang SAU sync, 5 lan/ngay: 18, 19, 20, 21, 22 VN. Moi slot
+# chi gui job MOI (dedup kenh website) nen slot gan nhau khong gui trung.
+_CRON_VN = CronSchedule(cron="0 18,19,20,21,22 * * *", timezone="Asia/Ho_Chi_Minh")
 
 
 @task(name="dispatch_alerts", retries=2, retry_delay_seconds=30, timeout_seconds=180)
