@@ -19,6 +19,7 @@ from sqlalchemy import (
     select,
     and_,
     not_,
+    or_,
     tuple_,
     exists,
     cast,
@@ -46,6 +47,13 @@ LEVEL_MAP: dict[str, list[str]] = {
 }
 
 ALERT_LIMIT = 3
+
+# Chi gui job MOI: posted trong 7 ngay gan nhat. Snapshot crawl giu job het
+# han la `is_active=true` (linkedin/4446023484 posted 29/07 van duoc alert
+# 08/08 — nguoi dung bam link thi LinkedIn bao job da dong). Job khong co
+# posted_at (NULL) van duoc phep gui de khong chan nham du lieu thieu cot.
+_FRESH_CUTOFF = func.now() - literal_column("interval '7 days'")
+
 # Gioi han 10 (truoc day 50): 50 job mot lan qua tai voi sinh vien — tin nhan
 # dai, cham doc, va (truoc JA-03/JA-08) de vuot gioi han 4096 ky tu cua
 # Telegram. 10 van nhieu hon ALERT_LIMIT cua user thuong vi sinh vien can
@@ -255,6 +263,9 @@ class JobMatcher:
         query = (
             select(moi_nhat)
             .where(moi_nhat.c.is_active)
+            .where(
+                or_(moi_nhat.c.posted_at.is_(None), moi_nhat.c.posted_at >= _FRESH_CUTOFF)
+            )
             .order_by(moi_nhat.c.posted_at.desc().nullslast())
             .limit(STUDENT_ALERT_LIMIT)
         )
@@ -361,6 +372,7 @@ class JobMatcher:
             )
             .where(scored.c.score > 0)
             .where(scored.c.is_active)
+            .where(or_(scored.c.posted_at.is_(None), scored.c.posted_at >= _FRESH_CUTOFF))
             .order_by(scored.c.score.desc(), scored.c.posted_at.desc().nullslast())
             .limit(ALERT_LIMIT)
         )
