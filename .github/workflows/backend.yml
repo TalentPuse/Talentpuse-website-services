@@ -208,6 +208,9 @@ jobs:
           S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
           S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
           MCP_DATABASE_URL=${{ secrets.MCP_DATABASE_URL }}
+          JD_LLM_API_KEY=${{ secrets.JD_LLM_API_KEY }}
+          JD_LLM_BASE_URL=${{ secrets.JD_LLM_BASE_URL }}
+          JD_LLM_MODEL=${{ secrets.JD_LLM_MODEL }}
           # Mac dinh trong compose la `change-me-before-migration`. Khong ghi bien
           # nay ra .env thi moi lan tp-postgres duoc TAO LAI tren volume moi se am
           # tham quay ve mat khau yeu do. Postgres chi ap POSTGRES_PASSWORD luc
