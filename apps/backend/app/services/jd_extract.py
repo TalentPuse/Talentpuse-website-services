@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 from openai import OpenAI
 
@@ -15,6 +16,10 @@ logger = logging.getLogger(__name__)
 MODEL_VERSION = "jdi-v1"
 
 _chat: OpenAI | None = None
+
+# asyncio.to_thread dung pool mac dinh (min(32, cpu+4) threads) — box 4 CPU thi
+# chi 8 thread. Extract can ~25 luong, nen tao executor rieng.
+_LLM_EXECUTOR = ThreadPoolExecutor(max_workers=25, thread_name_prefix="jd-llm")
 
 
 def _effective() -> tuple[str, str, str]:
@@ -95,10 +100,14 @@ async def extract_insight(
     """
     try:
         try:
-            content = await asyncio.to_thread(_call_llm, text[:8000])
+            content = await asyncio.get_running_loop().run_in_executor(
+                _LLM_EXECUTOR, lambda: _call_llm(text[:8000], json_mode=True)
+            )
         except Exception:
             logger.warning("json_mode call failed, retry khong response_format", exc_info=True)
-            content = await asyncio.to_thread(_call_llm, text[:8000], json_mode=False)
+            content = await asyncio.get_running_loop().run_in_executor(
+                _LLM_EXECUTOR, lambda: _call_llm(text[:8000], json_mode=False)
+            )
         data = json.loads(content)
     except Exception as exc:
         raise ExtractError(f"llm_extract_failed: {exc}") from exc
