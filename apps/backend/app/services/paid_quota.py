@@ -71,6 +71,13 @@ async def revoke_key(db: AsyncSession, key_hash_value: str) -> None:
     await db.commit()
 
 
+async def revoke_key_by_id(db: AsyncSession, key_id: UUID) -> None:
+    await db.execute(
+        update(ApiKey).where(ApiKey.id == key_id).values(is_active=False)
+    )
+    await db.commit()
+
+
 async def list_keys(db: AsyncSession) -> list[dict]:
     rows = (await db.execute(
         select(ApiKey).order_by(ApiKey.created_at.desc())

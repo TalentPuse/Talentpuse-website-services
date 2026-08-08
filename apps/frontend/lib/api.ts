@@ -428,6 +428,16 @@ export type AdminJobList = {
   per_page: number;
 };
 
+export type ApiKeyRecord = {
+  id: string;
+  name: string;
+  quota_month: number;
+  used_count: number;
+  quota_reset_at: string;
+  is_active: boolean;
+  created_at: string;
+};
+
 /* ───── Admin API (browser only, requires admin JWT) ───── */
 
 function adminHeaders(token: string) {
@@ -844,6 +854,24 @@ export const adminApi = {
       headers: adminHeaders(token),
     });
   },
+
+  listApiKeys: (token: string) =>
+    clientFetch<{ keys: ApiKeyRecord[] }>("/api/admin/api-keys", {
+      headers: adminHeaders(token),
+    }),
+
+  createApiKey: (token: string, data: { name: string; quota_month?: number }) =>
+    clientFetch<{ api_key: string; name: string; quota_month: number }>("/api/admin/api-keys", {
+      method: "POST",
+      headers: adminHeaders(token),
+      body: JSON.stringify(data),
+    }),
+
+  revokeApiKey: (token: string, keyId: string) =>
+    clientFetch<{ ok: boolean }>(
+      `/api/admin/api-keys/${encodeURIComponent(keyId)}/revoke-by-id`,
+      { method: "POST", headers: adminHeaders(token) },
+    ),
 };
 
 /* ───── CV Upload ───── */

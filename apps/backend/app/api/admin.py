@@ -41,7 +41,7 @@ from app.services.email import send_job_alert_email
 from app.services.jd_pipeline import run_extract_pipeline
 from app.services.job_alert import _parse_channels, dispatch_alerts, email_all_users
 from app.services.job_matcher import MatchedJob
-from app.services.paid_quota import create_api_key, list_keys, revoke_key
+from app.services.paid_quota import create_api_key, list_keys, revoke_key, revoke_key_by_id
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -281,6 +281,21 @@ async def admin_revoke_api_key(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     await revoke_key(db, key_hash_value)
+    return {"ok": True}
+
+
+@router.post("/api-keys/{key_id}/revoke-by-id")
+async def admin_revoke_api_key_by_id(
+    key_id: str,
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Thu hoi theo id — list tra id chu khong tra key_hash (admin UI dung)."""
+    try:
+        key_uuid = uuid.UUID(key_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid key id")
+    await revoke_key_by_id(db, key_uuid)
     return {"ok": True}
 
 
