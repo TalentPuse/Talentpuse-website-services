@@ -7,7 +7,7 @@ import logging
 
 from openai import OpenAI
 
-from app.core.config import OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL
+from app.core import config
 from app.schemas.jd_insight import JdInsight
 
 logger = logging.getLogger(__name__)
@@ -17,10 +17,18 @@ MODEL_VERSION = "jdi-v1"
 _chat: OpenAI | None = None
 
 
+def _effective() -> tuple[str, str, str]:
+    """(api_key, base_url, model) — uu tien provider JD_LLM_*, roi xuong OPENAI_*."""
+    if config.JD_LLM_API_KEY:
+        return config.JD_LLM_API_KEY, config.JD_LLM_BASE_URL, config.JD_LLM_MODEL
+    return config.OPENAI_API_KEY, config.OPENAI_BASE_URL, config.OPENAI_MODEL
+
+
 def _get_chat() -> OpenAI:
     global _chat
     if _chat is None:
-        _chat = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
+        api_key, base_url, _ = _effective()
+        _chat = OpenAI(api_key=api_key, base_url=base_url)
     return _chat
 
 
@@ -62,8 +70,9 @@ Quy tac:
 def _call_llm(text: str, *, json_mode: bool = True) -> str:
     """Sync goi OpenAI (chay trong thread) — tra raw content tu LLM."""
     client = _get_chat()
+    _, _, model = _effective()
     kwargs = {
-        "model": OPENAI_MODEL,
+        "model": model,
         "temperature": 0,
         "timeout": 120,
         "messages": [

@@ -72,6 +72,12 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek/deepseek-v4-flash")
 
+# JDI extract: provider LLM rieng (vd OpenCode Zen — free tier). Co JD_LLM_API_KEY
+# thi dung JD_LLM_BASE_URL/JD_LLM_MODEL, khong thi roi xuong OPENAI_*.
+JD_LLM_API_KEY = os.getenv("JD_LLM_API_KEY", "")
+JD_LLM_BASE_URL = os.getenv("JD_LLM_BASE_URL", "https://opencode.ai/zen/v1")
+JD_LLM_MODEL = os.getenv("JD_LLM_MODEL", "deepseek-v4-flash-free")
+
 S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "http://minio:9000")
 S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minioadmin")
 S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "")
