@@ -14,9 +14,12 @@ export default function AdminApiKeysPage() {
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [quota, setQuota] = useState(10000);
+  const [expiryDays, setExpiryDays] = useState<number | "">(""); // "" = khong het han
   const [creating, setCreating] = useState(false);
   const [newKey, setNewKey] = useState<{ api_key: string; name: string } | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [adjusting, setAdjusting] = useState<string | null>(null);
+  const [adjustDays, setAdjustDays] = useState<number | "">(30);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -36,7 +39,10 @@ export default function AdminApiKeysPage() {
     if (!token || !name.trim()) return;
     setCreating(true);
     try {
-      const res = await adminApi.createApiKey(token, { name: name.trim(), quota_month: Math.max(1, quota) });
+      const expiresAt = expiryDays === "" || !expiryDays
+        ? null
+        : new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString();
+      const res = await adminApi.createApiKey(token, { name: name.trim(), quota_month: Math.max(1, quota), expires_at: expiresAt });
       setNewKey(res);
       setName("");
       toast.success("Đã tạo key — copy key thô NGAY (chỉ hiện 1 lần)");
@@ -45,6 +51,22 @@ export default function AdminApiKeysPage() {
       toast.error("Tạo key thất bại");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function onAdjustExpiry(k: ApiKeyRecord) {
+    if (!token || adjusting !== k.id) return;
+    try {
+      const expiresAt = adjustDays === "" || !adjustDays
+        ? null
+        : new Date(Date.now() + adjustDays * 24 * 60 * 60 * 1000).toISOString();
+      await adminApi.updateApiKeyExpiry(token, k.id, expiresAt);
+      toast.success(expiresAt ? `Hạn key: ${new Date(expiresAt).toLocaleDateString("vi-VN")}` : "Key không còn hạn");
+      load();
+    } catch {
+      toast.error("Điều chỉnh hạn thất bại");
+    } finally {
+      setAdjusting(null);
     }
   }
 
@@ -121,6 +143,17 @@ export default function AdminApiKeysPage() {
               className="w-28 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30"
             />
           </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">Hạn (ngày)</label>
+            <input
+              type="number"
+              min={1}
+              placeholder="0 = vĩnh viễn"
+              value={expiryDays}
+              onChange={(e) => setExpiryDays(e.target.value === "" ? "" : Number(e.target.value))}
+              className="w-28 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-hidden focus:ring-2 focus:ring-brand-500/30"
+            />
+          </div>
           <motion.button
             onClick={onCreate}
             disabled={creating || !name.trim()}
@@ -183,6 +216,7 @@ export default function AdminApiKeysPage() {
                 <th className="px-4 py-3 font-medium">Trạng thái</th>
                 <th className="px-4 py-3 font-medium">Đã dùng / Quota</th>
                 <th className="px-4 py-3 font-medium">%</th>
+                <th className="px-4 py-3 font-medium">Hết hạn</th>
                 <th className="px-4 py-3 font-medium">Reset quota</th>
                 <th className="px-4 py-3 font-medium">Tạo lúc</th>
                 <th className="px-4 py-3 font-medium"></th>
@@ -213,6 +247,17 @@ export default function AdminApiKeysPage() {
                         <span className="text-xs text-slate-500">{pct}%</span>
                       </div>
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {k.expires_at ? (
+                        <span className={`text-xs font-medium ${
+                          new Date(k.expires_at) < new Date() ? "text-red-600" : "text-slate-600"
+                        }`}>
+                          {new Date(k.expires_at).toLocaleDateString("vi-VN")}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">vĩnh viễn</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
                       {k.quota_reset_at ? new Date(k.quota_reset_at).toLocaleDateString("vi-VN") : "—"}
                     </td>
@@ -221,13 +266,47 @@ export default function AdminApiKeysPage() {
                     </td>
                     <td className="px-4 py-3">
                       {k.is_active && (
-                        <button
-                          onClick={() => onRevoke(k)}
-                          disabled={revoking === k.id}
-                          className="text-xs font-medium text-red-500 hover:text-red-700 disabled:opacity-40"
-                        >
-                          {revoking === k.id ? "..." : "Thu hồi"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {adjusting === k.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min={1}
+                                value={adjustDays}
+                                onChange={(e) => setAdjustDays(e.target.value === "" ? "" : Number(e.target.value))}
+                                className="w-16 rounded border border-slate-200 px-1.5 py-0.5 text-xs outline-hidden"
+                              />
+                              <button
+                                onClick={() => onAdjustExpiry(k)}
+                                className="text-xs font-medium text-emerald-600 hover:text-emerald-800"
+                              >
+                                Lưu
+                              </button>
+                              <button
+                                onClick={() => setAdjusting(null)}
+                                className="text-xs text-slate-400"
+                              >
+                                Hủy
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => { setAdjusting(k.id); setAdjustDays(k.expires_at ? Math.max(1, Math.ceil((new Date(k.expires_at).getTime() - Date.now()) / 86400000)) : 30); }}
+                                className="text-xs font-medium text-emerald-600 hover:text-emerald-800"
+                              >
+                                Chỉnh hạn
+                              </button>
+                              <button
+                                onClick={() => onRevoke(k)}
+                                disabled={revoking === k.id}
+                                className="text-xs font-medium text-red-500 hover:text-red-700 disabled:opacity-40"
+                              >
+                                {revoking === k.id ? "..." : "Thu hồi"}
+                              </button>
+                            </>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>

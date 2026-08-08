@@ -29,7 +29,9 @@ def hash_key(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()
 
 
-async def create_api_key(db: AsyncSession, name: str, quota_month: int = 10000) -> str:
+async def create_api_key(
+    db: AsyncSession, name: str, quota_month: int = 10000, expires_at: datetime | None = None
+) -> str:
     raw = generate_key()
     first_of_next_month = (
         datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -40,18 +42,21 @@ async def create_api_key(db: AsyncSession, name: str, quota_month: int = 10000) 
         key_hash=hash_key(raw),
         quota_month=quota_month,
         quota_reset_at=first_of_next_month,
+        expires_at=expires_at,
     ))
     await db.commit()
     return raw
 
 
 async def verify_key(db: AsyncSession, key: str) -> bool:
-    """True neu key active va con quota (reset dau thang truoc khi dem)."""
+    """True neu key active, chua het han va con quota (reset dau thang truoc khi dem)."""
     kh = hash_key(key)
     row = (await db.execute(select(ApiKey).where(ApiKey.key_hash == kh))).scalar_one_or_none()
     if row is None or not row.is_active:
         return False
     now = datetime.now(timezone.utc)
+    if row.expires_at is not None and row.expires_at <= now:
+        return False
     if row.quota_reset_at <= now:
         row.used_count = 0
         row.quota_reset_at = (now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -62,6 +67,14 @@ async def verify_key(db: AsyncSession, key: str) -> bool:
     row.used_count += 1
     await db.commit()
     return True
+
+
+async def set_key_expiry(db: AsyncSession, key_id: UUID, expires_at: datetime | None) -> None:
+    """Dieu chinh thoi gian song cua key (None = khong het han)."""
+    await db.execute(
+        update(ApiKey).where(ApiKey.id == key_id).values(expires_at=expires_at)
+    )
+    await db.commit()
 
 
 async def revoke_key(db: AsyncSession, key_hash_value: str) -> None:
@@ -84,7 +97,9 @@ async def list_keys(db: AsyncSession) -> list[dict]:
     )).scalars().all()
     return [
         {"id": str(r.id), "name": r.name, "quota_month": r.quota_month,
-         "used_count": r.used_count, "is_active": r.is_active, "created_at": r.created_at}
+         "used_count": r.used_count, "is_active": r.is_active,
+         "expires_at": r.expires_at, "quota_reset_at": r.quota_reset_at,
+         "created_at": r.created_at}
         for r in rows
     ]
 

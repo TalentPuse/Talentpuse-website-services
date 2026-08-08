@@ -434,6 +434,7 @@ export type ApiKeyRecord = {
   quota_month: number;
   used_count: number;
   quota_reset_at: string;
+  expires_at: string | null;
   is_active: boolean;
   created_at: string;
 };
@@ -860,12 +861,18 @@ export const adminApi = {
       headers: adminHeaders(token),
     }),
 
-  createApiKey: (token: string, data: { name: string; quota_month?: number }) =>
-    clientFetch<{ api_key: string; name: string; quota_month: number }>("/api/admin/api-keys", {
+  createApiKey: (token: string, data: { name: string; quota_month?: number; expires_at?: string | null }) =>
+    clientFetch<{ api_key: string; name: string; quota_month: number; expires_at: string | null }>("/api/admin/api-keys", {
       method: "POST",
       headers: adminHeaders(token),
       body: JSON.stringify(data),
     }),
+
+  updateApiKeyExpiry: (token: string, keyId: string, expiresAt: string | null) =>
+    clientFetch<{ ok: boolean; expires_at: string | null }>(
+      `/api/admin/api-keys/${encodeURIComponent(keyId)}/expiry`,
+      { method: "PUT", headers: adminHeaders(token), body: JSON.stringify({ expires_at: expiresAt }) },
+    ),
 
   revokeApiKey: (token: string, keyId: string) =>
     clientFetch<{ ok: boolean }>(

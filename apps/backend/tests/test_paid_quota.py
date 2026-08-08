@@ -5,7 +5,8 @@ import pytest
 
 from app.models.api_key import ApiKey
 from app.services.paid_quota import (
-    create_api_key, generate_key, hash_key, list_keys, rate_limit_ok, revoke_key, verify_key,
+    create_api_key, generate_key, hash_key, list_keys, rate_limit_ok, revoke_key,
+    set_key_expiry, verify_key,
 )
 
 
@@ -47,6 +48,35 @@ async def test_revoke(db_session):
     raw = await create_api_key(db_session, "Bi Thu Hoi")
     await revoke_key(db_session, hash_key(raw))
     assert await verify_key(db_session, raw) is False
+
+
+async def test_key_het_han_bi_tu_choi(db_session):
+    from sqlalchemy import select
+
+    raw = await create_api_key(
+        db_session, "Het Han",
+        expires_at=datetime.now(timezone.utc) - timedelta(days=1),
+    )
+    assert await verify_key(db_session, raw) is False
+
+
+async def test_key_chua_het_han_van_verify_duoc(db_session):
+    raw = await create_api_key(
+        db_session, "Con Han",
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+    )
+    assert await verify_key(db_session, raw) is True
+
+
+async def test_set_key_expiry_null_la_khong_het_han(db_session):
+    from sqlalchemy import select
+
+    raw = await create_api_key(db_session, "Dieu Chinh Han")
+    row = (await db_session.execute(select(ApiKey).where(ApiKey.key_hash == hash_key(raw)))).scalar_one()
+    await set_key_expiry(db_session, row.id, datetime.now(timezone.utc) + timedelta(days=7))
+    assert await verify_key(db_session, raw) is True
+    await set_key_expiry(db_session, row.id, None)
+    assert await verify_key(db_session, raw) is True
 
 
 async def test_list_keys(db_session):

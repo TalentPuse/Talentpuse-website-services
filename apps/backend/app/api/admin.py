@@ -41,7 +41,13 @@ from app.services.email import send_job_alert_email
 from app.services.jd_pipeline import run_extract_pipeline
 from app.services.job_alert import _parse_channels, dispatch_alerts, email_all_users
 from app.services.job_matcher import MatchedJob
-from app.services.paid_quota import create_api_key, list_keys, revoke_key, revoke_key_by_id
+from app.services.paid_quota import (
+    create_api_key,
+    list_keys,
+    revoke_key,
+    revoke_key_by_id,
+    set_key_expiry,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -253,6 +259,11 @@ async def internal_dispatch(
 class ApiKeyCreate(BaseModel):
     name: str
     quota_month: int = 10000
+    expires_at: datetime | None = None
+
+
+class ApiKeyExpiryUpdate(BaseModel):
+    expires_at: datetime | None = None
 
 
 @router.post("/api-keys")
@@ -262,8 +273,9 @@ async def admin_create_api_key(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Tao key ban hang — key tho chi tra 1 lan duy nhat, admin tu gui cho khach."""
-    raw = await create_api_key(db, data.name, data.quota_month)
-    return {"api_key": raw, "name": data.name, "quota_month": data.quota_month}
+    raw = await create_api_key(db, data.name, data.quota_month, data.expires_at)
+    return {"api_key": raw, "name": data.name, "quota_month": data.quota_month,
+            "expires_at": data.expires_at}
 
 
 @router.get("/api-keys")
@@ -297,6 +309,22 @@ async def admin_revoke_api_key_by_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid key id")
     await revoke_key_by_id(db, key_uuid)
     return {"ok": True}
+
+
+@router.put("/api-keys/{key_id}/expiry")
+async def admin_update_api_key_expiry(
+    key_id: str,
+    data: ApiKeyExpiryUpdate,
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Dieu chinh thoi gian song: expires_at ISO (null = khong het han)."""
+    try:
+        key_uuid = uuid.UUID(key_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid key id")
+    await set_key_expiry(db, key_uuid, data.expires_at)
+    return {"ok": True, "expires_at": data.expires_at}
 
 
 @router.post("/jd/extract")
