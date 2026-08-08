@@ -32,7 +32,10 @@ from prefect.client.schemas.schedules import CronSchedule
 # Lich cua flow JD lay tu flows.jd_extract — nguon duy nhat, tranh lech cron.
 from flows.jd_extract import _CRON_JD
 
-_CRON_VN = CronSchedule(cron="0 7,12 * * *", timezone="Asia/Ho_Chi_Minh")
+# Sync du lieu tu warehouse box chay ~11:00-17:00 VN (da do nhieu ngay:
+# max loaded 08-03 16:56 VN). Cron 7,12 VN chay TRUOC sync nen alert luon
+# 0 job moi. Doi sang SAU sync: 18:00 + 21:00 VN.
+_CRON_VN = CronSchedule(cron="0 18,21 * * *", timezone="Asia/Ho_Chi_Minh")
 
 
 @task(name="dispatch_alerts", retries=2, retry_delay_seconds=30, timeout_seconds=180)
