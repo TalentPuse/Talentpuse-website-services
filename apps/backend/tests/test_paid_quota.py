@@ -58,24 +58,32 @@ async def test_list_keys(db_session):
 
 
 async def test_rate_limit_fail_open(monkeypatch):
-    # Redis chet -> True (fail-open): cache_claim nem loi / tra None client.
+    # Redis chet -> True (fail-open): cache_incr nem loi / tra None client.
     async def _boom(key, ttl_seconds):
         raise RuntimeError("redis down")
-    monkeypatch.setattr("app.services.paid_quota.cache_claim", _boom)
+    monkeypatch.setattr("app.services.paid_quota.cache_incr", _boom)
     assert await rate_limit_ok("abc") is True
 
 
 async def test_rate_limit_het_han_muc(monkeypatch):
-    # Slot giay cua key da bi claim -> False (chan request).
-    async def _claimed(key, ttl_seconds):
-        return False
-    monkeypatch.setattr("app.services.paid_quota.cache_claim", _claimed)
+    # Cua so phut da vuot 60 request -> False (chan request).
+    async def _over(key, ttl_seconds):
+        return 61
+    monkeypatch.setattr("app.services.paid_quota.cache_incr", _over)
     assert await rate_limit_ok("abc") is False
 
 
 async def test_rate_limit_con_cho_phep(monkeypatch):
-    # Slot con trong -> True.
+    # Request thu 60 trong phut -> True.
     async def _free(key, ttl_seconds):
-        return True
-    monkeypatch.setattr("app.services.paid_quota.cache_claim", _free)
+        return 60
+    monkeypatch.setattr("app.services.paid_quota.cache_incr", _free)
+    assert await rate_limit_ok("abc") is True
+
+
+async def test_rate_limit_redis_chet_tra_none_fail_open(monkeypatch):
+    # cache_incr tra None khi Redis khong cau hinh -> True (fail-open).
+    async def _none(key, ttl_seconds):
+        return None
+    monkeypatch.setattr("app.services.paid_quota.cache_incr", _none)
     assert await rate_limit_ok("abc") is True

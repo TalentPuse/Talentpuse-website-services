@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.cache import cache_claim
+from app.core.cache import cache_incr
 from app.models.api_key import ApiKey
 
 logger = logging.getLogger(__name__)
@@ -85,22 +85,19 @@ async def list_keys(db: AsyncSession) -> list[dict]:
 async def rate_limit_ok(key_hash_value: str) -> bool:
     """Rate limit 60 req/phut theo key. Redis chet -> fail-open (True).
 
-    Dem theo luoi giay: moi giay trong phut la mot key claim rieng
-    `paid:rl:{key_hash}:{epoch_giay}` (TTL 61s). Moi request chiem dung slot
-    giay cua no bang `cache_claim` (SET NX EX nguyen tu) nen toi da 60 request
-    thanh cong trong mot cua so 60s — slot da chiem (request thu 2+ trong cung
-    giay) -> False.
+    Dem theo CUA SO PHUT cung dinh: key `paid:rl:{key_hash}:{epoch_phut}`
+    (TTL 65s) INCR nguyen tu moi request. Request thu 61 trong cung phut ->
+    False. Khong dung luoi giay (bug cu: 2 request cung giay -> 429).
 
-    Fail-open trong ca hai lop: `cache_claim` tra True khi Redis chet / khong
-    cau hinh, va try/except o day chan bat ky loi bat thuong nao khac — toi da
-    chi lam request chay cham hon mot chut khi khong co cache, khong bao gio
-    chan nham request hop le.
+    Fail-open: `cache_incr` tra None khi Redis chet, va try/except chan loi
+    bat thuong — khong bao gio chan nham request hop le.
     """
-    slot = f"paid:rl:{key_hash_value}:{int(time.time())}"
+    bucket = f"paid:rl:{key_hash_value}:{int(time.time()) // 60}"
     try:
-        return await cache_claim(slot, _RATE_SLOT_TTL_SECONDS)
+        n = await cache_incr(bucket, _RATE_SLOT_TTL_SECONDS)
+        if n is None:
+            return True
+        return n <= 60
     except Exception:
-        # Fail-open lan nua o lop nay (ngoai hop dong cua cache_claim): loi
-        # bat thuong tu Redis khong duoc chan request cua khach.
         logger.warning("rate limit check failed for key=%s, failing open", key_hash_value)
         return True

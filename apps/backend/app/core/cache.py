@@ -114,3 +114,18 @@ async def cache_claim(key: str, ttl_seconds: int) -> bool:
     except Exception:
         logger.warning("cache_claim failed for key=%s, failing open", key)
         return True
+
+
+async def cache_incr(key: str, ttl_seconds: int) -> int | None:
+    """INCR nguyen tu voi TTL set lan dau. None khi Redis chet (fail-open)."""
+    client = _get_client()
+    if client is None:
+        return None
+    try:
+        n = await client.incr(key)
+        if n == 1:
+            await client.expire(key, ttl_seconds)
+        return n
+    except Exception:
+        logger.warning("cache_incr failed for key=%s", key, exc_info=True)
+        return None
