@@ -85,7 +85,7 @@ async def test_extract_limit_khong_phai_so_tra_400(client):
     assert "X-Extract-Limit" in r.json()["detail"]
 
 
-async def test_extract_limit_qua_lon_bi_clamp(monkeypatch):
+async def test_extract_limit_khong_bi_cap_tren(monkeypatch):
     calls = {}
 
     async def fake_pipeline(db, limit=50):
@@ -100,4 +100,4 @@ async def test_extract_limit_qua_lon_bi_clamp(monkeypatch):
                      "X-Extract-Limit": "9999"},
         )
     assert r.status_code == 200
-    assert calls["limit"] == 200
+    assert calls["limit"] == 9999

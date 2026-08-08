@@ -301,7 +301,7 @@ async def admin_jd_extract(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"X-Extract-Limit phai la so nguyen, nhan duoc {raw_limit!r}",
         )
-    limit = max(0, min(limit, 200))
+    limit = max(0, limit)
     n = await run_extract_pipeline(db, limit=limit)
     return {"extracted": n}
 
