@@ -298,7 +298,10 @@ services:
     networks:
       - talentpulse
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/heartbeat || exit 1"]
+      # Dung 127.0.0.1 chu khong phai localhost: trong container nay `localhost`
+      # resolve sang IPv6 ::1, ma Next.js chi bind IPv4 -> healthcheck fail nham
+      # (Status=unhealthy) du server van chay tot.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/heartbeat || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
