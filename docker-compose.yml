@@ -281,7 +281,13 @@ services:
   # Doi lai, quen dat bien thi Umami khong khoi dong duoc; deploy/umami/README.md
   # ghi ro cac buoc cap phat.
   umami:
-    image: ghcr.io/umami-software/umami:postgresql-latest
+    # Image CHINH CHU build tu source voi `--build-arg BASE_PATH=/umami`. Image
+    # chuan tu GHCR khong doc BASE_PATH (build-time variable): dat o sub path thi
+    # Next.js hardcode `/_next/` va `/api/` — browser goi ve `/` roi vao frontend
+    # 404 -> dashboard trang trang. Workflow umami.yml build+push len GHCR roi
+    # set UMAMI_IMAGE khi deploy; default o day giu image local da build thu cong
+    # (xem deploy/umami/README.md va .github/workflows/umami.yml).
+    image: ${UMAMI_IMAGE:-umami-custom:3.2.0}
     container_name: tp-umami
     restart: unless-stopped
     # Port loopback de SSH tunnel xem dashboard tu may ngoai. Cong khai chi di
@@ -301,7 +307,8 @@ services:
       # Dung 127.0.0.1 chu khong phai localhost: trong container nay `localhost`
       # resolve sang IPv6 ::1, ma Next.js chi bind IPv4 -> healthcheck fail nham
       # (Status=unhealthy) du server van chay tot.
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/heartbeat || exit 1"]
+      # Image custom co basePath=/umami nen path chinh la /umami/api/heartbeat.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/umami/api/heartbeat || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5

@@ -1,0 +1,163 @@
+name: CI/CD — Umami
+
+# Umami dashboard chay o `/umami/` sau nginx. Image CHINH CHU bat buoc: image
+# chuan tu GHCR khong doc BASE_PATH (build-time variable), dat vao sub path thi
+# Next.js hardcode `/_next/` + `/api/` -> browser goi ve `/` roi vao frontend
+# 404 -> white screen. Vi vay workflow nay:
+#   1. Clone umami source (tag co dinh v3.2.0) tren runner sach.
+#   2. Build voi `--build-arg BASE_PATH=/umami` va push len GHCR tag sha-<sha>.
+#   3. Deploy len box: pull image do, `docker compose up -d --no-deps umami`.
+#
+# Fallback: neu pull `sha-<sha>` that bai (vi du push lai cung commit) thi dung
+# tag `develop`. compose dung `image: ${UMAMI_IMAGE:-umami-custom:3.2.0}` nen
+# neu workflow nay chua chay bao gio, box van chay duoc voi image local cu.
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "docker-compose.yml"
+      - "deploy/umami/**"
+      - ".github/workflows/umami.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: talentpulse-umami-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: Build & Push Umami Image
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clone umami source
+        run: |
+          git clone --depth 1 --branch v3.2.0 https://github.com/umami-software/umami.git umami-src
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-umami
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: umami-src
+          file: umami-src/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BASE_PATH=/umami
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy Umami
+    runs-on: [self-hosted, Linux, X64, talentpulse_backend]
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    timeout-minutes: 20
+
+    steps:
+      # Xem ghi chu day du o backend.yml deploy job: runner khong co sudo, dung
+      # docker container chay root de xoa logs root-owned sau bind mount.
+      - name: Clean stale logs
+        run: |
+          if [ -e "$GITHUB_WORKSPACE/logs" ]; then
+            docker run --rm -v "$GITHUB_WORKSPACE":/ws alpine rm -rf /ws/logs || {
+              echo "Khong xoa duoc logs. Chay tay tren box:"
+              echo "  sudo rm -rf $GITHUB_WORKSPACE/logs"
+              exit 1
+            }
+          fi
+          echo "logs trong worktree da sach"
+
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          clean: false
+
+      # Phai ghi NGUYEN bo bien nhu backend.yml — compose doc CA file .env luc
+      # parse, thieu bien `:?` cua service khac la `docker compose` chet ngay.
+      - name: Create runtime .env
+        run: |
+          rm -f .env
+          cat > .env <<'EOF'
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_USERNAME=${{ secrets.TELEGRAM_BOT_USERNAME }}
+          TELEGRAM_WEBHOOK_SECRET=${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL=${{ secrets.OPENAI_MODEL }}
+          S3_ENDPOINT_URL=${{ secrets.S3_ENDPOINT_URL }}
+          S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
+          S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+          MCP_DATABASE_URL=${{ secrets.MCP_DATABASE_URL }}
+          REDIS_URL=${{ secrets.REDIS_URL }}
+          JD_LLM_API_KEY=${{ secrets.JD_LLM_API_KEY }}
+          JD_LLM_BASE_URL=${{ secrets.JD_LLM_BASE_URL }}
+          JD_LLM_MODEL=${{ secrets.JD_LLM_MODEL }}
+          APP_POSTGRES_PASSWORD=${{ secrets.APP_POSTGRES_PASSWORD }}
+          NEXT_PUBLIC_UMAMI_WEBSITE_ID=${{ secrets.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
+          UMAMI_DB_PASSWORD=${{ secrets.UMAMI_DB_PASSWORD }}
+          UMAMI_APP_SECRET=${{ secrets.UMAMI_APP_SECRET }}
+          UMAMI_WEBSITE_ID=${{ secrets.UMAMI_WEBSITE_ID }}
+          EOF
+          sed -i 's/^[[:space:]]*//' .env
+          test -f .env || { echo "Failed to create .env"; exit 1; }
+          echo ".env created successfully"
+
+      - name: Deploy with Docker Compose
+        run: |
+          export REGISTRY=${{ env.REGISTRY }}
+          export IMAGE_NAME=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          export IMAGE_TAG=sha-${{ github.sha }}
+          export IMAGE_TAG_FALLBACK=${{ github.ref_name }}
+
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          if ! docker pull ${REGISTRY}/${IMAGE_NAME}-umami:${IMAGE_TAG}; then
+            echo "Fallback to ${IMAGE_TAG_FALLBACK}"
+            export IMAGE_TAG=${IMAGE_TAG_FALLBACK}
+            docker pull ${REGISTRY}/${IMAGE_NAME}-umami:${IMAGE_TAG}
+          fi
+
+          export UMAMI_IMAGE=${REGISTRY}/${IMAGE_NAME}-umami:${IMAGE_TAG}
+
+          # `--no-build`: umami khong co context trong repo (image lay tu GHCR).
+          # `--no-deps`: khong keo theo postgres/redis — da chay san roi.
+          docker compose up -d --no-build --no-deps umami
+          docker image prune -f
+
+          echo "Deployment successful!"
+          docker compose ps umami

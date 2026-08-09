@@ -59,6 +59,11 @@ jobs:
       # ca khi ta chi dinh dung nginx.
       - name: Create runtime .env
         run: |
+          # KHONG duoc viet subset nhu truoc: compose doc .env truoc khi chay,
+          # va neu ghi thieu bien thi service khac (vi du umami) khi duoc
+          # `up -d` lai se nhan DATABASE_URL thieu password roi crash. Giu NGUYEN
+          # bo bien nhu backend.yml — viet thieu bien khong bao gio dung dung y,
+          # chi lam container dang chay tot chet vao lan recreate tiep theo.
           rm -f .env
           cat > .env <<'EOF'
           DATABASE_URL=${{ secrets.DATABASE_URL }}
@@ -67,11 +72,27 @@ jobs:
           TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_BOT_USERNAME=${{ secrets.TELEGRAM_BOT_USERNAME }}
           TELEGRAM_WEBHOOK_SECRET=${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL=${{ secrets.RESEND_FROM_EMAIL }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL=${{ secrets.OPENAI_MODEL }}
+          S3_ENDPOINT_URL=${{ secrets.S3_ENDPOINT_URL }}
+          S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }}
+          S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
           MCP_DATABASE_URL=${{ secrets.MCP_DATABASE_URL }}
           REDIS_URL=${{ secrets.REDIS_URL }}
+          JD_LLM_API_KEY=${{ secrets.JD_LLM_API_KEY }}
+          JD_LLM_BASE_URL=${{ secrets.JD_LLM_BASE_URL }}
+          JD_LLM_MODEL=${{ secrets.JD_LLM_MODEL }}
           # Xem ghi chu trong backend.yml: thieu bien nay thi tp-postgres tao lai
           # tren volume moi se quay ve mat khau mac dinh yeu ma khong ai biet.
           APP_POSTGRES_PASSWORD=${{ secrets.APP_POSTGRES_PASSWORD }}
+          NEXT_PUBLIC_UMAMI_WEBSITE_ID=${{ secrets.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
+          UMAMI_DB_PASSWORD=${{ secrets.UMAMI_DB_PASSWORD }}
+          UMAMI_APP_SECRET=${{ secrets.UMAMI_APP_SECRET }}
+          UMAMI_WEBSITE_ID=${{ secrets.UMAMI_WEBSITE_ID }}
           EOF
           sed -i 's/^[[:space:]]*//' .env
           test -f .env || { echo "Failed to create .env"; exit 1; }
