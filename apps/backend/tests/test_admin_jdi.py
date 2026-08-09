@@ -63,7 +63,7 @@ async def test_extract_happy_path(monkeypatch):
 
     async def fake_pipeline(db, limit=50):
         calls["limit"] = limit
-        return 7
+        return 7, 7
 
     monkeypatch.setattr("app.api.admin.run_extract_pipeline", fake_pipeline)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
@@ -90,7 +90,7 @@ async def test_extract_limit_khong_bi_cap_tren(monkeypatch):
 
     async def fake_pipeline(db, limit=50):
         calls["limit"] = limit
-        return 3
+        return 3, 3
 
     monkeypatch.setattr("app.api.admin.run_extract_pipeline", fake_pipeline)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:

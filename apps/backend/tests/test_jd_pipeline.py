@@ -25,7 +25,7 @@ async def test_pipeline_extract_toi_da_limit(db_session, monkeypatch):
     monkeypatch.setattr("app.services.jd_pipeline.extract_insight", fake_extract)
     monkeypatch.setattr("app.services.jd_pipeline.get_jd_text", AsyncMock(return_value="text"))
 
-    n = await run_extract_pipeline(db_session, limit=3)
+    _, n = await run_extract_pipeline(db_session, limit=3)
     assert n == 3
     assert len(calls) == 3
     for _, source, sjid in calls:
@@ -47,7 +47,7 @@ async def test_pipeline_loi_mot_job_van_tiep_tuc(db_session, monkeypatch):
         return "bad" if sjid == "a" else "ok"
     monkeypatch.setattr("app.services.jd_pipeline.get_jd_text", fake_get_text)
 
-    n = await run_extract_pipeline(db_session, limit=2)
+    _, n = await run_extract_pipeline(db_session, limit=2)
     assert n == 1  # chi job "b" thanh cong
 
 
@@ -61,7 +61,7 @@ async def test_pipeline_jd_text_trong_thi_bo_qua(db_session, monkeypatch):
         return "" if sjid == "empty" else "ok"
     monkeypatch.setattr("app.services.jd_pipeline.get_jd_text", fake_get_text)
 
-    n = await run_extract_pipeline(db_session, limit=2)
+    _, n = await run_extract_pipeline(db_session, limit=2)
     assert n == 1
 
 
@@ -80,5 +80,5 @@ async def test_pipeline_loi_db_generic_khong_chan_ca_lo(db_session, monkeypatch)
     monkeypatch.setattr("app.services.jd_pipeline.extract_insight", fake_extract)
     monkeypatch.setattr("app.services.jd_pipeline.get_jd_text", AsyncMock(return_value="text"))
 
-    n = await run_extract_pipeline(db_session, limit=2)
+    _, n = await run_extract_pipeline(db_session, limit=2)
     assert n == 1  # chi job "b" thanh cong sau khi rollback session

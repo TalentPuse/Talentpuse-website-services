@@ -345,8 +345,8 @@ async def admin_jd_extract(
             detail=f"X-Extract-Limit phai la so nguyen, nhan duoc {raw_limit!r}",
         )
     limit = max(0, limit)
-    n = await run_extract_pipeline(db, limit=limit)
-    return {"extracted": n}
+    _, ok = await run_extract_pipeline(db, limit=limit)
+    return {"extracted": ok}
 
 
 @router.put("/users/{user_id}/email-alert")

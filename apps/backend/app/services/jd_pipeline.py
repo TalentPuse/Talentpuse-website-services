@@ -22,15 +22,19 @@ async def get_jd_text(db: AsyncSession, source: str, source_job_id: str) -> str:
     return (row or "").strip()
 
 
-async def run_extract_pipeline(db: AsyncSession, limit: int = 50, concurrency: int = 5) -> int:
-    """Extract toi da `limit` job chua co insight. Tra so job thanh cong.
+async def run_extract_pipeline(db: AsyncSession, limit: int = 50, concurrency: int = 5) -> tuple[int, int]:
+    """Extract toi da `limit` job chua co insight.
+
+    Tra `(so key lay duoc, so job extract thanh cong)`. Loai gap nhau: neu chi
+    tra ve 1 con so la so THANH CONG, goi vong lap break som khi trong batch
+    co job fail (vd 93/1000) ma van con hang ngay job khac chua xử ly.
 
     LLM goi song song (`concurrency`) nhung DB doc/ghi giu tuan tu tren cung
     session — tranh chia se AsyncSession giua cac coroutine.
     """
     keys = await get_missing_job_keys(db, limit=limit)
     if not keys:
-        return 0
+        return 0, 0
 
     rows = []
     for source, sjid in keys:
@@ -65,4 +69,4 @@ async def run_extract_pipeline(db: AsyncSession, limit: int = 50, concurrency: i
             except Exception:
                 await db.rollback()
                 logger.exception("upsert fail %s/%s", source, sjid)
-    return ok
+    return len(keys), ok
