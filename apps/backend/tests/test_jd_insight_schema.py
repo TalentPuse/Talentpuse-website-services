@@ -44,3 +44,11 @@ def test_extras_accepts_10_items():
     data = copy.deepcopy(MINIMAL)
     data["extras"] = [{"aspect": f"a{i}", "value": "x"} for i in range(10)]
     assert len(JdInsight.model_validate(data).extras) == 10
+
+
+@pytest.mark.parametrize("raw_value,expected", [(0.5, 1), ("0.5", 1), (3.4, 3), ("2.7", 3)])
+def test_years_experience_float_bi_lam_tron(raw_value, expected):
+    data = copy.deepcopy(MINIMAL)
+    data["requirements"]["years_experience"] = {"min": raw_value}
+    m = JdInsight.model_validate(data)
+    assert m.requirements.years_experience.min == expected
