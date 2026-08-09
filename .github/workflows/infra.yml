@@ -188,7 +188,14 @@ jobs:
           # thieu co nay thi moi lan sua nginx.conf se keo theo viec tao lai ca hai
           # service kia — downtime khong can thiet, va co the gay neu tag image cua
           # chung khong con trong local cache.
-          docker compose up -d --no-build --no-deps redis nginx
+          #
+          # `--force-recreate` la BAT BUOC: nginx bind-mount file nginx.conf (khong
+          # phai image/env doi). Khong co co nay thi `docker compose up -d` thay
+          # container "da dung y" roi KHONG tao lai — nginx van chay config CU
+          # da load luc start, moi sua file tren dia van vo dung. Da vap that: sua
+          # tracker umami xong, container bao "Up N minutes" va van phuc vu duong
+          # dan cu.
+          docker compose up -d --no-build --no-deps --force-recreate redis nginx
           docker image prune -f
           docker compose ps redis nginx
 
