@@ -217,6 +217,10 @@ jobs:
           # khoi tao volume LAN DAU, nen dat bien khong doi mat khau cua DB dang
           # co — muon doi phai `ALTER USER`.
           APP_POSTGRES_PASSWORD=${{ secrets.APP_POSTGRES_PASSWORD }}
+          NEXT_PUBLIC_UMAMI_WEBSITE_ID=${{ secrets.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
+          UMAMI_DB_PASSWORD=${{ secrets.UMAMI_DB_PASSWORD }}
+          UMAMI_APP_SECRET=${{ secrets.UMAMI_APP_SECRET }}
+          UMAMI_WEBSITE_ID=${{ secrets.UMAMI_WEBSITE_ID }}
           EOF
           sed -i 's/^[[:space:]]*//' .env
 

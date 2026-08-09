@@ -14,9 +14,11 @@ ARG NEXT_PUBLIC_DOMAIN=""
 # o build stage — dat chung o runtime environment thi khong co tac dung.
 # Mac dinh rong = tat (lib/flags.ts chi bat khi === "1"), nen CI/CD khong doi.
 ARG NEXT_PUBLIC_AI_HOME=""
+ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID=""
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 ENV NEXT_PUBLIC_DOMAIN=$NEXT_PUBLIC_DOMAIN
 ENV NEXT_PUBLIC_AI_HOME=$NEXT_PUBLIC_AI_HOME
+ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID
 ENV NODE_OPTIONS="--max-old-space-size=1024"
 RUN npm run build
 

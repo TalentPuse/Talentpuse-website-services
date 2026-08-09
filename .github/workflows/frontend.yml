@@ -108,6 +108,7 @@ jobs:
             NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }}
             NEXT_PUBLIC_DOMAIN=${{ secrets.NEXT_PUBLIC_DOMAIN }}
             NEXT_PUBLIC_AI_HOME=${{ vars.NEXT_PUBLIC_AI_HOME }}
+            NEXT_PUBLIC_UMAMI_WEBSITE_ID=${{ secrets.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -168,6 +169,10 @@ jobs:
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           TELEGRAM_WEBHOOK_SECRET=${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
           APP_POSTGRES_PASSWORD=${{ secrets.APP_POSTGRES_PASSWORD }}
+          NEXT_PUBLIC_UMAMI_WEBSITE_ID=${{ secrets.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
+          UMAMI_DB_PASSWORD=${{ secrets.UMAMI_DB_PASSWORD }}
+          UMAMI_APP_SECRET=${{ secrets.UMAMI_APP_SECRET }}
+          UMAMI_WEBSITE_ID=${{ secrets.UMAMI_WEBSITE_ID }}
           EOF
           sed -i 's/^[[:space:]]*//' .env
 

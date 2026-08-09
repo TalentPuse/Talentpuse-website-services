@@ -284,6 +284,10 @@ services:
     image: ghcr.io/umami-software/umami:postgresql-latest
     container_name: tp-umami
     restart: unless-stopped
+    # Port loopback de SSH tunnel xem dashboard tu may ngoai. Cong khai chi di
+    # qua nginx `/umami/` (TLS + login) — KHONG mo 0.0.0.0.
+    ports:
+      - "127.0.0.1:3000:3000"
     environment:
       DATABASE_URL: postgresql://umami_app:${UMAMI_DB_PASSWORD}@postgres:5432/umami
       DATABASE_TYPE: postgresql
