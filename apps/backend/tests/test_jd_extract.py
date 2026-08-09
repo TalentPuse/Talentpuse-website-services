@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from app.core import config as app_config
-from app.services.jd_extract import MODEL_VERSION, ExtractError, _call_llm, _get_chat, extract_insight
+from app.services.jd_extract import MODEL_VERSION, ExtractError, _call_llm, _auth_headers, extract_insight
 
 GOOD_JSON = {
     "summary": {"role_summary": "Lam AI", "seniority_hint": "mid"},
@@ -17,13 +17,27 @@ GOOD_JSON = {
 }
 
 
+def _fake_resp(content: str, status: int = 200) -> MagicMock:
+    resp = MagicMock()
+    resp.status_code = status
+    resp.json.return_value = {"choices": [{"message": {"content": content}}]}
+    resp.text = content
+    return resp
+
+
+def _patch_httpx(monkeypatch, resp: MagicMock) -> MagicMock:
+    client = MagicMock()
+    client.post = MagicMock(return_value=resp)
+    ctx = MagicMock()
+    ctx.__enter__.return_value = client
+    ctx.__exit__.return_value = None
+    monkeypatch.setattr("app.services.jd_extract.httpx.Client", lambda **kw: ctx)
+    return client
+
+
 @pytest.mark.asyncio
 async def test_extract_valid(monkeypatch):
-    fake = MagicMock()
-    fake.choices[0].message.content = json.dumps(GOOD_JSON)
-    fake_chat = MagicMock()
-    fake_chat.chat.completions.create = MagicMock(return_value=fake)
-    monkeypatch.setattr("app.services.jd_extract._chat", fake_chat)
+    _patch_httpx(monkeypatch, _fake_resp(json.dumps(GOOD_JSON)))
 
     result = await extract_insight("Mô tả công việc...", source="topcv", source_job_id="1")
     assert isinstance(result, dict)  # dict de nhet vao jsonb
@@ -34,11 +48,7 @@ async def test_extract_valid(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_extract_sai_json_raise(monkeypatch):
-    fake = MagicMock()
-    fake.choices[0].message.content = "khong phai json"
-    fake_chat = MagicMock()
-    fake_chat.chat.completions.create = MagicMock(return_value=fake)
-    monkeypatch.setattr("app.services.jd_extract._chat", fake_chat)
+    _patch_httpx(monkeypatch, _fake_resp("khong phai json"))
 
     with pytest.raises(ExtractError):
         await extract_insight("text")
@@ -48,44 +58,47 @@ def test_model_version_fixed():
     assert MODEL_VERSION == "jdi-v1"
 
 
-def test_default_dung_openai_khi_chua_set_jd_llm(monkeypatch):
+def test_auth_headers_zen_khong_gui_authorization():
+    # Zen free: gui bat ky Authorization header nao cung bi 401
+    assert _auth_headers("sk-zen", "https://opencode.ai/zen/v1") == {}
+
+
+def test_auth_headers_openrouter_gui_bearer():
+    assert _auth_headers("sk-or-xxx", "https://openrouter.ai/api/v1") == {
+        "Authorization": "Bearer sk-or-xxx"
+    }
+
+
+def test_call_llm_dung_jd_llm_provider(monkeypatch):
+    monkeypatch.setattr(app_config, "JD_LLM_API_KEY", "sk-zen")
+    monkeypatch.setattr(app_config, "JD_LLM_BASE_URL", "https://opencode.ai/zen/v1")
+    monkeypatch.setattr(app_config, "JD_LLM_MODEL", "deepseek-v4-flash-free")
+
+    client = _patch_httpx(monkeypatch, _fake_resp(json.dumps({"summary": {"role_summary": "x"}})))
+    out = _call_llm("text")
+    assert out  # khong raise
+    url = client.post.call_args.args[0]
+    assert url == "https://opencode.ai/zen/v1/chat/completions"
+    assert client.post.call_args.kwargs["headers"] == {}
+    body = client.post.call_args.kwargs["json"]
+    assert body["model"] == "deepseek-v4-flash-free"
+
+
+def test_call_llm_fallback_openai_gui_bearer(monkeypatch):
     monkeypatch.setattr(app_config, "JD_LLM_API_KEY", "")
     monkeypatch.setattr(app_config, "OPENAI_API_KEY", "sk-fallback")
     monkeypatch.setattr(app_config, "OPENAI_BASE_URL", "http://fallback/v1")
     monkeypatch.setattr(app_config, "OPENAI_MODEL", "fallback-model")
-    monkeypatch.setattr("app.services.jd_extract._chat", None)
 
-    fake_client = MagicMock()
-    fake_resp = MagicMock()
-    fake_resp.choices[0].message.content = json.dumps({"summary": {"role_summary": "x"}})
-    fake_client.chat.completions.create = MagicMock(return_value=fake_resp)
-    monkeypatch.setattr("app.services.jd_extract.OpenAI", MagicMock(return_value=fake_client))
-
-    client = _get_chat()
-    assert client is fake_client
-    called = _call_llm("text")
-    assert called  # khong raise — dang ky thuong qua fallback
-    _, kwargs = fake_client.chat.completions.create.call_args
-    assert kwargs["model"] == "fallback-model"
-
-
-def test_jd_llm_provider_override_zen(monkeypatch):
-    monkeypatch.setattr(app_config, "JD_LLM_API_KEY", "sk-zen")
-    monkeypatch.setattr(app_config, "JD_LLM_BASE_URL", "https://opencode.ai/zen/v1")
-    monkeypatch.setattr(app_config, "JD_LLM_MODEL", "deepseek-v4-flash-free")
-    monkeypatch.setattr("app.services.jd_extract._chat", None)
-
-    fake_client = MagicMock()
-    fake_resp = MagicMock()
-    fake_resp.choices[0].message.content = json.dumps({"summary": {"role_summary": "x"}})
-    fake_client.chat.completions.create = MagicMock(return_value=fake_resp)
-    mock_openai = MagicMock(return_value=fake_client)
-    monkeypatch.setattr("app.services.jd_extract.OpenAI", mock_openai)
-
-    _get_chat()
-    assert mock_openai.call_args.kwargs["base_url"] == "https://opencode.ai/zen/v1"
-    assert mock_openai.call_args.kwargs["api_key"] == "sk-zen"
-
+    client = _patch_httpx(monkeypatch, _fake_resp(json.dumps({"summary": {"role_summary": "x"}})))
     _call_llm("text")
-    _, kwargs = fake_client.chat.completions.create.call_args
-    assert kwargs["model"] == "deepseek-v4-flash-free"
+    assert client.post.call_args.kwargs["headers"] == {"Authorization": "Bearer sk-fallback"}
+    assert client.post.call_args.kwargs["json"]["model"] == "fallback-model"
+
+
+def test_call_llm_http_error_raise(monkeypatch):
+    monkeypatch.setattr(app_config, "JD_LLM_API_KEY", "sk-or-xxx")
+    monkeypatch.setattr(app_config, "JD_LLM_BASE_URL", "https://openrouter.ai/api/v1")
+    _patch_httpx(monkeypatch, _fake_resp("out of credits", status=402))
+    with pytest.raises(RuntimeError, match="402"):
+        _call_llm("text")

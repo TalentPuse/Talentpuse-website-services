@@ -1,4 +1,4 @@
-"""Extract insight tu JD text bang LLM (OpenRouter qua OPENAI_API_KEY)."""
+"""Extract insight tu JD text bang LLM (JD_LLM_* hoac OPENAI_*, Zen free / OpenRouter)."""
 from __future__ import annotations
 
 import asyncio
@@ -6,7 +6,7 @@ import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
-from openai import OpenAI
+import httpx
 
 from app.core import config
 from app.schemas.jd_insight import JdInsight
@@ -14,8 +14,6 @@ from app.schemas.jd_insight import JdInsight
 logger = logging.getLogger(__name__)
 
 MODEL_VERSION = "jdi-v1"
-
-_chat: OpenAI | None = None
 
 # asyncio.to_thread dung pool mac dinh (min(32, cpu+4) threads) — box 4 CPU thi
 # chi 8 thread. Extract can ~25 luong, nen tao executor rieng.
@@ -29,12 +27,12 @@ def _effective() -> tuple[str, str, str]:
     return config.OPENAI_API_KEY, config.OPENAI_BASE_URL, config.OPENAI_MODEL
 
 
-def _get_chat() -> OpenAI:
-    global _chat
-    if _chat is None:
-        api_key, base_url, _ = _effective()
-        _chat = OpenAI(api_key=api_key, base_url=base_url)
-    return _chat
+# Zen free tier (opencode.ai/zen) khong can API key: gui bat ky Authorization
+# header nao deu bi tu choi 401. Chi gui header khi co key that.
+def _auth_headers(api_key: str, base_url: str) -> dict:
+    if api_key and not base_url.startswith("https://opencode.ai/zen"):
+        return {"Authorization": f"Bearer {api_key}"}
+    return {}
 
 
 class ExtractError(RuntimeError):
@@ -73,9 +71,12 @@ Quy tac:
 
 
 def _call_llm(text: str, *, json_mode: bool = True) -> str:
-    """Sync goi OpenAI (chay trong thread) — tra raw content tu LLM."""
-    client = _get_chat()
-    _, _, model = _effective()
+    """Sync goi LLM (chay trong thread) — tra raw content tu LLM.
+
+    Dung httpx truc tiep (khong openai lib): Zen free tier tu choi 401 neu co
+    bat ky Authorization header nao, con openai lib luon gui `Bearer <key>`.
+    """
+    api_key, base_url, model = _effective()
     kwargs = {
         "model": model,
         "temperature": 0,
@@ -87,8 +88,15 @@ def _call_llm(text: str, *, json_mode: bool = True) -> str:
     }
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
-    resp = client.chat.completions.create(**kwargs)
-    return (resp.choices[0].message.content or "").strip()
+    with httpx.Client(timeout=httpx.Timeout(600.0)) as client:
+        resp = client.post(
+            f"{base_url.rstrip('/')}/chat/completions",
+            json=kwargs,
+            headers=_auth_headers(api_key, base_url),
+        )
+    if resp.status_code != 200:
+        raise RuntimeError(f"LLM HTTP {resp.status_code}: {resp.text[:300]}")
+    return (resp.json()["choices"][0]["message"].get("content") or "").strip()
 
 
 async def extract_insight(
