@@ -23,37 +23,20 @@ async function fetchJson<T>(path: string, fallback: T): Promise<T> {
 
 export type Overview = {
   total_jobs: number;
-  pct_with_salary: number;
-  avg_salary_million: number | null;
 };
 
 export type SkillRow = { skill: string; n_jobs: number; pct_of_jobs: number };
 
-export type HighestPayingSkillRow = {
-  skill: string;
-  n_jobs: number;
-  avg_salary_million: number;
-};
-
-export type SalaryByLevelRow = {
-  level_city: string;
-  job_level: string;
-  city_canonical: string;
-  p25_million: number;
-  p50_million: number;
-  p75_million: number;
-  n_visible_jobs: number;
-};
+export type DashboardRow = { name: string; n_jobs: number; pct_of_jobs: number };
 
 export type CompanyRow = {
   company_name: string;
   n_jobs: number;
   primary_city: string | null;
   avg_views: number | null;
-  avg_salary_million: number | null;
 };
 
-const EMPTY_OVERVIEW: Overview = { total_jobs: 0, pct_with_salary: 0, avg_salary_million: null };
+const EMPTY_OVERVIEW: Overview = { total_jobs: 0 };
 
 function catParam(category?: string) {
   return category ? `&category=${encodeURIComponent(category)}` : "";
@@ -64,10 +47,10 @@ export const api = {
     fetchJson<Overview>(`/api/overview${category ? `?category=${encodeURIComponent(category)}` : ""}`, EMPTY_OVERVIEW),
   topSkills: (limit = 15, category?: string) =>
     fetchJson<SkillRow[]>(`/api/skills/top?limit=${limit}${catParam(category)}`, []),
-  highestPayingSkills: (limit = 10, category?: string) =>
-    fetchJson<HighestPayingSkillRow[]>(`/api/skills/highest-paying?limit=${limit}${catParam(category)}`, []),
-  salaryByLevel: (category?: string) =>
-    fetchJson<SalaryByLevelRow[]>(`/api/salary/by-level${category ? `?category=${encodeURIComponent(category)}` : ""}`, []),
+  dashboardCities: (limit = 15, category?: string) =>
+    fetchJson<DashboardRow[]>(`/api/dashboard/cities?limit=${limit}${catParam(category)}`, []),
+  dashboardLevels: (limit = 15, category?: string) =>
+    fetchJson<DashboardRow[]>(`/api/dashboard/levels?limit=${limit}${catParam(category)}`, []),
   topCompanies: (limit = 20, category?: string) =>
     fetchJson<CompanyRow[]>(`/api/companies/top?limit=${limit}${catParam(category)}`, []),
   categories: () =>
@@ -98,10 +81,10 @@ export const dashboardApi = {
     dashboardFetch<Overview>(`/api/overview${category ? `?category=${encodeURIComponent(category)}` : ""}`, EMPTY_OVERVIEW),
   topSkills: (limit: number, category?: string) =>
     dashboardFetch<SkillRow[]>(`/api/skills/top?limit=${limit}${catParam(category)}`, []),
-  highestPayingSkills: (limit: number, category?: string) =>
-    dashboardFetch<HighestPayingSkillRow[]>(`/api/skills/highest-paying?limit=${limit}${catParam(category)}`, []),
-  salaryByLevel: (category?: string) =>
-    dashboardFetch<SalaryByLevelRow[]>(`/api/salary/by-level${category ? `?category=${encodeURIComponent(category)}` : ""}`, []),
+  dashboardCities: (limit: number, category?: string) =>
+    dashboardFetch<DashboardRow[]>(`/api/dashboard/cities?limit=${limit}${catParam(category)}`, []),
+  dashboardLevels: (limit: number, category?: string) =>
+    dashboardFetch<DashboardRow[]>(`/api/dashboard/levels?limit=${limit}${catParam(category)}`, []),
   topCompanies: (limit: number, category?: string) =>
     dashboardFetch<CompanyRow[]>(`/api/companies/top?limit=${limit}${catParam(category)}`, []),
 };
