@@ -3,7 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.schemas.dashboard import Overview
+from app.schemas.dashboard import DashboardRow, Overview
 
 router = APIRouter(prefix="/api", tags=["overview"])
 
@@ -61,3 +61,87 @@ async def get_categories(db: AsyncSession = Depends(get_db)) -> list[str]:
         order by job_category
     """))
     return [row["job_category"] for row in result.mappings().all()]
+
+
+@router.get("/dashboard/cities", response_model=list[DashboardRow])
+async def dashboard_cities(
+    limit: int = Query(15, ge=1, le=50),
+    category: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+) -> list[DashboardRow]:
+    cat_cond = "and job_category = :category" if category else ""
+    params: dict = {"limit": limit}
+    if category:
+        params["category"] = category
+
+    # Chi bind :category (khong bao gom :limit) — asyncpg tu choi parameter
+    # khong dung den trong SQL.
+    total_result = await db.execute(
+        text(f"""
+            select count(*)::int from dbt_dev_gold.fct_jobs_daily
+            where is_active {cat_cond}
+        """),
+        {"category": category} if category else {},
+    )
+    total = total_result.scalar() or 1
+
+    result = await db.execute(
+        text(f"""
+            select
+                city_canonical as name,
+                count(distinct (source, source_job_id))::int as n_jobs,
+                round((100.0 * count(distinct (source, source_job_id))
+                       / nullif(:total, 0))::numeric, 1)::float as pct_of_jobs
+            from dbt_dev_gold.fct_jobs_daily
+            where is_active
+                and city_canonical is not null
+                {cat_cond}
+            group by city_canonical
+            order by n_jobs desc
+            limit :limit
+        """),
+        {**params, "total": total},
+    )
+    return [DashboardRow(**r) for r in result.mappings().all()]
+
+
+@router.get("/dashboard/levels", response_model=list[DashboardRow])
+async def dashboard_levels(
+    limit: int = Query(15, ge=1, le=50),
+    category: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+) -> list[DashboardRow]:
+    cat_cond = "and job_category = :category" if category else ""
+    params: dict = {"limit": limit}
+    if category:
+        params["category"] = category
+
+    # Chi bind :category (khong bao gom :limit) — asyncpg tu choi parameter
+    # khong dung den trong SQL.
+    total_result = await db.execute(
+        text(f"""
+            select count(*)::int from dbt_dev_gold.fct_jobs_daily
+            where is_active {cat_cond}
+        """),
+        {"category": category} if category else {},
+    )
+    total = total_result.scalar() or 1
+
+    result = await db.execute(
+        text(f"""
+            select
+                coalesce(nullif(job_level, ''), 'Không xác định') as name,
+                count(distinct (source, source_job_id))::int as n_jobs,
+                round((100.0 * count(distinct (source, source_job_id))
+                       / nullif(:total, 0))::numeric, 1)::float as pct_of_jobs
+            from dbt_dev_gold.fct_jobs_daily
+            where is_active
+                and job_level is not null
+                {cat_cond}
+            group by job_level
+            order by n_jobs desc
+            limit :limit
+        """),
+        {**params, "total": total},
+    )
+    return [DashboardRow(**r) for r in result.mappings().all()]
