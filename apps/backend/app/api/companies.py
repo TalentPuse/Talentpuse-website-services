@@ -21,8 +21,7 @@ async def top_companies(
                     company_name,
                     n_jobs::int,
                     primary_city,
-                    round(avg_views::numeric, 0)::float as avg_views,
-                    round((avg_salary_vnd / 1000000.0)::numeric, 1)::float as avg_salary_million
+                    round(avg_views::numeric, 0)::float as avg_views
                 from dbt_dev_gold.mart_company_hiring
                 order by n_jobs desc, avg_views desc nulls last
                 limit :limit
@@ -37,8 +36,7 @@ async def top_companies(
                 company_name,
                 count(*)::int as n_jobs,
                 mode() within group (order by city_canonical) as primary_city,
-                round(avg(num_of_views)::numeric, 0)::float as avg_views,
-                round((avg(salary_vnd_monthly_avg) / 1000000.0)::numeric, 1)::float as avg_salary_million
+                round(avg(num_of_views)::numeric, 0)::float as avg_views
             from dbt_dev_gold.fct_jobs_daily
             where is_active and job_category = :category
             group by company_name
