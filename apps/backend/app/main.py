@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, analytics, applications, auth, chat, companies, cv, email, interview, jobs, overview, paid, recommendations, redirect, salary, skills, telegram
+from app.api import admin, analytics, applications, auth, chat, companies, cv, email, interview, jobs, overview, paid, recommendations, redirect, skills, telegram
 from app.services.interview_agent.api import interview_router as interview_agent_router
 from app.core.config import (
     ALERT_END_TIME,
@@ -146,7 +146,6 @@ app.add_middleware(
 
 app.include_router(overview.router)
 app.include_router(skills.router)
-app.include_router(salary.router)
 app.include_router(companies.router)
 app.include_router(auth.router)
 app.include_router(jobs.router)
