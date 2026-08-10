@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import KpiCard from "@/components/KpiCard";
 import SkillsBar from "@/components/SkillsBar";
-import HighestPayingSkills from "@/components/HighestPayingSkills";
-import SalaryByLevel from "@/components/SalaryByLevel";
+import CitiesBar from "@/components/CitiesBar";
+import LevelsBar from "@/components/LevelsBar";
 import CompaniesTable from "@/components/CompaniesTable";
 import Card from "@/components/Card";
 import ScrollReveal from "@/components/landing/ScrollReveal";
@@ -21,16 +21,15 @@ import { dashboardApi } from "@/lib/api";
 import type {
   Overview,
   SkillRow,
-  HighestPayingSkillRow,
-  SalaryByLevelRow,
+  DashboardRow,
   CompanyRow,
 } from "@/lib/api";
 
 type Props = {
   overview: Overview;
   topSkills: SkillRow[];
-  paying: HighestPayingSkillRow[];
-  salary: SalaryByLevelRow[];
+  cities: DashboardRow[];
+  levels: DashboardRow[];
   companies: CompanyRow[];
   categories: string[];
 };
@@ -52,10 +51,10 @@ function DashboardSkeleton() {
         ))}
       </section>
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <SkeletonBlock className="h-[440px] rounded-[var(--radius-lg)]" />
-        <SkeletonBlock className="h-[440px] rounded-[var(--radius-lg)]" />
+        <SkeletonBlock className="h-[400px] rounded-[var(--radius-lg)]" />
+        <SkeletonBlock className="h-[400px] rounded-[var(--radius-lg)]" />
       </section>
-      <SkeletonBlock className="h-[480px] rounded-[var(--radius-lg)]" />
+      <SkeletonBlock className="h-[340px] rounded-[var(--radius-lg)]" />
       <SkeletonBlock className="h-[540px] rounded-[var(--radius-lg)]" />
     </div>
   );
@@ -64,33 +63,33 @@ function DashboardSkeleton() {
 export default function DashboardClient({
   overview: initOverview,
   topSkills: initTopSkills,
-  paying: initPaying,
-  salary: initSalary,
+  cities: initCities,
+  levels: initLevels,
   companies: initCompanies,
   categories,
 }: Props) {
   const [category, setCategory] = useState("");
   const [overview, setOverview] = useState(initOverview);
   const [topSkills, setTopSkills] = useState(initTopSkills);
-  const [paying, setPaying] = useState(initPaying);
-  const [salary, setSalary] = useState(initSalary);
+  const [cities, setCities] = useState(initCities);
+  const [levels, setLevels] = useState(initLevels);
   const [companies, setCompanies] = useState(initCompanies);
   const [loading, setLoading] = useState(false);
 
   const fetchData = useCallback(async (cat: string) => {
     setLoading(true);
     try {
-      const [o, ts, hp, sal, comp] = await Promise.all([
+      const [o, ts, ct, lv, comp] = await Promise.all([
         dashboardApi.overview(cat || undefined),
         dashboardApi.topSkills(15, cat || undefined),
-        dashboardApi.highestPayingSkills(10, cat || undefined),
-        dashboardApi.salaryByLevel(cat || undefined),
+        dashboardApi.dashboardCities(15, cat || undefined),
+        dashboardApi.dashboardLevels(15, cat || undefined),
         dashboardApi.topCompanies(20, cat || undefined),
       ]);
       setOverview(o);
       setTopSkills(ts);
-      setPaying(hp);
-      setSalary(sal);
+      setCities(ct);
+      setLevels(lv);
       setCompanies(comp);
     } finally {
       setLoading(false);
@@ -101,19 +100,21 @@ export default function DashboardClient({
     if (!category) {
       setOverview(initOverview);
       setTopSkills(initTopSkills);
-      setPaying(initPaying);
-      setSalary(initSalary);
+      setCities(initCities);
+      setLevels(initLevels);
       setCompanies(initCompanies);
       return;
     }
     fetchData(category);
   }, [category]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Derived sparkline series for each KPI, drawn from data already fetched
-  // for the charts below — no extra requests, just a shape for context.
+  // Derived sparkline series drawn from data already fetched below.
   const demandSeries = useMemo(() => topSkills.map((s) => s.n_jobs), [topSkills]);
-  const payingSeries = useMemo(() => paying.map((p) => p.avg_salary_million), [paying]);
-  const medianSalarySeries = useMemo(() => salary.map((s) => s.p50_million), [salary]);
+  const citySeries = useMemo(() => cities.map((c) => c.n_jobs), [cities]);
+  const companySeries = useMemo(
+    () => companies.map((c) => c.n_jobs),
+    [companies]
+  );
 
   return (
     <DashboardLayout>
@@ -160,22 +161,17 @@ export default function DashboardClient({
                   series={demandSeries}
                 />
                 <KpiCard
-                  label="Công khai lương"
-                  value={`${overview.pct_with_salary}%`}
-                  hint="Tỷ lệ minh bạch lương"
+                  label="Ngành nghề theo dõi"
+                  value={categories.length.toLocaleString()}
+                  hint="Tất cả ngành nghề đang tuyển"
                   accent="amber"
-                  series={payingSeries}
                 />
                 <KpiCard
-                  label="Lương trung bình"
-                  value={
-                    overview.avg_salary_million
-                      ? `${overview.avg_salary_million}M`
-                      : "—"
-                  }
-                  hint="VND / tháng"
+                  label="Công ty đang tuyển"
+                  value={companies.length.toLocaleString()}
+                  hint="Top 20 công ty trong kỳ"
                   accent="green"
-                  series={medianSalarySeries}
+                  series={companySeries}
                 />
               </section>
             </ScrollReveal>
@@ -189,10 +185,10 @@ export default function DashboardClient({
                   <SkillsBar data={topSkills} />
                 </Card>
                 <Card
-                  title="Top 10 kỹ năng lương cao nhất"
-                  subtitle="Lương trung bình theo kỹ năng"
+                  title="Việc làm theo Thành phố"
+                  subtitle="Phân bố tin tuyển dụng theo địa điểm"
                 >
-                  <HighestPayingSkills data={paying} />
+                  <CitiesBar data={cities} />
                 </Card>
               </section>
             </ScrollReveal>
@@ -200,10 +196,10 @@ export default function DashboardClient({
             <ScrollReveal delay={0.15}>
               <section className="mb-8">
                 <Card
-                  title="Mức lương theo Level x Thành phố"
-                  subtitle="P25 → Median → P75 lương tháng"
+                  title="Việc làm theo Cấp bậc kinh nghiệm"
+                  subtitle="Junior → Senior → Lead theo số tin tuyển dụng"
                 >
-                  <SalaryByLevel data={salary} />
+                  <LevelsBar data={levels} />
                 </Card>
               </section>
             </ScrollReveal>

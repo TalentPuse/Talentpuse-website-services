@@ -34,7 +34,6 @@ export default function CompaniesTable({ data }: { data: CompanyRow[] }) {
           <TableHead className="text-right">Jobs</TableHead>
           <TableHead>City</TableHead>
           <TableHead className="text-right">Avg views</TableHead>
-          <TableHead className="text-right">Avg salary</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -62,9 +61,6 @@ export default function CompaniesTable({ data }: { data: CompanyRow[] }) {
             </TableCell>
             <TableCell className="text-right font-mono tabular-nums text-text-muted">
               {row.avg_views ? Math.round(row.avg_views).toLocaleString() : "—"}
-            </TableCell>
-            <TableCell className="text-right font-mono tabular-nums text-text">
-              {row.avg_salary_million ? `${row.avg_salary_million}M` : "—"}
             </TableCell>
           </TableRow>
         ))}

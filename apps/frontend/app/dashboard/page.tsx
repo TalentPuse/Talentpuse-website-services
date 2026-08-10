@@ -4,11 +4,11 @@ import DashboardClient from "./DashboardClient";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [overview, topSkills, paying, salary, companies, categories] = await Promise.all([
+  const [overview, topSkills, cities, levels, companies, categories] = await Promise.all([
     api.overview(),
     api.topSkills(15),
-    api.highestPayingSkills(10),
-    api.salaryByLevel(),
+    api.dashboardCities(15),
+    api.dashboardLevels(15),
     api.topCompanies(20),
     api.categories(),
   ]);
@@ -17,8 +17,8 @@ export default async function DashboardPage() {
     <DashboardClient
       overview={overview}
       topSkills={topSkills}
-      paying={paying}
-      salary={salary}
+      cities={cities}
+      levels={levels}
       companies={companies}
       categories={categories}
     />
