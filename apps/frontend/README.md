@@ -26,10 +26,10 @@ Dashboard UI for DE/AI job market insights with user authentication, job search,
 ### Dashboard (public analytics)
 | Component | Chart type | Data source |
 |---|---|---|
-| `KpiCard` | Stat card | `/api/overview` |
+| `KpiCard` | Stat card | `/api/overview`, `/api/dashboard/categories`, `/api/companies/top` |
 | `SkillsBar` | Horizontal bar | `/api/skills/top` |
-| `HighestPayingSkills` | Horizontal bar | `/api/skills/highest-paying` |
-| `SalaryByLevel` | Grouped bar (P25/P50/P75) | `/api/salary/by-level` |
+| `CitiesBar` | Horizontal bar | `/api/dashboard/cities` |
+| `LevelsBar` | Horizontal bar | `/api/dashboard/levels` |
 | `CompaniesTable` | Table | `/api/companies/top` |
 
 ### Auth & Profile

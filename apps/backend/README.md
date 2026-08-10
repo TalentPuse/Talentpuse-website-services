@@ -10,10 +10,10 @@ REST API serving DE/AI job market insights and powering the TalentPuse dashboard
 | Method | Path | Description |
 |---|---|---|
 | GET | `/` | Health check |
-| GET | `/api/overview` | 3 KPIs: total jobs, % with salary, avg salary |
+| GET | `/api/overview` | KPI: total active jobs |
 | GET | `/api/skills/top?limit=15` | Top skills by demand |
-| GET | `/api/skills/highest-paying?limit=10` | Top skills by avg salary |
-| GET | `/api/salary/by-level` | Salary P25/P50/P75 by level x city |
+| GET | `/api/dashboard/cities?limit=15` | Top cities by active jobs |
+| GET | `/api/dashboard/levels?limit=15` | Jobs by experience level |
 | GET | `/api/companies/top?limit=20` | Top hiring companies |
 | GET | `/api/dashboard/categories` | Available job categories |
 | GET | `/docs` | Swagger UI |
