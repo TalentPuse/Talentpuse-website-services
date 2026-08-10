@@ -19,24 +19,15 @@ from app.main import app
 # Fake DB layer for dashboard routes
 # ─────────────────────────────────────────────
 
-FAKE_OVERVIEW = {"total_jobs": 42, "pct_with_salary": 65.0, "avg_salary_million": 25.5}
+FAKE_OVERVIEW = {"total_jobs": 42}
 FAKE_SKILL = {"skill": "Python", "n_jobs": 30, "pct_of_jobs": 71.4}
-FAKE_PAYING = {"skill": "Spark", "n_jobs": 10, "avg_salary_million": 45.0}
-FAKE_SALARY = {
-    "level_city": "Senior - Ho Chi Minh",
-    "job_level": "Senior",
-    "city_canonical": "Ho Chi Minh",
-    "p25_million": 20.0,
-    "p50_million": 30.0,
-    "p75_million": 40.0,
-    "n_visible_jobs": 15,
-}
+FAKE_CITY = {"name": "HCMC", "n_jobs": 30, "pct_of_jobs": 71.4}
+FAKE_LEVEL = {"name": "Senior", "n_jobs": 28, "pct_of_jobs": 66.7}
 FAKE_COMPANY = {
     "company_name": "FPT",
     "n_jobs": 25,
     "primary_city": "Ha Noi",
     "avg_views": 1200.0,
-    "avg_salary_million": 22.0,
 }
 
 
@@ -58,20 +49,29 @@ class _Result:
     def mappings(self):
         return _MappingResult(self._rows)
 
+    def scalar(self, column: int = 0):
+        if not self._rows:
+            return None
+        row = self._rows[0]
+        if isinstance(row, dict):
+            values = list(row.values())
+            return values[column] if column < len(values) else values[-1]
+        return row
+
 
 class FakeSession:
     """Mimics AsyncSession for dashboard queries (text() SQL)."""
 
     async def execute(self, stmt, params=None):
         sql = str(stmt).lower()
+        if "city_canonical" in sql and "as name" in sql:
+            return _Result([FAKE_CITY])
+        if "job_level" in sql and "as name" in sql:
+            return _Result([FAKE_LEVEL])
         if "fct_jobs_daily" in sql:
             return _Result([FAKE_OVERVIEW])
-        if "mart_skill_demand" in sql and "avg_salary_vnd" in sql:
-            return _Result([FAKE_PAYING])
         if "mart_skill_demand" in sql:
             return _Result([FAKE_SKILL])
-        if "mart_salary_by_level" in sql:
-            return _Result([FAKE_SALARY])
         if "mart_company_hiring" in sql:
             return _Result([FAKE_COMPANY])
         return _Result([])
@@ -162,8 +162,8 @@ async def test_overview_returns_shape():
     assert r.status_code == 200
     d = r.json()
     assert isinstance(d["total_jobs"], int)
-    assert isinstance(d["pct_with_salary"], float)
-    assert d["avg_salary_million"] is None or isinstance(d["avg_salary_million"], float)
+    assert "pct_with_salary" not in d
+    assert "avg_salary_million" not in d
 
 
 # ─────────────────────────────────────────────
@@ -196,29 +196,46 @@ async def test_top_skills_invalid_limit():
 
 
 @pytest.mark.asyncio
-async def test_highest_paying_skills():
+async def test_dashboard_cities_default():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-        r = await c.get("/api/skills/highest-paying?limit=5")
+        r = await c.get("/api/dashboard/cities")
     assert r.status_code == 200
     rows = r.json()
     assert isinstance(rows, list)
     if rows:
-        assert "avg_salary_million" in rows[0]
+        assert {"name", "n_jobs", "pct_of_jobs"} <= rows[0].keys()
 
-
-# ─────────────────────────────────────────────
-# Dashboard — salary
-# ─────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_salary_by_level():
+async def test_dashboard_cities_with_category():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-        r = await c.get("/api/salary/by-level")
+        r = await c.get("/api/dashboard/cities?category=AI")
+    assert r.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_dashboard_cities_invalid_limit():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.get("/api/dashboard/cities?limit=0")
+    assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_dashboard_levels_default():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.get("/api/dashboard/levels")
     assert r.status_code == 200
     rows = r.json()
     assert isinstance(rows, list)
     if rows:
-        assert {"level_city", "job_level", "p50_million"} <= rows[0].keys()
+        assert {"name", "n_jobs", "pct_of_jobs"} <= rows[0].keys()
+
+
+@pytest.mark.asyncio
+async def test_dashboard_levels_with_category():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.get("/api/dashboard/levels?category=AI")
+    assert r.status_code == 200
 
 
 # ─────────────────────────────────────────────
