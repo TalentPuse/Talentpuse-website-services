@@ -24,6 +24,11 @@ def test_chan_da_cau_lenh():
     assert not validate_sql("SELECT 1; DROP TABLE t")
 
 
+def test_chan_select_into():
+    assert not validate_sql("SELECT 1 INTO t")
+    assert not validate_sql("SELECT * INTO public.x FROM app.users")
+
+
 def test_chan_comment_smuggle():
     assert not validate_sql("SELECT 1 -- DROP TABLE t")
     assert not validate_sql("SELECT 1 /* x */")

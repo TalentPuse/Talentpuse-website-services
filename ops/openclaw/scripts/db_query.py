@@ -18,7 +18,7 @@ import sys
 # Keywords ghi — xuat hien o bat ky dau trong cau lenh thi chan.
 _FORBIDDEN = re.compile(
     r"\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|"
-    r"copy|vacuum|reindex|cluster|comment|merge|call|do)\b",
+    r"copy|vacuum|reindex|cluster|comment|merge|call|do|into)\b",
     re.IGNORECASE,
 )
 
