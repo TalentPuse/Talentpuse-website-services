@@ -36,7 +36,7 @@ Tạo `ops/openclaw/slack-manifest.json` với nội dung:
 {
   "display_information": {
     "name": "OpenClaw",
-    "description": "Tro ly quan ly web box TalentPulse",
+    "description": "Trợ lý quản lý web box TalentPulse",
     "background_color": "#1a1a2e"
   },
   "features": {
@@ -338,7 +338,7 @@ import sys
 # Keywords ghi — xuat hien o bat ky dau trong cau lenh thi chan.
 _FORBIDDEN = re.compile(
     r"\b(insert|update|delete|drop|alter|create|truncate|grant|revoke|"
-    r"copy|vacuum|reindex|cluster|comment|merge|call|do)\b",
+    r"copy|vacuum|reindex|cluster|comment|merge|call|do|into)\b",
     re.IGNORECASE,
 )
 
@@ -414,6 +414,11 @@ def test_chan_update_insert_delete():
 def test_chan_ddl():
     for sql in ("DROP TABLE t", "ALTER TABLE t ADD c int", "TRUNCATE t", "CREATE TABLE t()"):
         assert not validate_sql(sql), sql
+
+
+def test_chan_select_into():
+    assert not validate_sql("SELECT 1 INTO t")
+    assert not validate_sql("SELECT * INTO public.x FROM app.users")
 
 
 def test_chan_da_cau_lenh():
