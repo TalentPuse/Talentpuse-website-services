@@ -17,9 +17,15 @@ OpenClaw (gateway trên web box) + Slack = hỏi mọi thứ về server và s�
 - `SLACK_SETUP.md` — hướng dẫn tạo app + token
 - `slack.socket.patch.json5` — config patch channel Slack
 - `scripts/db_query.py` — wrapper SQL đọc-only (chặn non-SELECT, có pytest)
-- `scripts/health.sh`, `scripts/status.sh`, `scripts/check_alerts.sh` — script các skill
+- `scripts/check_alerts.sh` — script chạy bởi automation `talentpulse-alerts`
+- `skills/server-health/scripts/health.sh` — script skill `server-health`
+- `skills/talentpulse-status/scripts/status.sh` — script skill `talentpulse-status`
 - `skills/*/SKILL.md` — định nghĩa skill
 - `install-skills.sh` — copy skills lên `~/.openclaw/skills/`
+
+> **Lưu ý đường dẫn:** web box phải checkout repo tại `/ops/openclaw` — các script
+> (`status.sh`, `check_alerts.sh`), SKILL.md và automation đều dùng đường dẫn
+> tuyệt đối bắt đầu bằng `/ops/openclaw/`.
 
 ## Bảo trì
 

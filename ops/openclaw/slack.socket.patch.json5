@@ -6,7 +6,8 @@
       appToken: { source: "env", provider: "default", id: "SLACK_APP_TOKEN" },
       botToken: { source: "env", provider: "default", id: "SLACK_BOT_TOKEN" },
       dmPolicy: "allowlist",
-      allowFrom: ["*"],
+      // Thay U0123456789 bang user ID that cua ban (right-click avatar -> Copy member ID)
+      allowFrom: ["U0123456789"],
       groupPolicy: "allowlist",
       channels: {
         // Thay C0123456789 bằng ID thật của #server-alerts ở Task 1
