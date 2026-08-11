@@ -165,6 +165,27 @@ def _alerted_subquery(user_id: UUID):
 
 _ILIKE_DAC_BIET = str.maketrans({"\\": "\\\\", "%": "\\%", "_": "\\_"})
 
+# Metachar cua POSIX regex ma PG hieu theo nghia dac biet. PG16 khong co
+# `regexp_escape`, nen phai tu escape bang Python truoc khi dua vao pattern.
+_REGEX_DAC_BIET = str.maketrans({c: "\\" + c for c in ".^$|()[]{}*+?\\"})
+
+
+def _skill_word_boundary(skill: str) -> str:
+    """Bien mot skill thanh regex "dung 1 tu" bang nhau word boundary.
+
+    `%ai%` cu match substring: 'KHAI' (trong TRIEN KHAI) va 'SustAInability'
+    deu chua 'ai' -> job vo can van duoc tinh diem skill (JA-60).
+
+    Postgres khong co tuong duong word-boundary cua PCRE; `y` boundary chi
+    nhan biet bien GIUA cac word char, khong dung duoc voi skill chua ky tu
+    dac biet (`c++`, `node.js` - `+`/`.` khong phai word char nen "y c++ y"
+    khong match 'Senior C++ Developer'). Dung `(^|[^[:alnum:]_])...`
+    `([^[:alnum:]_]|$)` lam bien - da kiem chung tren PG16 prod ca `c++`,
+    `node.js`, `sql`, va loai dung 'KHAI'/'Sustainability'.
+    """
+    escaped = skill.translate(_REGEX_DAC_BIET)
+    return rf"(^|[^[:alnum:]_]){escaped}([^[:alnum:]_]|$)"
+
 
 def _mau_chua(v: str) -> str:
     """Bien mot chuoi nguoi dung nhap thanh mau ILIKE "chua chuoi nay".
@@ -332,9 +353,13 @@ class JobMatcher:
                 )
             )
 
-        # Scored CTE
+        # Scored CTE. Expose `title_score`/`skill_score` thanh cot rieng de cac
+        # thanh phan rieng le co the duoc loc o final query — khong the loc tren
+        # `score` tong vi vay job chi khop city van lo lot (JA-60).
         scored_cols = [
             * _base_columns(),
+            title_score.label("title_score"),
+            skill_score.label("skill_score"),
             total_score,
         ]
         scored_query = (
@@ -370,7 +395,7 @@ class JobMatcher:
                 scored.c.primary_address,
                 scored.c.city_raw_vi,
             )
-            .where(scored.c.score > 0)
+            .where(or_(scored.c.title_score > 0, scored.c.skill_score > 0))
             .where(scored.c.is_active)
             .where(or_(scored.c.posted_at.is_(None), scored.c.posted_at >= _FRESH_CUTOFF))
             .order_by(scored.c.score.desc(), scored.c.posted_at.desc().nullslast())
@@ -391,7 +416,7 @@ class JobMatcher:
             (
                 (fct_jobs_daily.c.title.ilike(any_(patterns)))
                 | (fct_jobs_daily.c.job_category.ilike(any_(patterns))),
-                40,
+                45,
             ),
             else_=0,
         )
@@ -401,7 +426,7 @@ class JobMatcher:
         if not cities:
             return literal_column("0")
         return case(
-            (fct_jobs_daily.c.city_canonical == any_(cities), 25),
+            (fct_jobs_daily.c.city_canonical == any_(cities), 20),
             else_=0,
         )
 
@@ -415,7 +440,7 @@ class JobMatcher:
                     fct_jobs_daily.c.salary_vnd_monthly_avg.isnot(None),
                     fct_jobs_daily.c.salary_vnd_monthly_avg >= min_salary,
                 ),
-                20,
+                10,
             ),
             else_=0,
         )
@@ -448,21 +473,25 @@ class JobMatcher:
 
         # `silver_skill_long` co coverage 0% cho LinkedIn (~64% kho job). Voi
         # `coalesce(..., 0)` cu, user chi khai skills (khong title/city/salary)
-        # se cham 0 diem cho MOI job LinkedIn -> bi `WHERE score > 0` loai
-        # sach, tuc la mot phan lon kho viec vo hinh voi ho (JA-16).
+        # se cham 0 diem cho MOI job LinkedIn -> bi cong loai sach, tuc la mot
+        # phan lon kho viec vo hinh voi ho (JA-16).
         #
         # LEFT JOIN cho phep phan biet "job nay khong khop skill nao" (ratio =
         # 0) voi "job nay khong he co du lieu skill" (ratio IS NULL). Chi
         # nhom thu hai moi dung tieu de lam nguon thay the — cac nguon da co
         # du lieu skill van cham diem y nhu cu, khong bi xao tron thu hang.
-        patterns = [_mau_chua(s) for s in skills]
+        #
+        # Fallback dung word-boundary regex, KHONG dung `%...%` ILIKE: skill
+        # ngan nhu 'ai' match nham 'KHAI'/'Sustainability' (JA-60). Xem
+        # `_skill_word_boundary`.
+        pattern = "|".join(_skill_word_boundary(s) for s in skills)
         fallback = case(
-            (fct_jobs_daily.c.title.ilike(any_(patterns)), 15),
+            (fct_jobs_daily.c.title.regexp_match(pattern, flags="i"), 25),
             else_=0,
         )
         diem = case(
             (skill_subq.c.skill_ratio.is_(None), fallback),
-            else_=skill_subq.c.skill_ratio * 15,
+            else_=skill_subq.c.skill_ratio * 25,
         )
         return diem, skill_subq
 

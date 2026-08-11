@@ -211,7 +211,9 @@ async def test_job_khong_co_du_lieu_skill_van_cham_diem_duoc():
     assert "sk.skill_ratio IS NULL" in sql, (
         f"khong phan biet 'khong khop skill' voi 'khong co du lieu skill':\n{sql}"
     )
-    assert "title ILIKE" in sql, "khong co nguon thay the cho job thieu du lieu skill"
+    # JA-60: nguon thay the la regex word-boundary qua `~*`, khong con `%...%`
+    # ILIKE (skill 'ai' match nham 'KHAI'/'Sustainability').
+    assert "title ~*" in sql, "khong co nguon thay the cho job thieu du lieu skill"
 
 
 @pytest.mark.asyncio
