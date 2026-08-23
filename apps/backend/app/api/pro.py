@@ -53,22 +53,27 @@ async def health(user: User = Depends(require_pro), db: AsyncSession = Depends(g
         try:
             max_posted_at = (await db.execute(text("SELECT max(posted_at) FROM dbt_dev_gold.fct_jobs_daily WHERE is_active"))).scalar()
         except Exception:
+            await db.rollback()
             max_posted_at = None
         if max_posted_at is None:
             try:
                 max_posted_at = (await db.execute(text("SELECT max(snapshot_date) FROM dbt_dev_gold.fct_jobs_daily WHERE is_active"))).scalar()
             except Exception:
+                await db.rollback()
                 pass
         if max_posted_at is None:
             try:
                 max_posted_at = (await db.execute(text("SELECT max(posted_at) FROM dbt_dev_silver.silver_job_detail"))).scalar()
             except Exception:
+                await db.rollback()
                 pass
     except Exception:
+        await db.rollback()
         max_posted_at = None
     try:
         max_extracted_at = (await db.execute(text("SELECT max(extracted_at) FROM app.jd_insight"))).scalar()
     except Exception:
+        await db.rollback()
         max_extracted_at = None
 
     # compute gap_days
@@ -292,7 +297,7 @@ async def export_xlsx(
     buf = BytesIO()
     wb.save(buf)
     buf.seek(0)
-    filename = f'TalentPulse_Pro_{category or "All"}.xlsx'
+    filename = f'TalentPulse_Pro_{category or "All"}_{datetime.now(timezone.utc).strftime("%Y-%m-%d")}.xlsx'
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -306,9 +311,6 @@ async def report(category: str | None = Query(None), user: User = Depends(requir
     tools = await tools_top(category, None, 10, user, db)
     languages = await languages_top(category, 10, user, db)
     benefits = await benefits_top(category, None, 10, user, db)
-    # Use _filter_sql correctly for experience (via helper) or raw if needed
-    extra, params = _filter_sql(category)
-    # also fetch experience via helper for consistency
     experience = await experience_dist(category, user, db)
 
     # missing stats for data_note
