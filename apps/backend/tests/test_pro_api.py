@@ -87,3 +87,16 @@ async def test_health_gap_days(client, db_session, seed_user):
     token = create_access_token({"sub": str(seed_user.id)})
     resp = await client.get("/api/pro/health", headers={"Authorization": f"Bearer {token}"})
     assert "gap_days" in resp.json()
+
+
+@pytest.mark.asyncio
+async def test_full_pro_flow(client, db_session, seed_user):
+    seed_user.subscription_tier="pro"; await db_session.commit()
+    token=create_access_token({"sub": str(seed_user.id)})
+    h= {"Authorization": f"Bearer {token}"}
+    for path in ["/api/pro/skills/top", "/api/pro/tools/top", "/api/pro/languages/top", "/api/pro/benefits/top", "/api/pro/requirements/experience"]:
+        assert (await client.get(path, headers=h)).status_code==200
+    xlsx = await client.get("/api/pro/export.xlsx?kind=all&limit=5", headers=h)
+    assert len(xlsx.content) > 1000
+    rep = await client.post("/api/pro/report?category=AI", headers=h)
+    assert "narrative" in rep.json()

@@ -78,6 +78,8 @@ refreshed by a daily one-way sync. That copy exists because the backend JOINs
 statements**, and Postgres cannot join across databases. It is a constraint, not a
 convenience.
 
+**Pro Insights (`app.jd_insight`, `app/api/pro.py`, `apps/frontend/app/pro-insights/`)** — aggregates over `app.jd_insight` (LLM-extracted from `silver_job_detail`) gated by `require_pro` (`subscription_tier=pro` or `is_admin`). 8 routes: `/health` (handover: `missing_pct`/`gap_days`/`llm`), 5 top-N (`skills`/`tools`/`languages`/`benefits`/`experience`), `/export.xlsx` (multi-sheet, `openpyxl`), `/report` (tables + narrative), and `/jobs/{source}/{id}/insight`. Health probes the two LLM bases (`JD_LLM_*` and `OPENAI_*`) via `httpx`. Daily extract is triggered internally via `POST /api/admin/jd/extract` (header `X-Webhook-Secret`, Prefect).
+
 ---
 
 ## 4. AI stack
