@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,7 +42,7 @@ async def health(user: User = Depends(require_pro), db: AsyncSession = Depends(g
 
 
 @router.get("/skills/top")
-async def skills_top(category: str | None = None, city: str | None = None, limit: int = 20, user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
+async def skills_top(category: str | None = None, city: str | None = None, limit: int = Query(20, ge=1, le=100), user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
     extra, params = _filter_sql(category, city)
     rows = await db.execute(text(f"""
         SELECT lower(btrim(s.skill)) AS skill, count(*)::int AS n_jobs
@@ -61,7 +61,7 @@ async def skills_top(category: str | None = None, city: str | None = None, limit
 
 
 @router.get("/tools/top")
-async def tools_top(category: str | None = None, city: str | None = None, limit: int = 20, user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
+async def tools_top(category: str | None = None, city: str | None = None, limit: int = Query(20, ge=1, le=100), user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
     extra, params = _filter_sql(category, city)
     params["limit"] = limit
     rows = await db.execute(text(f"""
@@ -77,7 +77,7 @@ async def tools_top(category: str | None = None, city: str | None = None, limit:
 
 
 @router.get("/languages/top")
-async def languages_top(category: str | None = None, limit: int = 20, user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
+async def languages_top(category: str | None = None, limit: int = Query(20, ge=1, le=100), user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
     extra, params = _filter_sql(category)
     params["limit"] = limit
     rows = await db.execute(text(f"""
@@ -93,7 +93,7 @@ async def languages_top(category: str | None = None, limit: int = 20, user: User
 
 
 @router.get("/benefits/top")
-async def benefits_top(category: str | None = None, city: str | None = None, limit: int = 20, user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
+async def benefits_top(category: str | None = None, city: str | None = None, limit: int = Query(20, ge=1, le=100), user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
     extra, params = _filter_sql(category, city)
     params["limit"] = limit
     rows = await db.execute(text(f"""
