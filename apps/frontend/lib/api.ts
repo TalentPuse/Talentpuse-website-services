@@ -1414,3 +1414,145 @@ export const applicationsApi = {
       { method: "POST", headers: authHeaders(token) },
     ),
 };
+
+/* ───── Pro Insights types & API (Task 4 — proApi client) ───── */
+
+export type ProHealth = {
+  total_jd: number;
+  extracted: number;
+  missing: number;
+  missing_pct: number;
+  max_posted_at: string | null;
+  max_extracted_at: string | null;
+  gap_days: number | null;
+  llm: { jd: string; openai: string };
+};
+export type Health = ProHealth;
+
+export type ProSkillRow = { skill: string; n_jobs: number };
+export type ProToolRow = { tool: string; n_jobs: number };
+export type ProLanguageRow = { lang: string; level: string | null; n_jobs: number };
+export type ProBenefitRow = { benefit: string; n_jobs: number };
+export type ProExperienceRow = { bucket: string; n_jobs: number };
+
+export type ProReport = {
+  generated_at: string;
+  category: string | null;
+  narrative: string;
+  tables: {
+    skills: ProSkillRow[];
+    tools: ProToolRow[];
+    languages: ProLanguageRow[];
+    benefits: ProBenefitRow[];
+    experience: ProExperienceRow[];
+  };
+  data_note: string;
+  missing: number;
+  missing_pct: number;
+  gap_days: number | null;
+};
+
+export const proApi = {
+  health: (token: string) =>
+    clientFetch<ProHealth>("/api/pro/health", {
+      headers: authHeaders(token),
+    }),
+
+  skillsTop: (
+    token: string,
+    params: { category?: string | null; city?: string | null; limit?: number } = {},
+  ) => {
+    const q = new URLSearchParams();
+    if (params.category) q.set("category", params.category);
+    if (params.city) q.set("city", params.city);
+    if (params.limit) q.set("limit", String(params.limit));
+    return clientFetch<ProSkillRow[]>(`/api/pro/skills/top?${q.toString()}`, {
+      headers: authHeaders(token),
+    });
+  },
+
+  toolsTop: (
+    token: string,
+    params: { category?: string | null; city?: string | null; limit?: number } = {},
+  ) => {
+    const q = new URLSearchParams();
+    if (params.category) q.set("category", params.category);
+    if (params.city) q.set("city", params.city);
+    if (params.limit) q.set("limit", String(params.limit));
+    return clientFetch<ProToolRow[]>(`/api/pro/tools/top?${q.toString()}`, {
+      headers: authHeaders(token),
+    });
+  },
+
+  languagesTop: (
+    token: string,
+    params: { category?: string | null; limit?: number } = {},
+  ) => {
+    const q = new URLSearchParams();
+    if (params.category) q.set("category", params.category);
+    if (params.limit) q.set("limit", String(params.limit));
+    return clientFetch<ProLanguageRow[]>(`/api/pro/languages/top?${q.toString()}`, {
+      headers: authHeaders(token),
+    });
+  },
+
+  benefitsTop: (
+    token: string,
+    params: { category?: string | null; city?: string | null; limit?: number } = {},
+  ) => {
+    const q = new URLSearchParams();
+    if (params.category) q.set("category", params.category);
+    if (params.city) q.set("city", params.city);
+    if (params.limit) q.set("limit", String(params.limit));
+    return clientFetch<ProBenefitRow[]>(`/api/pro/benefits/top?${q.toString()}`, {
+      headers: authHeaders(token),
+    });
+  },
+
+  experience: (
+    token: string,
+    params: { category?: string | null } = {},
+  ) => {
+    const q = new URLSearchParams();
+    if (params.category) q.set("category", params.category);
+    const suffix = q.toString() ? `?${q.toString()}` : "";
+    return clientFetch<ProExperienceRow[]>(`/api/pro/requirements/experience${suffix}`, {
+      headers: authHeaders(token),
+    });
+  },
+
+  exportXlsx: async (
+    token: string,
+    params: { category?: string | null; city?: string | null; kind?: string; limit?: number } = {},
+  ): Promise<Blob> => {
+    const q = new URLSearchParams();
+    if (params.category) q.set("category", params.category);
+    if (params.city) q.set("city", params.city);
+    if (params.kind) q.set("kind", params.kind);
+    if (params.limit) q.set("limit", String(params.limit));
+    const query = q.toString() ? `?${q.toString()}` : "";
+    const res = await fetch(`${CLIENT_BASE}/api/pro/export.xlsx${query}`, {
+      headers: authHeaders(token),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw { message: errorMessage(body), status: res.status } as ApiError;
+    }
+    return res.blob();
+  },
+
+  report: (token: string, params: { category?: string | null } = {}) => {
+    const q = new URLSearchParams();
+    if (params.category) q.set("category", params.category);
+    const suffix = q.toString() ? `?${q.toString()}` : "";
+    return clientFetch<ProReport>(`/api/pro/report${suffix}`, {
+      method: "POST",
+      headers: authHeaders(token),
+    });
+  },
+
+  jobInsight: (token: string, source: string, sourceJobId: string) =>
+    clientFetch<unknown>(`/api/pro/jobs/${encodeURIComponent(source)}/${encodeURIComponent(sourceJobId)}/insight`, {
+      headers: authHeaders(token),
+    }),
+};

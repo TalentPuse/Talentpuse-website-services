@@ -12,6 +12,7 @@ export type NavItem = {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
+  proOnly?: boolean;
 };
 
 /** Single source of truth for the work-shell navigation. Consumed by both
@@ -26,6 +27,13 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/applications", label: "Ứng tuyển", icon: ClipboardCheck },
   { href: "/profile", label: "Hồ sơ", icon: User },
 ];
+
+export const PRO_ITEM: NavItem = {
+  href: "/pro-insights",
+  label: "Pro Insights",
+  icon: Sparkles,
+  proOnly: true,
+};
 
 export const ADMIN_ITEM: NavItem = {
   href: "/admin",

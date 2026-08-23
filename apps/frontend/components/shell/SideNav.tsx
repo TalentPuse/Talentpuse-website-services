@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import { ICON } from "@/lib/icons";
-import { ADMIN_ITEM, NAV_ITEMS, isActiveRoute } from "@/components/shell/nav-items";
+import { ADMIN_ITEM, NAV_ITEMS, PRO_ITEM, isActiveRoute } from "@/components/shell/nav-items";
 
 /**
  * SideNav — primary work-shell navigation. Collapses to icons-only below
@@ -16,7 +16,7 @@ export default function SideNav() {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const items = user?.is_admin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS;
+  const items = [...NAV_ITEMS, ...(user?.subscription_tier === "pro" || user?.is_admin ? [PRO_ITEM] : []), ...(user?.is_admin ? [ADMIN_ITEM] : [])];
 
   return (
     <aside
