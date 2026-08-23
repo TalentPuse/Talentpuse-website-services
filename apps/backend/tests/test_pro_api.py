@@ -150,3 +150,43 @@ async def test_raw_jd_pro_ok(client, db_session, seed_user):
             val = data.get(key) or ""
             assert not email_pat.search(val), f"PII email leaked in {key}"
             assert not phone_pat.search(val), f"PII phone leaked in {key}"
+
+
+@pytest.mark.asyncio
+async def test_export_raw_pro_ok(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    h = {"Authorization": f"Bearer {token}"}
+    resp = await client.get("/api/pro/export.xlsx?kind=raw&limit=5&category=AI", headers=h)
+    assert resp.status_code == 200
+    assert "application/vnd.openxmlformats" in resp.headers["content-type"]
+    assert len(resp.content) > 1000
+    # verify it is a valid xlsx with raw_jds sheet
+    from io import BytesIO
+    from openpyxl import load_workbook
+
+    wb = load_workbook(BytesIO(resp.content))
+    assert "raw_jds" in wb.sheetnames
+    ws = wb["raw_jds"]
+    header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+    assert "source" in header and "source_job_id" in header
+    assert "job_description_text" in header and "job_requirement_text" in header
+
+
+@pytest.mark.asyncio
+async def test_export_raw_free_forbidden(client, db_session, seed_user):
+    seed_user.subscription_tier = "free"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    resp = await client.get("/api/pro/export.xlsx?kind=raw&limit=5", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_export_raw_invalid_kind(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    resp = await client.get("/api/pro/export.xlsx?kind=INVALID&limit=5", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 422

@@ -263,7 +263,7 @@ async def experience_dist(category: str | None = None, user: User = Depends(requ
 async def export_xlsx(
     category: str | None = Query(None),
     city: str | None = Query(None),
-    kind: str = Query("skills", pattern="^(skills|tools|languages|benefits|all)$"),
+    kind: str = Query("skills", pattern="^(skills|tools|languages|benefits|experience|raw|all)$"),
     limit: int = Query(20, ge=1, le=200),
     user: User = Depends(require_pro),
     db: AsyncSession = Depends(get_db),
@@ -281,10 +281,11 @@ async def export_xlsx(
     for k in kinds:
         if first:
             ws = wb.active
-            ws.title = k
+            # raw sheet is named raw_jds per spec
+            ws.title = "raw_jds" if k == "raw" else k
             first = False
         else:
-            ws = wb.create_sheet(title=k)
+            ws = wb.create_sheet(title="raw_jds" if k == "raw" else k)
 
         if k == "skills":
             ws.append(["skill", "n_jobs"])
@@ -311,11 +312,113 @@ async def export_xlsx(
             data = await experience_dist(category, user, db)
             for row in data:
                 ws.append([row.get("bucket"), row.get("n_jobs")])
+        elif k == "raw":
+            ws.append([
+                "source", "source_job_id", "title", "company_name", "city_canonical",
+                "job_level", "job_category", "posted_at", "source_url",
+                "job_description_text", "job_requirement_text", "primary_address", "city_raw_vi",
+            ])
+            # Query raw JDs: silver_job_detail left join latest gold snapshot
+            #  - filter by category (job_category) and city (city_canonical) if provided
+            #  - PII stripped for description/requirement via _strip_pii
+            #  - order by posted_at DESC / snapshot_date DESC, limit 1..200
+            raw_rows = []
+            try:
+                conds = []
+                params: dict = {}
+                if category:
+                    conds.append("COALESCE(f.job_category, d.job_category) = :category")
+                    params["category"] = category
+                if city:
+                    conds.append("COALESCE(f.city_canonical, d.city_canonical) = :city")
+                    params["city"] = city
+                where_sql = (" WHERE " + " AND ".join(conds)) if conds else ""
+                params["limit"] = limit
+                rows = await db.execute(text(f"""
+                    WITH latest_gold AS (
+                        SELECT DISTINCT ON (source, source_job_id)
+                            source, source_job_id, title, company_name, city_canonical,
+                            job_level, job_category, posted_at, snapshot_date
+                        FROM dbt_dev_gold.fct_jobs_daily
+                        ORDER BY source, source_job_id, snapshot_date DESC NULLS LAST, posted_at DESC NULLS LAST
+                    )
+                    SELECT
+                        d.source,
+                        d.source_job_id,
+                        COALESCE(f.title, d.title) AS title,
+                        COALESCE(f.company_name, d.company_name) AS company_name,
+                        COALESCE(f.city_canonical, d.city_canonical) AS city_canonical,
+                        COALESCE(f.job_level, d.job_level) AS job_level,
+                        COALESCE(f.job_category, d.job_category) AS job_category,
+                        COALESCE(f.posted_at, d.posted_at) AS posted_at,
+                        d.source_url,
+                        d.job_description_text,
+                        d.job_requirement_text,
+                        d.primary_address,
+                        d.city_raw_vi,
+                        COALESCE(f.snapshot_date, d.posted_at) AS snapshot_date
+                    FROM dbt_dev_silver.silver_job_detail d
+                    LEFT JOIN latest_gold f
+                        ON f.source = d.source AND f.source_job_id = d.source_job_id
+                    {where_sql}
+                    ORDER BY COALESCE(f.posted_at, d.posted_at) DESC NULLS LAST, snapshot_date DESC NULLS LAST, d.source, d.source_job_id
+                    LIMIT :limit
+                """), params)
+                raw_rows = list(rows.mappings())
+            except Exception:
+                await db.rollback()
+                # Fallback: silver only (gold table may be missing in CI / empty DB)
+                try:
+                    conds2 = []
+                    params2: dict = {}
+                    if category:
+                        conds2.append("d.job_category = :category")
+                        params2["category"] = category
+                    if city:
+                        conds2.append("d.city_canonical = :city")
+                        params2["city"] = city
+                    where_sql2 = (" WHERE " + " AND ".join(conds2)) if conds2 else ""
+                    params2["limit"] = limit
+                    rows2 = await db.execute(text(f"""
+                        SELECT
+                            d.source, d.source_job_id, d.title, d.company_name,
+                            d.city_canonical, d.job_level, d.job_category,
+                            d.posted_at, d.source_url,
+                            d.job_description_text, d.job_requirement_text,
+                            d.primary_address, d.city_raw_vi
+                        FROM dbt_dev_silver.silver_job_detail d
+                        {where_sql2}
+                        ORDER BY d.posted_at DESC NULLS LAST, d.source, d.source_job_id
+                        LIMIT :limit
+                    """), params2)
+                    raw_rows = list(rows2.mappings())
+                except Exception:
+                    await db.rollback()
+                    raw_rows = []
+            for r in raw_rows:
+                ws.append([
+                    r.get("source"),
+                    str(r.get("source_job_id") or ""),
+                    r.get("title"),
+                    r.get("company_name"),
+                    r.get("city_canonical"),
+                    r.get("job_level"),
+                    r.get("job_category"),
+                    r.get("posted_at").isoformat() if hasattr(r.get("posted_at"), "isoformat") and r.get("posted_at") else r.get("posted_at"),
+                    r.get("source_url"),
+                    _strip_pii(r.get("job_description_text") or ""),
+                    _strip_pii(r.get("job_requirement_text") or ""),
+                    r.get("primary_address"),
+                    r.get("city_raw_vi"),
+                ])
 
     buf = BytesIO()
     wb.save(buf)
     buf.seek(0)
-    filename = f'TalentPulse_Pro_{category or "All"}_{datetime.now(timezone.utc).strftime("%Y-%m-%d")}.xlsx'
+    if kind == "raw":
+        filename = f'TalentPulse_RawJD_{category or "All"}_{datetime.now(timezone.utc).strftime("%Y-%m-%d")}.xlsx'
+    else:
+        filename = f'TalentPulse_Pro_{category or "All"}_{datetime.now(timezone.utc).strftime("%Y-%m-%d")}.xlsx'
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

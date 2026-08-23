@@ -87,6 +87,7 @@ export default function ProInsightsClient() {
   const [loading, setLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [excelLoading, setExcelLoading] = useState(false);
+  const [rawExcelLoading, setRawExcelLoading] = useState(false);
 
   const [rawSource, setRawSource] = useState("");
   const [rawId, setRawId] = useState("");
@@ -172,6 +173,33 @@ export default function ProInsightsClient() {
       // ignore for now; toast could be added
     } finally {
       setExcelLoading(false);
+    }
+  }, [token, category, city, limit]);
+
+  const handleExportRaw = useCallback(async () => {
+    if (!token) return;
+    setRawExcelLoading(true);
+    try {
+      const blob = await proApi.exportXlsx(token, {
+        category: category || null,
+        city: city || null,
+        kind: "raw",
+        limit,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const date = new Date().toISOString().slice(0, 10);
+      const catPart = category || "All";
+      a.href = url;
+      a.download = `TalentPulse_RawJD_${catPart}_${date}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore for now; toast could be added
+    } finally {
+      setRawExcelLoading(false);
     }
   }, [token, category, city, limit]);
 
@@ -284,6 +312,13 @@ export default function ProInsightsClient() {
                 disabled={excelLoading || loading}
               >
                 {excelLoading ? "Đang tải..." : "Tải Excel"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleExportRaw}
+                disabled={rawExcelLoading || loading}
+              >
+                {rawExcelLoading ? "Đang tải..." : "Tải JD Excel"}
               </Button>
               <Button onClick={handleReport} disabled={reportLoading || loading}>
                 {reportLoading ? "Đang tạo..." : "Generate Report"}
