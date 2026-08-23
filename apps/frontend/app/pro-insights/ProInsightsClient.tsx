@@ -347,25 +347,13 @@ export default function ProInsightsClient() {
         <>
           {health && (
             <ScrollReveal delay={0.05}>
-              <section className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <section className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-1">
                 <KpiCard
                   label="Đã trích xuất"
                   value={health.extracted.toLocaleString()}
                   hint={`Trên ${health.total_jd.toLocaleString()} tin JD`}
                   accent="blue"
                   series={skills.map((s) => s.n_jobs)}
-                />
-                <KpiCard
-                  label="Độ trễ dữ liệu"
-                  value={health.gap_days == null ? "—" : `${health.gap_days} ngày`}
-                  hint={
-                    health.max_extracted_at
-                      ? `Mới nhất: ${new Date(health.max_extracted_at).toLocaleDateString("vi-VN")}`
-                      : health.max_posted_at
-                        ? `Posted: ${new Date(health.max_posted_at).toLocaleDateString("vi-VN")}`
-                        : undefined
-                  }
-                  accent="purple"
                 />
               </section>
             </ScrollReveal>
