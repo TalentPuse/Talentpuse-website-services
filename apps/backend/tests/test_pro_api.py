@@ -60,3 +60,30 @@ async def test_insight_404(client, db_session, seed_user):
     token = create_access_token({"sub": str(seed_user.id)})
     resp = await client.get("/api/pro/jobs/unknown/999/insight", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code in (404, 200)
+
+
+@pytest.mark.asyncio
+async def test_export_xlsx(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"; await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    resp = await client.get("/api/pro/export.xlsx?kind=skills&limit=5", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert "application/vnd.openxmlformats" in resp.headers["content-type"]
+    assert len(resp.content) > 500
+
+
+@pytest.mark.asyncio
+async def test_report(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"; await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    resp = await client.post("/api/pro/report?category=AI", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert "narrative" in resp.json() and "tables" in resp.json()
+
+
+@pytest.mark.asyncio
+async def test_health_gap_days(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"; await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    resp = await client.get("/api/pro/health", headers={"Authorization": f"Bearer {token}"})
+    assert "gap_days" in resp.json()
