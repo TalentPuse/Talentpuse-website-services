@@ -40,8 +40,16 @@ async def require_pro(user: User = Depends(get_current_user)):
 
 @router.get("/health")
 async def health(user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
-    total = (await db.execute(text("SELECT count(*) FROM dbt_dev_silver.silver_job_detail WHERE length(coalesce(job_description_text,'')||coalesce(job_requirement_text,'')) > 100"))).scalar() or 0
-    extracted = (await db.execute(text("SELECT count(*) FROM app.jd_insight"))).scalar() or 0
+    try:
+        total = (await db.execute(text("SELECT count(*) FROM dbt_dev_silver.silver_job_detail WHERE length(coalesce(job_description_text,'')||coalesce(job_requirement_text,'')) > 100"))).scalar() or 0
+    except Exception:
+        await db.rollback()
+        total = 0
+    try:
+        extracted = (await db.execute(text("SELECT count(*) FROM app.jd_insight"))).scalar() or 0
+    except Exception:
+        await db.rollback()
+        extracted = 0
     missing = max(total - extracted, 0)
     missing_pct = round(missing * 100 / max(total, 1), 1)
 
@@ -309,8 +317,16 @@ async def report(category: str | None = Query(None), user: User = Depends(requir
     experience = await experience_dist(category, user, db)
 
     # missing stats for data_note
-    total = (await db.execute(text("SELECT count(*) FROM dbt_dev_silver.silver_job_detail WHERE length(coalesce(job_description_text,'')||coalesce(job_requirement_text,'')) > 100"))).scalar() or 0
-    extracted = (await db.execute(text("SELECT count(*) FROM app.jd_insight"))).scalar() or 0
+    try:
+        total = (await db.execute(text("SELECT count(*) FROM dbt_dev_silver.silver_job_detail WHERE length(coalesce(job_description_text,'')||coalesce(job_requirement_text,'')) > 100"))).scalar() or 0
+    except Exception:
+        await db.rollback()
+        total = 0
+    try:
+        extracted = (await db.execute(text("SELECT count(*) FROM app.jd_insight"))).scalar() or 0
+    except Exception:
+        await db.rollback()
+        extracted = 0
     missing = max(total - extracted, 0)
     missing_pct = round(missing * 100 / max(total, 1), 1)
 
