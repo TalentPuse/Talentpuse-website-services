@@ -275,19 +275,13 @@ export default function ProInsightsClient() {
         <>
           {health && (
             <ScrollReveal delay={0.05}>
-              <section className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <section className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
                 <KpiCard
                   label="Đã trích xuất"
                   value={health.extracted.toLocaleString()}
                   hint={`Trên ${health.total_jd.toLocaleString()} tin JD`}
                   accent="blue"
                   series={skills.map((s) => s.n_jobs)}
-                />
-                <KpiCard
-                  label="Thiếu"
-                  value={`${health.missing.toLocaleString()} (${health.missing_pct}%)`}
-                  hint={health.missing === 0 ? "Đồng bộ tốt" : "Cần crawl thêm"}
-                  accent={health.missing_pct > 5 ? "amber" : "green"}
                 />
                 <KpiCard
                   label="Độ trễ dữ liệu"
