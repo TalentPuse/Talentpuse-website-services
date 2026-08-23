@@ -1,13 +1,14 @@
 import re
 from io import BytesIO
 from datetime import datetime, timezone, date
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
 
 from app.core import config
+from app.core.config import VN_TZ
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
@@ -30,6 +31,66 @@ def _filter_sql(category: str | None, city: str | None = None, alias: str = "i")
     if city:
         conds.append(f"{alias}.data->'job'->>'city_canonical' = :city")
         params["city"] = city
+    return (" AND " + " AND ".join(conds)) if conds else "", params
+
+
+def _khoang_ngay_pro(date_from: str | None, date_to: str | None) -> tuple[datetime | None, datetime | None]:
+    """Parse YYYY-MM-DD date strings to VN_TZ datetimes (THEO NGÀY).
+
+    - date_from -> 00:00:00 VN at start of that day
+    - date_to   -> 23:59:59.999999 VN at end of that day (inclusive)
+    - raises 422 if format invalid or date_from > date_to
+    Similar to admin._khoang_ngay (admin.py:61) but accepts plain date strings
+    and uses strict YYYY-MM-DD parsing.
+    """
+    def _doc(v: str | None, ten: str) -> datetime | None:
+        if not v:
+            return None
+        # allow YYYY-MM-DD only; fromisoformat also handles YYYY-MM-DDTHH:MM etc. but we validate
+        try:
+            # strict YYYY-MM-DD
+            dt = datetime.strptime(v, "%Y-%m-%d")
+        except ValueError:
+            try:
+                # fallback: fromisoformat for YYYY-MM-DD with possible time
+                dt = datetime.fromisoformat(v)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"{ten} khong phai ngay hop le (can YYYY-MM-DD): {v!r}",
+                )
+        # naive -> VN_TZ, aware -> convert to VN_TZ
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=VN_TZ)
+        else:
+            dt = dt.astimezone(VN_TZ)
+        return dt
+
+    tu = _doc(date_from, "date_from")
+    den = _doc(date_to, "date_to")
+    # if date_to is date-only (00:00:00), extend to end of day (same as admin._khoang_ngay)
+    if den is not None and (den.hour, den.minute, den.second, den.microsecond) == (0, 0, 0, 0):
+        den = den.replace(hour=23, minute=59, second=59, microsecond=999999)
+    if tu is not None and den is not None and tu > den:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="date_from phai truoc date_to",
+        )
+    return tu, den
+
+
+def _date_filter_sql(
+    tu: datetime | None, den: datetime | None, alias: str = "i", col: str = "extracted_at"
+) -> tuple[str, dict]:
+    """Build WHERE fragment for date range on alias.col (timestamptz)."""
+    conds: list[str] = []
+    params: dict = {}
+    if tu is not None:
+        conds.append(f"{alias}.{col} >= :date_from")
+        params["date_from"] = tu
+    if den is not None:
+        conds.append(f"{alias}.{col} <= :date_to")
+        params["date_to"] = den
     return (" AND " + " AND ".join(conds)) if conds else "", params
 
 
@@ -63,14 +124,44 @@ async def require_pro(user: User = Depends(get_current_user)):
 
 
 @router.get("/health")
-async def health(user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
+async def health(
+    date_from: str | None = Query(None, description="Filter from date YYYY-MM-DD"),
+    date_to: str | None = Query(None, description="Filter to date YYYY-MM-DD"),
+    user: User = Depends(require_pro),
+    db: AsyncSession = Depends(get_db),
+):
+    tu, den = _khoang_ngay_pro(date_from, date_to)
     try:
-        total = (await db.execute(text("SELECT count(*) FROM dbt_dev_silver.silver_job_detail WHERE length(coalesce(job_description_text,'')||coalesce(job_requirement_text,'')) > 100"))).scalar() or 0
+        if tu is not None or den is not None:
+            conds = ["length(coalesce(job_description_text,'')||coalesce(job_requirement_text,'')) > 100"]
+            params: dict = {}
+            if tu is not None:
+                conds.append("posted_at >= :date_from")
+                params["date_from"] = tu
+            if den is not None:
+                conds.append("posted_at <= :date_to")
+                params["date_to"] = den
+            where_sql = " AND ".join(conds)
+            total = (await db.execute(text(f"SELECT count(*) FROM dbt_dev_silver.silver_job_detail WHERE {where_sql}"), params)).scalar() or 0
+        else:
+            total = (await db.execute(text("SELECT count(*) FROM dbt_dev_silver.silver_job_detail WHERE length(coalesce(job_description_text,'')||coalesce(job_requirement_text,'')) > 100"))).scalar() or 0
     except Exception:
         await db.rollback()
         total = 0
     try:
-        extracted = (await db.execute(text("SELECT count(*) FROM app.jd_insight"))).scalar() or 0
+        if tu is not None or den is not None:
+            conds2: list[str] = []
+            params2: dict = {}
+            if tu is not None:
+                conds2.append("extracted_at >= :date_from")
+                params2["date_from"] = tu
+            if den is not None:
+                conds2.append("extracted_at <= :date_to")
+                params2["date_to"] = den
+            where2 = (" WHERE " + " AND ".join(conds2)) if conds2 else ""
+            extracted = (await db.execute(text(f"SELECT count(*) FROM app.jd_insight{where2}"), params2)).scalar() or 0
+        else:
+            extracted = (await db.execute(text("SELECT count(*) FROM app.jd_insight"))).scalar() or 0
     except Exception:
         await db.rollback()
         extracted = 0
@@ -185,8 +276,20 @@ async def health(user: User = Depends(require_pro), db: AsyncSession = Depends(g
 
 
 @router.get("/skills/top")
-async def skills_top(category: str | None = None, city: str | None = None, limit: int = Query(20, ge=1, le=100), user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
+async def skills_top(
+    category: str | None = None,
+    city: str | None = None,
+    limit: int = Query(10, ge=1, le=100),
+    date_from: str | None = Query(None, description="Filter from date YYYY-MM-DD"),
+    date_to: str | None = Query(None, description="Filter to date YYYY-MM-DD"),
+    user: User = Depends(require_pro),
+    db: AsyncSession = Depends(get_db),
+):
+    tu, den = _khoang_ngay_pro(date_from, date_to)
     extra, params = _filter_sql(category, city)
+    date_extra, date_params = _date_filter_sql(tu, den, alias="i", col="extracted_at")
+    extra += date_extra
+    params.update(date_params)
     rows = await db.execute(text(f"""
         SELECT lower(btrim(s.skill)) AS skill, count(*)::int AS n_jobs
         FROM app.jd_insight i
@@ -204,8 +307,20 @@ async def skills_top(category: str | None = None, city: str | None = None, limit
 
 
 @router.get("/tools/top")
-async def tools_top(category: str | None = None, city: str | None = None, limit: int = Query(20, ge=1, le=100), user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
+async def tools_top(
+    category: str | None = None,
+    city: str | None = None,
+    limit: int = Query(10, ge=1, le=100),
+    date_from: str | None = Query(None, description="Filter from date YYYY-MM-DD"),
+    date_to: str | None = Query(None, description="Filter to date YYYY-MM-DD"),
+    user: User = Depends(require_pro),
+    db: AsyncSession = Depends(get_db),
+):
+    tu, den = _khoang_ngay_pro(date_from, date_to)
     extra, params = _filter_sql(category, city)
+    date_extra, date_params = _date_filter_sql(tu, den, alias="i", col="extracted_at")
+    extra += date_extra
+    params.update(date_params)
     params["limit"] = limit
     rows = await db.execute(text(f"""
         SELECT s.tool, count(*)::int AS n_jobs
@@ -220,8 +335,19 @@ async def tools_top(category: str | None = None, city: str | None = None, limit:
 
 
 @router.get("/languages/top")
-async def languages_top(category: str | None = None, limit: int = Query(20, ge=1, le=100), user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
+async def languages_top(
+    category: str | None = None,
+    limit: int = Query(10, ge=1, le=100),
+    date_from: str | None = Query(None, description="Filter from date YYYY-MM-DD"),
+    date_to: str | None = Query(None, description="Filter to date YYYY-MM-DD"),
+    user: User = Depends(require_pro),
+    db: AsyncSession = Depends(get_db),
+):
+    tu, den = _khoang_ngay_pro(date_from, date_to)
     extra, params = _filter_sql(category)
+    date_extra, date_params = _date_filter_sql(tu, den, alias="i", col="extracted_at")
+    extra += date_extra
+    params.update(date_params)
     params["limit"] = limit
     rows = await db.execute(text(f"""
         SELECT l->>'lang' AS lang, l->>'level' AS level, count(*)::int AS n_jobs
@@ -236,8 +362,20 @@ async def languages_top(category: str | None = None, limit: int = Query(20, ge=1
 
 
 @router.get("/benefits/top")
-async def benefits_top(category: str | None = None, city: str | None = None, limit: int = Query(20, ge=1, le=100), user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
+async def benefits_top(
+    category: str | None = None,
+    city: str | None = None,
+    limit: int = Query(10, ge=1, le=100),
+    date_from: str | None = Query(None, description="Filter from date YYYY-MM-DD"),
+    date_to: str | None = Query(None, description="Filter to date YYYY-MM-DD"),
+    user: User = Depends(require_pro),
+    db: AsyncSession = Depends(get_db),
+):
+    tu, den = _khoang_ngay_pro(date_from, date_to)
     extra, params = _filter_sql(category, city)
+    date_extra, date_params = _date_filter_sql(tu, den, alias="i", col="extracted_at")
+    extra += date_extra
+    params.update(date_params)
     params["limit"] = limit
     rows = await db.execute(text(f"""
         SELECT b.benefit, count(*)::int AS n_jobs
@@ -250,8 +388,18 @@ async def benefits_top(category: str | None = None, city: str | None = None, lim
 
 
 @router.get("/requirements/experience")
-async def experience_dist(category: str | None = None, user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
+async def experience_dist(
+    category: str | None = None,
+    date_from: str | None = Query(None, description="Filter from date YYYY-MM-DD"),
+    date_to: str | None = Query(None, description="Filter to date YYYY-MM-DD"),
+    user: User = Depends(require_pro),
+    db: AsyncSession = Depends(get_db),
+):
+    tu, den = _khoang_ngay_pro(date_from, date_to)
     extra, params = _filter_sql(category)
+    date_extra, date_params = _date_filter_sql(tu, den, alias="i", col="extracted_at")
+    extra += date_extra
+    params.update(date_params)
     rows = await db.execute(text(f"""
         SELECT
             CASE
@@ -275,11 +423,15 @@ async def export_xlsx(
     title: str | None = Query(None, description="Filter raw JD by job title substring (ILIKE)"),
     search: str | None = Query(None, description="Alias for title"),
     kind: str = Query("skills", pattern="^(skills|tools|languages|benefits|experience|raw|all)$"),
-    limit: int = Query(20, ge=1, le=200),
+    limit: int = Query(10, ge=1, le=200),
+    date_from: str | None = Query(None, description="Filter from date YYYY-MM-DD"),
+    date_to: str | None = Query(None, description="Filter to date YYYY-MM-DD"),
     user: User = Depends(require_pro),
     db: AsyncSession = Depends(get_db),
 ):
     from openpyxl import Workbook
+
+    tu, den = _khoang_ngay_pro(date_from, date_to)
 
     wb = Workbook()
     # Determine sheets to create
@@ -300,27 +452,27 @@ async def export_xlsx(
 
         if k == "skills":
             ws.append(["skill", "n_jobs"])
-            data = await skills_top(category, city, limit, user, db)
+            data = await skills_top(category, city, limit, date_from, date_to, user, db)
             for row in data:
                 ws.append([row.get("skill"), row.get("n_jobs")])
         elif k == "tools":
             ws.append(["tool", "n_jobs"])
-            data = await tools_top(category, city, limit, user, db)
+            data = await tools_top(category, city, limit, date_from, date_to, user, db)
             for row in data:
                 ws.append([row.get("tool"), row.get("n_jobs")])
         elif k == "languages":
             ws.append(["lang", "level", "n_jobs"])
-            data = await languages_top(category, limit, user, db)
+            data = await languages_top(category, limit, date_from, date_to, user, db)
             for row in data:
                 ws.append([row.get("lang"), row.get("level"), row.get("n_jobs")])
         elif k == "benefits":
             ws.append(["benefit", "n_jobs"])
-            data = await benefits_top(category, city, limit, user, db)
+            data = await benefits_top(category, city, limit, date_from, date_to, user, db)
             for row in data:
                 ws.append([row.get("benefit"), row.get("n_jobs")])
         elif k == "experience":
             ws.append(["bucket", "n_jobs"])
-            data = await experience_dist(category, user, db)
+            data = await experience_dist(category, date_from, date_to, user, db)
             for row in data:
                 ws.append([row.get("bucket"), row.get("n_jobs")])
         elif k == "raw":
@@ -347,6 +499,12 @@ async def export_xlsx(
                 if _title_raw:
                     conds.append("COALESCE(f.title, d.title) ILIKE :title")
                     params["title"] = _like_pattern(_title_raw)
+                if tu is not None:
+                    conds.append("COALESCE(f.posted_at, d.posted_at) >= :date_from")
+                    params["date_from"] = tu
+                if den is not None:
+                    conds.append("COALESCE(f.posted_at, d.posted_at) <= :date_to")
+                    params["date_to"] = den
                 where_sql = (" WHERE " + " AND ".join(conds)) if conds else ""
                 params["limit"] = limit
                 rows = await db.execute(text(f"""
@@ -396,6 +554,12 @@ async def export_xlsx(
                     if _title_raw2:
                         conds2.append("d.title ILIKE :title")
                         params2["title"] = _like_pattern(_title_raw2)
+                    if tu is not None:
+                        conds2.append("d.posted_at >= :date_from")
+                        params2["date_from"] = tu
+                    if den is not None:
+                        conds2.append("d.posted_at <= :date_to")
+                        params2["date_to"] = den
                     where_sql2 = (" WHERE " + " AND ".join(conds2)) if conds2 else ""
                     params2["limit"] = limit
                     rows2 = await db.execute(text(f"""
@@ -446,21 +610,53 @@ async def export_xlsx(
 
 
 @router.post("/report")
-async def report(category: str | None = Query(None), user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
-    skills = await skills_top(category, None, 10, user, db)
-    tools = await tools_top(category, None, 10, user, db)
-    languages = await languages_top(category, 10, user, db)
-    benefits = await benefits_top(category, None, 10, user, db)
-    experience = await experience_dist(category, user, db)
+async def report(
+    category: str | None = Query(None),
+    date_from: str | None = Query(None, description="Filter from date YYYY-MM-DD"),
+    date_to: str | None = Query(None, description="Filter to date YYYY-MM-DD"),
+    user: User = Depends(require_pro),
+    db: AsyncSession = Depends(get_db),
+):
+    tu, den = _khoang_ngay_pro(date_from, date_to)
+    # validate early even if not used in subcalls? keep for 422 on bad dates
+    skills = await skills_top(category, None, 10, date_from, date_to, user, db)
+    tools = await tools_top(category, None, 10, date_from, date_to, user, db)
+    languages = await languages_top(category, 10, date_from, date_to, user, db)
+    benefits = await benefits_top(category, None, 10, date_from, date_to, user, db)
+    experience = await experience_dist(category, date_from, date_to, user, db)
 
-    # missing stats for data_note
+    # missing stats for data_note (respect date filter if provided)
     try:
-        total = (await db.execute(text("SELECT count(*) FROM dbt_dev_silver.silver_job_detail WHERE length(coalesce(job_description_text,'')||coalesce(job_requirement_text,'')) > 100"))).scalar() or 0
+        if tu is not None or den is not None:
+            conds = ["length(coalesce(job_description_text,'')||coalesce(job_requirement_text,'')) > 100"]
+            params: dict = {}
+            if tu is not None:
+                conds.append("posted_at >= :date_from")
+                params["date_from"] = tu
+            if den is not None:
+                conds.append("posted_at <= :date_to")
+                params["date_to"] = den
+            where_sql = " AND ".join(conds)
+            total = (await db.execute(text(f"SELECT count(*) FROM dbt_dev_silver.silver_job_detail WHERE {where_sql}"), params)).scalar() or 0
+        else:
+            total = (await db.execute(text("SELECT count(*) FROM dbt_dev_silver.silver_job_detail WHERE length(coalesce(job_description_text,'')||coalesce(job_requirement_text,'')) > 100"))).scalar() or 0
     except Exception:
         await db.rollback()
         total = 0
     try:
-        extracted = (await db.execute(text("SELECT count(*) FROM app.jd_insight"))).scalar() or 0
+        if tu is not None or den is not None:
+            conds2: list[str] = []
+            params2: dict = {}
+            if tu is not None:
+                conds2.append("extracted_at >= :date_from")
+                params2["date_from"] = tu
+            if den is not None:
+                conds2.append("extracted_at <= :date_to")
+                params2["date_to"] = den
+            where2 = (" WHERE " + " AND ".join(conds2)) if conds2 else ""
+            extracted = (await db.execute(text(f"SELECT count(*) FROM app.jd_insight{where2}"), params2)).scalar() or 0
+        else:
+            extracted = (await db.execute(text("SELECT count(*) FROM app.jd_insight"))).scalar() or 0
     except Exception:
         await db.rollback()
         extracted = 0

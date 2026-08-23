@@ -92,7 +92,7 @@ jest.mock("@/components/ui/select", () => {
   const React = require("react");
   function Select({ onValueChange, value, children }: any) {
     const idx = selectIndex++;
-    // Determine options based on mount order: 0=category,1=city,2=limit
+    // Determine options based on mount order: 0=category,1=city,2=period (week/month)
     // Use fixed sets matching ProInsightsClient constants
     let options: { value: string; label: string }[] = [];
     if (idx % 3 === 0) {
@@ -105,10 +105,13 @@ jest.mock("@/components/ui/select", () => {
       const cities = ["Hà Nội", "Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ", "Bình Dương", "Đồng Nai"];
       options = [{ value: "all", label: "Tất cả thành phố" }, ...cities.map((c) => ({ value: c, label: c }))];
     } else {
-      const limits = ["10", "15", "20", "50"];
-      options = limits.map((n) => ({ value: n, label: `Top ${n}` }));
+      options = [
+        { value: "all", label: "Tất cả" },
+        { value: "week", label: "Tuần này" },
+        { value: "month", label: "Tháng này" },
+      ];
     }
-    const testId = idx % 3 === 0 ? "category-select" : idx % 3 === 1 ? "city-select" : "limit-select";
+    const testId = idx % 3 === 0 ? "category-select" : idx % 3 === 1 ? "city-select" : "period-select";
     return React.createElement(
       "select",
       {

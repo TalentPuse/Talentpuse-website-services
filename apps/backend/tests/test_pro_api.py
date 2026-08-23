@@ -260,3 +260,78 @@ async def test_export_raw_search_alias(client, db_session, seed_user):
     h = {"Authorization": f"Bearer {token}"}
     resp = await client.get("/api/pro/export.xlsx?kind=raw&limit=5&search=Engineer", headers=h)
     assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_skills_top_date_filter(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    h = {"Authorization": f"Bearer {token}"}
+    resp = await client.get("/api/pro/skills/top?date_from=2026-01-01&date_to=2026-12-31", headers=h)
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
+    # raw export with date filter also 200
+    resp2 = await client.get("/api/pro/export.xlsx?kind=raw&limit=5&date_from=2026-01-01&date_to=2026-12-31", headers=h)
+    assert resp2.status_code == 200
+    assert "application/vnd.openxmlformats" in resp2.headers["content-type"]
+
+
+@pytest.mark.asyncio
+async def test_pro_date_filter_all_endpoints(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    h = {"Authorization": f"Bearer {token}"}
+    for path in [
+        "/api/pro/skills/top?date_from=2026-01-01&date_to=2026-12-31",
+        "/api/pro/tools/top?date_from=2026-01-01&date_to=2026-12-31",
+        "/api/pro/languages/top?date_from=2026-01-01&date_to=2026-12-31",
+        "/api/pro/benefits/top?date_from=2026-01-01&date_to=2026-12-31",
+        "/api/pro/requirements/experience?date_from=2026-01-01&date_to=2026-12-31",
+        "/api/pro/health?date_from=2026-01-01&date_to=2026-12-31",
+    ]:
+        resp = await client.get(path, headers=h)
+        assert resp.status_code == 200, f"{path} failed {resp.status_code} {resp.text}"
+    # export all with date filter
+    resp = await client.get("/api/pro/export.xlsx?kind=skills&limit=5&date_from=2026-01-01&date_to=2026-12-31", headers=h)
+    assert resp.status_code == 200
+    # report with date filter
+    resp = await client.post("/api/pro/report?date_from=2026-01-01&date_to=2026-12-31", headers=h)
+    assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_pro_invalid_date_returns_422(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    h = {"Authorization": f"Bearer {token}"}
+    for bad in ["not-a-date", "2026-13-01", "2026-02-30", "2026/01/01"]:
+        resp = await client.get(f"/api/pro/skills/top?date_from={bad}", headers=h)
+        assert resp.status_code == 422, f"expected 422 for bad date {bad!r} got {resp.status_code}"
+    # reversed range
+    resp = await client.get("/api/pro/skills/top?date_from=2026-12-31&date_to=2026-01-01", headers=h)
+    assert resp.status_code == 422
+    # raw with bad date
+    resp = await client.get("/api/pro/export.xlsx?kind=raw&limit=5&date_from=invalid", headers=h)
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_export_raw_with_date_and_category_city_title(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    h = {"Authorization": f"Bearer {token}"}
+    resp = await client.get(
+        "/api/pro/export.xlsx?kind=raw&limit=5&date_from=2026-01-01&date_to=2026-12-31&category=AI&city=HCMC&title=Engineer",
+        headers=h,
+    )
+    assert resp.status_code == 200
+    assert "application/vnd.openxmlformats" in resp.headers["content-type"]
+    from io import BytesIO
+    from openpyxl import load_workbook
+
+    wb = load_workbook(BytesIO(resp.content))
+    assert "raw_jds" in wb.sheetnames

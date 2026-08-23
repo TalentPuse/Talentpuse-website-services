@@ -42,7 +42,36 @@ const CITIES = [
   "Bình Dương",
   "Đồng Nai",
 ];
-const LIMITS = [10, 15, 20, 50];
+const TOP_LIMIT = 10;
+
+type Period = "all" | "week" | "month";
+
+function formatLocal(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+function getPeriodDates(period: Period): { dateFrom: string; dateTo: string } {
+  if (period === "all") return { dateFrom: "", dateTo: "" };
+  const now = new Date();
+  if (period === "week") {
+    const day = now.getDay(); // 0 Sun .. 6 Sat
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return { dateFrom: formatLocal(monday), dateTo: formatLocal(sunday) };
+  }
+  if (period === "month") {
+    const first = new Date(now.getFullYear(), now.getMonth(), 1);
+    const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { dateFrom: formatLocal(first), dateTo: formatLocal(last) };
+  }
+  return { dateFrom: "", dateTo: "" };
+}
 
 function SkeletonBlock({ className }: { className?: string }) {
   return <div className={cn("skeleton", className)} aria-hidden="true" />;
@@ -74,7 +103,7 @@ export default function ProInsightsClient() {
   const [category, setCategory] = useState("");
   const [city, setCity] = useState("");
   const [jobTitle, setJobTitle] = useState("");
-  const [limit, setLimit] = useState(15);
+  const [period, setPeriod] = useState<Period>("all");
 
   const [categories, setCategories] = useState<string[]>([]);
   const [skills, setSkills] = useState<ProSkillRow[]>([]);
@@ -104,31 +133,40 @@ export default function ProInsightsClient() {
   }, []);
 
   const fetchAll = useCallback(
-    async (cat: string, cty: string, lim: number) => {
+    async (cat: string, cty: string, per: Period) => {
       if (!token) return;
       setLoading(true);
       try {
+        const { dateFrom, dateTo } = getPeriodDates(per);
+        const dateParams = {
+          date_from: dateFrom || null,
+          date_to: dateTo || null,
+        };
         const [s, t, l, b, e] = await Promise.all([
           proApi.skillsTop(token, {
             category: cat || null,
             city: cty || null,
-            limit: lim,
+            limit: TOP_LIMIT,
+            ...dateParams,
           }),
           proApi.toolsTop(token, {
             category: cat || null,
             city: cty || null,
-            limit: lim,
+            limit: TOP_LIMIT,
+            ...dateParams,
           }),
           proApi.languagesTop(token, {
             category: cat || null,
-            limit: lim,
+            limit: TOP_LIMIT,
+            ...dateParams,
           }),
           proApi.benefitsTop(token, {
             category: cat || null,
             city: cty || null,
-            limit: lim,
+            limit: TOP_LIMIT,
+            ...dateParams,
           }),
-          proApi.experience(token, { category: cat || null }),
+          proApi.experience(token, { category: cat || null, ...dateParams }),
         ]);
         setSkills(s);
         setTools(t);
@@ -136,7 +174,7 @@ export default function ProInsightsClient() {
         setBenefits(b);
         setExperience(e);
         proApi
-          .health(token)
+          .health(token, dateParams)
           .then(setHealth)
           .catch(() => {});
       } finally {
@@ -147,18 +185,21 @@ export default function ProInsightsClient() {
   );
 
   useEffect(() => {
-    fetchAll(category, city, limit);
-  }, [category, city, limit, fetchAll]);
+    fetchAll(category, city, period);
+  }, [category, city, period, fetchAll]);
 
   const handleExport = useCallback(async () => {
     if (!token) return;
     setExcelLoading(true);
     try {
+      const { dateFrom, dateTo } = getPeriodDates(period);
       const blob = await proApi.exportXlsx(token, {
         category: category || null,
         city: city || null,
         kind: "all",
-        limit,
+        limit: TOP_LIMIT,
+        date_from: dateFrom || null,
+        date_to: dateTo || null,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -175,18 +216,21 @@ export default function ProInsightsClient() {
     } finally {
       setExcelLoading(false);
     }
-  }, [token, category, city, limit]);
+  }, [token, category, city, period]);
 
   const handleExportRaw = useCallback(async () => {
     if (!token) return;
     setRawExcelLoading(true);
     try {
+      const { dateFrom, dateTo } = getPeriodDates(period);
       const blob = await proApi.exportXlsx(token, {
         category: category || null,
         city: city || null,
         title: jobTitle || null,
         kind: "raw",
-        limit,
+        limit: TOP_LIMIT,
+        date_from: dateFrom || null,
+        date_to: dateTo || null,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -203,20 +247,25 @@ export default function ProInsightsClient() {
     } finally {
       setRawExcelLoading(false);
     }
-  }, [token, category, city, jobTitle, limit]);
+  }, [token, category, city, jobTitle, period]);
 
   const handleReport = useCallback(async () => {
     if (!token) return;
     setReportLoading(true);
     try {
-      const r = await proApi.report(token, { category: category || null });
+      const { dateFrom, dateTo } = getPeriodDates(period);
+      const r = await proApi.report(token, {
+        category: category || null,
+        date_from: dateFrom || null,
+        date_to: dateTo || null,
+      });
       setReport(r);
     } catch {
       // ignore
     } finally {
       setReportLoading(false);
     }
-  }, [token, category]);
+  }, [token, category, period]);
 
   const handleRawFetch = useCallback(async () => {
     if (!token || !rawSource.trim() || !rawId.trim()) return;
@@ -300,20 +349,18 @@ export default function ProInsightsClient() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-text-muted">Số lượng</label>
+              <label className="text-xs font-medium text-text-muted">Kỳ</label>
               <Select
-                value={String(limit)}
-                onValueChange={(v) => setLimit(Number(v))}
+                value={period}
+                onValueChange={(v) => setPeriod(v as Period)}
               >
-                <SelectTrigger aria-label="Limit filter" className="w-auto min-w-28">
-                  <SelectValue placeholder="Limit" />
+                <SelectTrigger aria-label="Period filter" className="w-auto min-w-36">
+                  <SelectValue placeholder="Tất cả" />
                 </SelectTrigger>
                 <SelectContent>
-                  {LIMITS.map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      Top {n}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="week">Tuần này</SelectItem>
+                  <SelectItem value="month">Tháng này</SelectItem>
                 </SelectContent>
               </Select>
             </div>
