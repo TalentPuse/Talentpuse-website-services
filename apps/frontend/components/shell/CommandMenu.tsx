@@ -20,6 +20,8 @@ import {
   ClipboardCheck,
   ICON,
 } from "@/lib/icons";
+import { useAuth } from "@/context/AuthContext";
+import { ADMIN_ITEM, PRO_ITEM } from "@/components/shell/nav-items";
 
 type CommandMenuProps = {
   open: boolean;
@@ -53,6 +55,14 @@ const QUICK_ACTIONS: CommandEntry[] = [
  */
 export default function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const router = useRouter();
+  const { user } = useAuth();
+
+  // Mirrors SideNav gating: PRO_ITEM visible to pro or admin, ADMIN_ITEM to admin only
+  const navigationEntries: CommandEntry[] = [
+    ...NAVIGATION_ENTRIES,
+    ...(user?.subscription_tier === "pro" || user?.is_admin ? [PRO_ITEM as unknown as CommandEntry] : []),
+    ...(user?.is_admin ? [ADMIN_ITEM as unknown as CommandEntry] : []),
+  ];
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -84,7 +94,7 @@ export default function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
       <CommandList>
         <CommandEmpty>Không tìm thấy kết quả.</CommandEmpty>
         <CommandGroup heading="Điều hướng">
-          {NAVIGATION_ENTRIES.map((entry) => {
+          {navigationEntries.map((entry) => {
             const Icon = entry.icon;
             return (
               <CommandItem

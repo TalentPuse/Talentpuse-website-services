@@ -288,11 +288,6 @@ async def export_xlsx(
             data = await experience_dist(category, user, db)
             for row in data:
                 ws.append([row.get("bucket"), row.get("n_jobs")])
-        else:
-            ws.append(["name", "n_jobs"])
-            data = await skills_top(category, city, limit, user, db)
-            for row in data:
-                ws.append([row.get("skill") or row.get("tool") or row.get("lang"), row.get("n_jobs")])
 
     buf = BytesIO()
     wb.save(buf)

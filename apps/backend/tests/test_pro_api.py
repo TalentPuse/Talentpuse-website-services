@@ -1,6 +1,5 @@
 import pytest
 from app.core.security import create_access_token
-from app.models.user import User
 
 
 @pytest.mark.asyncio
@@ -59,7 +58,7 @@ async def test_insight_404(client, db_session, seed_user):
     seed_user.subscription_tier = "pro"; await db_session.commit()
     token = create_access_token({"sub": str(seed_user.id)})
     resp = await client.get("/api/pro/jobs/unknown/999/insight", headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code in (404, 200)
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
