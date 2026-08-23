@@ -99,3 +99,54 @@ async def test_full_pro_flow(client, db_session, seed_user):
     assert len(xlsx.content) > 1000
     rep = await client.post("/api/pro/report?category=AI", headers=h)
     assert "narrative" in rep.json()
+
+
+@pytest.mark.asyncio
+async def test_raw_jd_requires_auth(client):
+    resp = await client.get("/api/pro/jobs/vietnamworks/999999/raw")
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_raw_jd_free_forbidden(client, db_session, seed_user):
+    seed_user.subscription_tier = "free"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    resp = await client.get("/api/pro/jobs/vietnamworks/999999/raw", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_raw_jd_pro_ok(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    h = {"Authorization": f"Bearer {token}"}
+    # unknown id must be 404 (handles missing warehouse tables gracefully)
+    resp = await client.get("/api/pro/jobs/__no_source__/999999999/raw", headers=h)
+    assert resp.status_code == 404
+    # if warehouse has data, also verify 200 path contains PII-stripped keys
+    from sqlalchemy import text
+
+    try:
+        row = (await db_session.execute(text("SELECT source, source_job_id FROM dbt_dev_silver.silver_job_detail LIMIT 1"))).mappings().first()
+    except Exception:
+        await db_session.rollback()
+        row = None
+    if row is not None:
+        src, sid = row["source"], str(row["source_job_id"])
+        resp2 = await client.get(f"/api/pro/jobs/{src}/{sid}/raw", headers=h)
+        assert resp2.status_code == 200
+        data = resp2.json()
+        assert "source" in data and "source_job_id" in data
+        assert "job_description_text" in data and "job_requirement_text" in data
+        assert "title" in data and "company_name" in data and "source_url" in data
+        # PII must be stripped server-side: no raw email/phone should leak if present
+        import re
+
+        email_pat = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
+        phone_pat = re.compile(r"0\d{9,10}")
+        for key in ("job_description_text", "job_requirement_text"):
+            val = data.get(key) or ""
+            assert not email_pat.search(val), f"PII email leaked in {key}"
+            assert not phone_pat.search(val), f"PII phone leaked in {key}"

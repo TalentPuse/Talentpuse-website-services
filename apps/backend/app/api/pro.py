@@ -1,3 +1,4 @@
+import re
 from io import BytesIO
 from datetime import datetime, timezone, date
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -30,6 +31,20 @@ def _filter_sql(category: str | None, city: str | None = None, alias: str = "i")
         conds.append(f"{alias}.data->'job'->>'city_canonical' = :city")
         params["city"] = city
     return (" AND " + " AND ".join(conds)) if conds else "", params
+
+
+_RE_EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
+_RE_PHONE_VN = re.compile(r"0\d{9,10}")
+_RE_DIGITS_9_12 = re.compile(r"\b\d{9,12}\b")
+
+
+def _strip_pii(text_val: str | None) -> str:
+    if not text_val:
+        return ""
+    s = _RE_EMAIL.sub("[redacted]", text_val)
+    s = _RE_PHONE_VN.sub("[redacted]", s)
+    s = _RE_DIGITS_9_12.sub("[redacted]", s)
+    return s
 
 
 async def require_pro(user: User = Depends(get_current_user)):
@@ -380,3 +395,42 @@ async def job_insight(source: str, source_job_id: str, user: User = Depends(requ
     if data is None:
         raise HTTPException(404, "Chua co insight cho job nay")
     return data
+
+
+@router.get("/jobs/{source}/{source_job_id}/raw")
+async def job_raw(source: str, source_job_id: str, user: User = Depends(require_pro), db: AsyncSession = Depends(get_db)):
+    try:
+        row = (
+            await db.execute(
+                text(
+                    """
+                    SELECT
+                        d.job_description_text,
+                        d.job_requirement_text,
+                        d.source_url,
+                        f.title,
+                        f.company_name
+                    FROM dbt_dev_silver.silver_job_detail d
+                    LEFT JOIN dbt_dev_gold.fct_jobs_daily f
+                        ON f.source = d.source AND f.source_job_id = d.source_job_id
+                    WHERE d.source = :source AND d.source_job_id::text = :source_job_id
+                    LIMIT 1
+                    """
+                ),
+                {"source": source, "source_job_id": source_job_id},
+            )
+        ).mappings().first()
+    except Exception:
+        await db.rollback()
+        raise HTTPException(404, "Khong tim thay JD goc")
+    if row is None:
+        raise HTTPException(404, "Khong tim thay JD goc")
+    return {
+        "source": source,
+        "source_job_id": source_job_id,
+        "title": row.get("title"),
+        "company_name": row.get("company_name"),
+        "source_url": row.get("source_url"),
+        "job_description_text": _strip_pii(row.get("job_description_text") or ""),
+        "job_requirement_text": _strip_pii(row.get("job_requirement_text") or ""),
+    }

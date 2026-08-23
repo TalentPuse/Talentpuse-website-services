@@ -18,11 +18,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { dashboardApi, proApi } from "@/lib/api";
 import type {
   ProBenefitRow,
   ProExperienceRow,
   ProHealth,
+  ProJobRaw,
   ProLanguageRow,
   ProReport,
   ProSkillRow,
@@ -85,6 +87,12 @@ export default function ProInsightsClient() {
   const [loading, setLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [excelLoading, setExcelLoading] = useState(false);
+
+  const [rawSource, setRawSource] = useState("");
+  const [rawId, setRawId] = useState("");
+  const [rawData, setRawData] = useState<ProJobRaw | null>(null);
+  const [rawLoading, setRawLoading] = useState(false);
+  const [rawError, setRawError] = useState<string | null>(null);
 
   useEffect(() => {
     dashboardApi
@@ -179,6 +187,22 @@ export default function ProInsightsClient() {
       setReportLoading(false);
     }
   }, [token, category]);
+
+  const handleRawFetch = useCallback(async () => {
+    if (!token || !rawSource.trim() || !rawId.trim()) return;
+    setRawLoading(true);
+    setRawError(null);
+    setRawData(null);
+    try {
+      const data = await proApi.jobRaw(token, rawSource.trim(), rawId.trim());
+      setRawData(data);
+    } catch (e: unknown) {
+      const msg = (e as { message?: string })?.message || "Không tải được JD gốc";
+      setRawError(msg);
+    } finally {
+      setRawLoading(false);
+    }
+  }, [token, rawSource, rawId]);
 
   // Keep visual filter bar in sync with auth readiness: show header always
 
@@ -392,6 +416,62 @@ export default function ProInsightsClient() {
               </section>
             </ScrollReveal>
           )}
+
+          <ScrollReveal delay={0.24}>
+            <section className="mb-8">
+              <Card title="JD gốc" subtitle="Xem mô tả công việc gốc đã lọc PII (Pro only)">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <div className="flex flex-1 flex-col gap-1">
+                    <label className="text-xs font-medium text-text-muted">Source</label>
+                    <Input
+                      placeholder="vd: vietnamworks"
+                      value={rawSource}
+                      onChange={(e) => setRawSource(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-1 flex-col gap-1">
+                    <label className="text-xs font-medium text-text-muted">Source Job ID</label>
+                    <Input
+                      placeholder="vd: 123456"
+                      value={rawId}
+                      onChange={(e) => setRawId(e.target.value)}
+                    />
+                  </div>
+                  <Button onClick={handleRawFetch} disabled={rawLoading || !rawSource.trim() || !rawId.trim()}>
+                    {rawLoading ? "Đang tải..." : "Xem JD gốc"}
+                  </Button>
+                </div>
+                {rawError && <p className="mt-3 text-sm text-destructive">{rawError}</p>}
+                {rawData && (
+                  <div className="mt-4 space-y-3 rounded-lg border bg-muted/20 p-4">
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-semibold text-text">{rawData.title || "—"}</h4>
+                      <p className="text-xs text-text-muted">
+                        {rawData.company_name || "—"} · {rawData.source} / {rawData.source_job_id}
+                      </p>
+                      {rawData.source_url && (
+                        <a href={rawData.source_url} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+                          {rawData.source_url}
+                        </a>
+                      )}
+                    </div>
+                    <div>
+                      <h5 className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">Mô tả</h5>
+                      <p className="max-h-80 overflow-auto whitespace-pre-wrap rounded bg-background p-3 text-sm leading-relaxed text-text">
+                        {rawData.job_description_text || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <h5 className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">Yêu cầu</h5>
+                      <p className="max-h-80 overflow-auto whitespace-pre-wrap rounded bg-background p-3 text-sm leading-relaxed text-text">
+                        {rawData.job_requirement_text || "—"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </section>
+          </ScrollReveal>
         </>
       )}
     </div>

@@ -1452,6 +1452,16 @@ export type ProReport = {
   gap_days: number | null;
 };
 
+export type ProJobRaw = {
+  source: string;
+  source_job_id: string;
+  title: string | null;
+  company_name: string | null;
+  source_url: string | null;
+  job_description_text: string;
+  job_requirement_text: string;
+};
+
 export const proApi = {
   health: (token: string) =>
     clientFetch<ProHealth>("/api/pro/health", {
@@ -1553,6 +1563,11 @@ export const proApi = {
 
   jobInsight: (token: string, source: string, sourceJobId: string) =>
     clientFetch<unknown>(`/api/pro/jobs/${encodeURIComponent(source)}/${encodeURIComponent(sourceJobId)}/insight`, {
+      headers: authHeaders(token),
+    }),
+
+  jobRaw: (token: string, source: string, sourceJobId: string) =>
+    clientFetch<ProJobRaw>(`/api/pro/jobs/${encodeURIComponent(source)}/${encodeURIComponent(sourceJobId)}/raw`, {
       headers: authHeaders(token),
     }),
 };
