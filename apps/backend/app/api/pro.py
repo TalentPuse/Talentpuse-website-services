@@ -47,6 +47,15 @@ def _strip_pii(text_val: str | None) -> str:
     return s
 
 
+# LIKE wildcards must be escaped — same logic as job_matcher._mau_chua (job_matcher.py:190)
+_ILIKE_ESC = str.maketrans({"\\": "\\\\", "%": "\\%", "_": "\\_"})
+
+
+def _like_pattern(v: str) -> str:
+    """User input → ILIKE '%<escaped>%' (PG default escape is backslash)."""
+    return f"%{v.translate(_ILIKE_ESC)}%"
+
+
 async def require_pro(user: User = Depends(get_current_user)):
     if user.subscription_tier != "pro" and not user.is_admin:
         raise HTTPException(403, "Pro subscription required")
@@ -263,6 +272,8 @@ async def experience_dist(category: str | None = None, user: User = Depends(requ
 async def export_xlsx(
     category: str | None = Query(None),
     city: str | None = Query(None),
+    title: str | None = Query(None, description="Filter raw JD by job title substring (ILIKE)"),
+    search: str | None = Query(None, description="Alias for title"),
     kind: str = Query("skills", pattern="^(skills|tools|languages|benefits|experience|raw|all)$"),
     limit: int = Query(20, ge=1, le=200),
     user: User = Depends(require_pro),
@@ -332,6 +343,10 @@ async def export_xlsx(
                 if city:
                     conds.append("COALESCE(f.city_canonical, d.city_canonical) = :city")
                     params["city"] = city
+                _title_raw = (title or search or "").strip() if (title or search) else ""
+                if _title_raw:
+                    conds.append("COALESCE(f.title, d.title) ILIKE :title")
+                    params["title"] = _like_pattern(_title_raw)
                 where_sql = (" WHERE " + " AND ".join(conds)) if conds else ""
                 params["limit"] = limit
                 rows = await db.execute(text(f"""
@@ -377,6 +392,10 @@ async def export_xlsx(
                     if city:
                         conds2.append("d.city_canonical = :city")
                         params2["city"] = city
+                    _title_raw2 = (title or search or "").strip() if (title or search) else ""
+                    if _title_raw2:
+                        conds2.append("d.title ILIKE :title")
+                        params2["title"] = _like_pattern(_title_raw2)
                     where_sql2 = (" WHERE " + " AND ".join(conds2)) if conds2 else ""
                     params2["limit"] = limit
                     rows2 = await db.execute(text(f"""

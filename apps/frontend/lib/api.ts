@@ -1533,11 +1533,13 @@ export const proApi = {
 
   exportXlsx: async (
     token: string,
-    params: { category?: string | null; city?: string | null; kind?: string; limit?: number } = {},
+    params: { category?: string | null; city?: string | null; title?: string | null; search?: string | null; kind?: string; limit?: number } = {},
   ): Promise<Blob> => {
     const q = new URLSearchParams();
     if (params.category) q.set("category", params.category);
     if (params.city) q.set("city", params.city);
+    if (params.title) q.set("title", params.title);
+    if (params.search) q.set("search", params.search);
     if (params.kind) q.set("kind", params.kind);
     if (params.limit) q.set("limit", String(params.limit));
     const query = q.toString() ? `?${q.toString()}` : "";

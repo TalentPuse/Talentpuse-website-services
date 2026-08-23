@@ -73,6 +73,7 @@ export default function ProInsightsClient() {
   const { user, token } = useAuth();
   const [category, setCategory] = useState("");
   const [city, setCity] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
   const [limit, setLimit] = useState(15);
 
   const [categories, setCategories] = useState<string[]>([]);
@@ -183,6 +184,7 @@ export default function ProInsightsClient() {
       const blob = await proApi.exportXlsx(token, {
         category: category || null,
         city: city || null,
+        title: jobTitle || null,
         kind: "raw",
         limit,
       });
@@ -201,7 +203,7 @@ export default function ProInsightsClient() {
     } finally {
       setRawExcelLoading(false);
     }
-  }, [token, category, city, limit]);
+  }, [token, category, city, jobTitle, limit]);
 
   const handleReport = useCallback(async () => {
     if (!token) return;
@@ -284,6 +286,17 @@ export default function ProInsightsClient() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-text-muted">Tên công việc</label>
+              <Input
+                placeholder="vd: Engineer"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                aria-label="Job title filter"
+                className="w-auto min-w-44"
+              />
             </div>
 
             <div className="flex flex-col gap-1">

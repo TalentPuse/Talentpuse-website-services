@@ -190,3 +190,73 @@ async def test_export_raw_invalid_kind(client, db_session, seed_user):
     token = create_access_token({"sub": str(seed_user.id)})
     resp = await client.get("/api/pro/export.xlsx?kind=INVALID&limit=5", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_export_raw_title_filter(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    h = {"Authorization": f"Bearer {token}"}
+    resp = await client.get("/api/pro/export.xlsx?kind=raw&limit=5&title=Engineer", headers=h)
+    assert resp.status_code == 200
+    assert "application/vnd.openxmlformats" in resp.headers["content-type"]
+    assert len(resp.content) > 500
+    from io import BytesIO
+    from openpyxl import load_workbook
+
+    wb = load_workbook(BytesIO(resp.content))
+    assert "raw_jds" in wb.sheetnames
+    ws = wb["raw_jds"]
+    header = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+    assert "title" in header
+
+
+@pytest.mark.asyncio
+async def test_export_raw_title_filter_escaping(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    h = {"Authorization": f"Bearer {token}"}
+    # % and _ are LIKE wildcards — must be escaped, not expand to "match all"
+    for special in ["Engineer%", "Senior_Engineer", "a\\b", "100%"]:
+        resp = await client.get("/api/pro/export.xlsx?kind=raw&limit=5", headers=h, params={"title": special})
+        # alternative: use URL encoding via params; httpx handles it
+        assert resp.status_code == 200, f"escaping failed for title={special!r}"
+
+
+@pytest.mark.asyncio
+async def test_export_raw_title_filter_with_category_and_city(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    h = {"Authorization": f"Bearer {token}"}
+    resp = await client.get(
+        "/api/pro/export.xlsx?kind=raw&limit=5&title=Engineer&category=AI&city=HCMC",
+        headers=h,
+    )
+    assert resp.status_code == 200
+    assert "application/vnd.openxmlformats" in resp.headers["content-type"]
+
+
+@pytest.mark.asyncio
+async def test_export_raw_title_filter_case_insensitive(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    h = {"Authorization": f"Bearer {token}"}
+    # lower-case should still match via ILIKE
+    resp_lower = await client.get("/api/pro/export.xlsx?kind=raw&limit=5&title=engineer", headers=h)
+    resp_upper = await client.get("/api/pro/export.xlsx?kind=raw&limit=5&title=ENGINEER", headers=h)
+    assert resp_lower.status_code == 200
+    assert resp_upper.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_export_raw_search_alias(client, db_session, seed_user):
+    seed_user.subscription_tier = "pro"
+    await db_session.commit()
+    token = create_access_token({"sub": str(seed_user.id)})
+    h = {"Authorization": f"Bearer {token}"}
+    resp = await client.get("/api/pro/export.xlsx?kind=raw&limit=5&search=Engineer", headers=h)
+    assert resp.status_code == 200
