@@ -348,6 +348,26 @@ def test_strip_pii_plus84():
     assert "[redacted]" in _strip_pii("Dia chi: 123 Le Loi, LH 0912345678")
 
 
+def test_norm_skill():
+    from app.api.pro import _norm_skill
+
+    assert _norm_skill("Artificial Intelligence") == "ai"
+    assert _norm_skill("ReactJS") == "react"
+    assert _norm_skill("React.js") == "react"  # currently fails before fix
+
+
+def test_synonym_merge():
+    from app.api.pro import _norm_skill
+
+    assert _norm_skill("React.js") == "react"
+    assert _norm_skill("NextJS") == "next.js"
+    assert _norm_skill("Next.js") == "next.js"
+    assert _norm_skill("VueJS") == "vue"
+    assert _norm_skill("Vue.js") == "vue"
+    assert _norm_skill("NodeJS") == "node.js"
+    assert _norm_skill("Machine Learning") == "ml"
+
+
 @pytest.mark.asyncio
 async def test_health_llm_parallel(client, monkeypatch):
     """Health must fetch jd + openai probes in parallel (audit D2 P2).

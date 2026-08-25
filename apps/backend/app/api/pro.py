@@ -17,7 +17,17 @@ from app.services.jd_insight_repo import get_insight
 
 router = APIRouter(prefix="/api/pro", tags=["pro"])
 
-SYNONYM_MAP = {"artificial intelligence": "ai", "machine learning": "ml", "nodejs": "node.js", "reactjs": "react"}
+SYNONYM_MAP = {
+    "artificial intelligence": "ai",
+    "machine learning": "ml",
+    "nodejs": "node.js",
+    "reactjs": "react",
+    "react.js": "react",
+    "nextjs": "next.js",
+    "next.js": "next.js",
+    "vuejs": "vue",
+    "vue.js": "vue",
+}
 
 
 def _norm_skill(raw: str) -> str:
@@ -666,6 +676,7 @@ async def export_xlsx(
 @router.post("/report")
 async def report(
     category: str | None = Query(None),
+    city: str | None = Query(None),
     date_from: str | None = Query(None, description="Filter from date YYYY-MM-DD"),
     date_to: str | None = Query(None, description="Filter to date YYYY-MM-DD"),
     user: User = Depends(require_pro),
@@ -673,11 +684,11 @@ async def report(
 ):
     tu, den = _khoang_ngay_pro(date_from, date_to)
     # validate early even if not used in subcalls? keep for 422 on bad dates
-    skills = await skills_top(category, None, 10, date_from, date_to, user, db)
-    tools = await tools_top(category, None, 10, date_from, date_to, user, db)
-    languages = await languages_top(category, None, 10, date_from, date_to, user, db)
-    benefits = await benefits_top(category, None, 10, date_from, date_to, user, db)
-    experience = await experience_dist(category, None, date_from, date_to, user, db)
+    skills = await skills_top(category, city, 10, date_from, date_to, user, db)
+    tools = await tools_top(category, city, 10, date_from, date_to, user, db)
+    languages = await languages_top(category, city, 10, date_from, date_to, user, db)
+    benefits = await benefits_top(category, city, 10, date_from, date_to, user, db)
+    experience = await experience_dist(category, city, date_from, date_to, user, db)
 
     # missing stats for data_note (respect date filter if provided)
     try:
@@ -745,13 +756,26 @@ async def report(
 
     top_skills_str = ", ".join([s["skill"] for s in skills[:3]]) or "no data"
     top_tools_str = ", ".join([t["tool"] for t in tools[:3]]) or "no data"
-    narrative = f"Top 3 skills for {category or 'All'}: {top_skills_str}. Top tools: {top_tools_str}."
+    # city/period context for B5 audit — keep English template but surface filters
+    city_ctx = f" in {city}" if city else ""
+    period_ctx = ""
+    if date_from or date_to:
+        period_ctx = f" [{date_from or '...'} → {date_to or '...'}]"
+    narrative = f"Top 3 skills for {category or 'All'}{city_ctx}{period_ctx}: {top_skills_str}. Top tools: {top_tools_str}."
     if gap_days is not None:
         narrative += f" Gap days: {gap_days}."
+    # explicit city/period sentences for i18n readability (audit B5)
+    if city:
+        narrative += f" City: {city}."
+    if date_from or date_to:
+        narrative += f" Period: {date_from or 'start'} to {date_to or 'now'}."
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "category": category,
+        "city": city,
+        "date_from": date_from,
+        "date_to": date_to,
         "narrative": narrative,
         "tables": {"skills": skills, "tools": tools, "languages": languages, "benefits": benefits, "experience": experience},
         "data_note": f"Based on {extracted} extracted jobs, missing {missing} ({missing_pct}%)",

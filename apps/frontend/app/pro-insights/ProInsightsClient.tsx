@@ -337,6 +337,7 @@ export default function ProInsightsClient() {
       const { dateFrom, dateTo } = getPeriodDates(period);
       const r = await proApi.report(token, {
         category: category || null,
+        city: city || null,
         date_from: dateFrom || null,
         date_to: dateTo || null,
       });
@@ -346,7 +347,7 @@ export default function ProInsightsClient() {
     } finally {
       setReportLoading(false);
     }
-  }, [token, category, period]);
+  }, [token, category, city, period]);
 
   const handleRawFetch = useCallback(async () => {
     if (!token || !rawSource.trim() || !rawId.trim()) return;
@@ -551,7 +552,7 @@ export default function ProInsightsClient() {
               <section className="mb-8">
                 <Card
                   title="Báo cáo"
-                  subtitle={`Tạo lúc ${new Date(report.generated_at).toLocaleString("vi-VN")} — ${report.category || "Tất cả ngành nghề"}`}
+                  subtitle={`Tạo lúc ${new Date(report.generated_at).toLocaleString("vi-VN")} — ${report.category || "Tất cả ngành nghề"}${report.city || city ? ` · ${report.city || city}` : ""}${report.date_from || report.date_to ? ` · ${report.date_from || ""}→${report.date_to || ""}` : ""}`}
                 >
                   <p className="whitespace-pre-wrap text-sm leading-relaxed text-text">
                     {report.narrative}

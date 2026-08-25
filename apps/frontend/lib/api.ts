@@ -1438,6 +1438,9 @@ export type ProExperienceRow = { bucket: string; n_jobs: number };
 export type ProReport = {
   generated_at: string;
   category: string | null;
+  city?: string | null;
+  date_from?: string | null;
+  date_to?: string | null;
   narrative: string;
   tables: {
     skills: ProSkillRow[];
@@ -1593,9 +1596,10 @@ export const proApi = {
     return res.blob();
   },
 
-  report: (token: string, params: { category?: string | null; date_from?: string | null; date_to?: string | null } = {}) => {
+  report: (token: string, params: { category?: string | null; city?: string | null; date_from?: string | null; date_to?: string | null } = {}) => {
     const q = new URLSearchParams();
     if (params.category) q.set("category", params.category);
+    if (params.city) q.set("city", params.city);
     if (params.date_from) q.set("date_from", params.date_from);
     if (params.date_to) q.set("date_to", params.date_to);
     const suffix = q.toString() ? `?${q.toString()}` : "";
