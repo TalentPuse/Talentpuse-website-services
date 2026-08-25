@@ -389,6 +389,7 @@ async def tools_top(
 @router.get("/languages/top")
 async def languages_top(
     category: str | None = None,
+    city: str | None = None,
     limit: int = Query(10, ge=1, le=100),
     date_from: str | None = Query(None, description="Filter from date YYYY-MM-DD"),
     date_to: str | None = Query(None, description="Filter to date YYYY-MM-DD"),
@@ -396,7 +397,7 @@ async def languages_top(
     db: AsyncSession = Depends(get_db),
 ):
     tu, den = _khoang_ngay_pro(date_from, date_to)
-    extra, params = _filter_sql(category)
+    extra, params = _filter_sql(category, city)
     date_extra, date_params = _date_filter_sql(tu, den, alias="i", col="extracted_at")
     extra += date_extra
     params.update(date_params)
@@ -442,13 +443,14 @@ async def benefits_top(
 @router.get("/requirements/experience")
 async def experience_dist(
     category: str | None = None,
+    city: str | None = None,
     date_from: str | None = Query(None, description="Filter from date YYYY-MM-DD"),
     date_to: str | None = Query(None, description="Filter to date YYYY-MM-DD"),
     user: User = Depends(require_pro),
     db: AsyncSession = Depends(get_db),
 ):
     tu, den = _khoang_ngay_pro(date_from, date_to)
-    extra, params = _filter_sql(category)
+    extra, params = _filter_sql(category, city)
     date_extra, date_params = _date_filter_sql(tu, den, alias="i", col="extracted_at")
     extra += date_extra
     params.update(date_params)
@@ -514,7 +516,7 @@ async def export_xlsx(
                 ws.append([row.get("tool"), row.get("n_jobs")])
         elif k == "languages":
             ws.append(["lang", "level", "n_jobs"])
-            data = await languages_top(category, limit, date_from, date_to, user, db)
+            data = await languages_top(category, city, limit, date_from, date_to, user, db)
             for row in data:
                 ws.append([row.get("lang"), row.get("level"), row.get("n_jobs")])
         elif k == "benefits":
@@ -524,7 +526,7 @@ async def export_xlsx(
                 ws.append([row.get("benefit"), row.get("n_jobs")])
         elif k == "experience":
             ws.append(["bucket", "n_jobs"])
-            data = await experience_dist(category, date_from, date_to, user, db)
+            data = await experience_dist(category, city, date_from, date_to, user, db)
             for row in data:
                 ws.append([row.get("bucket"), row.get("n_jobs")])
         elif k == "raw":
@@ -673,9 +675,9 @@ async def report(
     # validate early even if not used in subcalls? keep for 422 on bad dates
     skills = await skills_top(category, None, 10, date_from, date_to, user, db)
     tools = await tools_top(category, None, 10, date_from, date_to, user, db)
-    languages = await languages_top(category, 10, date_from, date_to, user, db)
+    languages = await languages_top(category, None, 10, date_from, date_to, user, db)
     benefits = await benefits_top(category, None, 10, date_from, date_to, user, db)
-    experience = await experience_dist(category, date_from, date_to, user, db)
+    experience = await experience_dist(category, None, date_from, date_to, user, db)
 
     # missing stats for data_note (respect date filter if provided)
     try:

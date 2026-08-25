@@ -1520,11 +1520,12 @@ export const proApi = {
 
   languagesTop: (
     token: string,
-    params: { category?: string | null; limit?: number; date_from?: string | null; date_to?: string | null } = {},
+    params: { category?: string | null; city?: string | null; limit?: number; date_from?: string | null; date_to?: string | null } = {},
     signal?: AbortSignal,
   ) => {
     const q = new URLSearchParams();
     if (params.category) q.set("category", params.category);
+    if (params.city) q.set("city", params.city);
     if (params.limit) q.set("limit", String(params.limit));
     if (params.date_from) q.set("date_from", params.date_from);
     if (params.date_to) q.set("date_to", params.date_to);
@@ -1553,11 +1554,12 @@ export const proApi = {
 
   experience: (
     token: string,
-    params: { category?: string | null; date_from?: string | null; date_to?: string | null } = {},
+    params: { category?: string | null; city?: string | null; date_from?: string | null; date_to?: string | null } = {},
     signal?: AbortSignal,
   ) => {
     const q = new URLSearchParams();
     if (params.category) q.set("category", params.category);
+    if (params.city) q.set("city", params.city);
     if (params.date_from) q.set("date_from", params.date_from);
     if (params.date_to) q.set("date_to", params.date_to);
     const suffix = q.toString() ? `?${q.toString()}` : "";

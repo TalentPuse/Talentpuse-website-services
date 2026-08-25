@@ -218,6 +218,7 @@ export default function ProInsightsClient() {
             token,
             {
               category: cat || null,
+              city: cty || null,
               limit: TOP_LIMIT,
               ...dateParams,
             },
@@ -233,7 +234,7 @@ export default function ProInsightsClient() {
             },
             ac.signal,
           ),
-          proApi.experience(token, { category: cat || null, ...dateParams }, ac.signal),
+          proApi.experience(token, { category: cat || null, city: cty || null, ...dateParams }, ac.signal),
         ]);
         if (ac.signal.aborted) return;
         setSkills(s);
