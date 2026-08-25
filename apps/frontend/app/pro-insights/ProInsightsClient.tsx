@@ -31,6 +31,7 @@ import type {
   ProToolRow,
 } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 const ALL = "all";
 const CITIES = [
@@ -292,8 +293,8 @@ export default function ProInsightsClient() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    } catch {
-      // ignore for now; toast could be added
+    } catch (e: unknown) {
+      toast.error((e as { message?: string })?.message || "Không tải được file");
     } finally {
       setExcelLoading(false);
     }
@@ -323,8 +324,8 @@ export default function ProInsightsClient() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    } catch {
-      // ignore for now; toast could be added
+    } catch (e: unknown) {
+      toast.error((e as { message?: string })?.message || "Không tải được file JD");
     } finally {
       setRawExcelLoading(false);
     }
@@ -342,8 +343,8 @@ export default function ProInsightsClient() {
         date_to: dateTo || null,
       });
       setReport(r);
-    } catch {
-      // ignore
+    } catch (e: unknown) {
+      toast.error((e as { message?: string })?.message || "Không tạo được báo cáo");
     } finally {
       setReportLoading(false);
     }
