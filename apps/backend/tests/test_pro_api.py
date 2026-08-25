@@ -335,3 +335,14 @@ async def test_export_raw_with_date_and_category_city_title(client, db_session, 
 
     wb = load_workbook(BytesIO(resp.content))
     assert "raw_jds" in wb.sheetnames
+
+
+from app.api.pro import _strip_pii
+
+
+def test_strip_pii_plus84():
+    assert "[redacted]" in _strip_pii("Lien he 0912345678 hoac +84912345678 email a@gmail.com")
+    assert "[redacted]" in _strip_pii("SDT: 84912345678")
+    assert "primary_address" not in _strip_pii("123 Le Loi") # address not stripped, but phone inside address should be
+    # address field itself should be stripped if contains phone
+    assert "[redacted]" in _strip_pii("Dia chi: 123 Le Loi, LH 0912345678")

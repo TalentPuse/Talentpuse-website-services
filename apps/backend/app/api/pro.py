@@ -95,7 +95,7 @@ def _date_filter_sql(
 
 
 _RE_EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
-_RE_PHONE_VN = re.compile(r"0\d{9,10}")
+_RE_PHONE_VN = re.compile(r"(?:\+84|84|0)\d{9,10}")
 _RE_DIGITS_9_12 = re.compile(r"\b\d{9,12}\b")
 
 
@@ -591,7 +591,7 @@ async def export_xlsx(
                     r.get("source_url"),
                     _strip_pii(r.get("job_description_text") or ""),
                     _strip_pii(r.get("job_requirement_text") or ""),
-                    r.get("primary_address"),
+                    _strip_pii(r.get("primary_address") or ""),
                     r.get("city_raw_vi"),
                 ])
 
