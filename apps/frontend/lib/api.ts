@@ -1463,19 +1463,25 @@ export type ProJobRaw = {
 };
 
 export const proApi = {
-  health: (token: string, params: { date_from?: string | null; date_to?: string | null } = {}) => {
+  health: (
+    token: string,
+    params: { date_from?: string | null; date_to?: string | null } = {},
+    signal?: AbortSignal,
+  ) => {
     const q = new URLSearchParams();
     if (params.date_from) q.set("date_from", params.date_from);
     if (params.date_to) q.set("date_to", params.date_to);
     const suffix = q.toString() ? `?${q.toString()}` : "";
     return clientFetch<ProHealth>(`/api/pro/health${suffix}`, {
       headers: authHeaders(token),
+      signal,
     });
   },
 
   skillsTop: (
     token: string,
     params: { category?: string | null; city?: string | null; limit?: number; date_from?: string | null; date_to?: string | null } = {},
+    signal?: AbortSignal,
   ) => {
     const q = new URLSearchParams();
     if (params.category) q.set("category", params.category);
@@ -1485,12 +1491,14 @@ export const proApi = {
     if (params.date_to) q.set("date_to", params.date_to);
     return clientFetch<ProSkillRow[]>(`/api/pro/skills/top?${q.toString()}`, {
       headers: authHeaders(token),
+      signal,
     });
   },
 
   toolsTop: (
     token: string,
     params: { category?: string | null; city?: string | null; limit?: number; date_from?: string | null; date_to?: string | null } = {},
+    signal?: AbortSignal,
   ) => {
     const q = new URLSearchParams();
     if (params.category) q.set("category", params.category);
@@ -1500,12 +1508,14 @@ export const proApi = {
     if (params.date_to) q.set("date_to", params.date_to);
     return clientFetch<ProToolRow[]>(`/api/pro/tools/top?${q.toString()}`, {
       headers: authHeaders(token),
+      signal,
     });
   },
 
   languagesTop: (
     token: string,
     params: { category?: string | null; limit?: number; date_from?: string | null; date_to?: string | null } = {},
+    signal?: AbortSignal,
   ) => {
     const q = new URLSearchParams();
     if (params.category) q.set("category", params.category);
@@ -1514,12 +1524,14 @@ export const proApi = {
     if (params.date_to) q.set("date_to", params.date_to);
     return clientFetch<ProLanguageRow[]>(`/api/pro/languages/top?${q.toString()}`, {
       headers: authHeaders(token),
+      signal,
     });
   },
 
   benefitsTop: (
     token: string,
     params: { category?: string | null; city?: string | null; limit?: number; date_from?: string | null; date_to?: string | null } = {},
+    signal?: AbortSignal,
   ) => {
     const q = new URLSearchParams();
     if (params.category) q.set("category", params.category);
@@ -1529,12 +1541,14 @@ export const proApi = {
     if (params.date_to) q.set("date_to", params.date_to);
     return clientFetch<ProBenefitRow[]>(`/api/pro/benefits/top?${q.toString()}`, {
       headers: authHeaders(token),
+      signal,
     });
   },
 
   experience: (
     token: string,
     params: { category?: string | null; date_from?: string | null; date_to?: string | null } = {},
+    signal?: AbortSignal,
   ) => {
     const q = new URLSearchParams();
     if (params.category) q.set("category", params.category);
@@ -1543,6 +1557,7 @@ export const proApi = {
     const suffix = q.toString() ? `?${q.toString()}` : "";
     return clientFetch<ProExperienceRow[]>(`/api/pro/requirements/experience${suffix}`, {
       headers: authHeaders(token),
+      signal,
     });
   },
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Card from "@/components/Card";
 import KpiCard from "@/components/KpiCard";
 import SkillsBar from "@/components/SkillsBar";
@@ -125,6 +125,8 @@ export default function ProInsightsClient() {
   const [rawLoading, setRawLoading] = useState(false);
   const [rawError, setRawError] = useState<string | null>(null);
 
+  const abortRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     dashboardApi
       .categories()
@@ -132,9 +134,16 @@ export default function ProInsightsClient() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
   const fetchAll = useCallback(
     async (cat: string, cty: string, per: Period) => {
       if (!token) return;
+      abortRef.current?.abort();
+      const ac = new AbortController();
+      abortRef.current = ac;
       setLoading(true);
       try {
         const { dateFrom, dateTo } = getPeriodDates(per);
@@ -143,42 +152,65 @@ export default function ProInsightsClient() {
           date_to: dateTo || null,
         };
         const [s, t, l, b, e] = await Promise.all([
-          proApi.skillsTop(token, {
-            category: cat || null,
-            city: cty || null,
-            limit: TOP_LIMIT,
-            ...dateParams,
-          }),
-          proApi.toolsTop(token, {
-            category: cat || null,
-            city: cty || null,
-            limit: TOP_LIMIT,
-            ...dateParams,
-          }),
-          proApi.languagesTop(token, {
-            category: cat || null,
-            limit: TOP_LIMIT,
-            ...dateParams,
-          }),
-          proApi.benefitsTop(token, {
-            category: cat || null,
-            city: cty || null,
-            limit: TOP_LIMIT,
-            ...dateParams,
-          }),
-          proApi.experience(token, { category: cat || null, ...dateParams }),
+          proApi.skillsTop(
+            token,
+            {
+              category: cat || null,
+              city: cty || null,
+              limit: TOP_LIMIT,
+              ...dateParams,
+            },
+            ac.signal,
+          ),
+          proApi.toolsTop(
+            token,
+            {
+              category: cat || null,
+              city: cty || null,
+              limit: TOP_LIMIT,
+              ...dateParams,
+            },
+            ac.signal,
+          ),
+          proApi.languagesTop(
+            token,
+            {
+              category: cat || null,
+              limit: TOP_LIMIT,
+              ...dateParams,
+            },
+            ac.signal,
+          ),
+          proApi.benefitsTop(
+            token,
+            {
+              category: cat || null,
+              city: cty || null,
+              limit: TOP_LIMIT,
+              ...dateParams,
+            },
+            ac.signal,
+          ),
+          proApi.experience(token, { category: cat || null, ...dateParams }, ac.signal),
         ]);
+        if (ac.signal.aborted) return;
         setSkills(s);
         setTools(t);
         setLanguages(l);
         setBenefits(b);
         setExperience(e);
         proApi
-          .health(token, dateParams)
-          .then(setHealth)
-          .catch(() => {});
+          .health(token, dateParams, ac.signal)
+          .then((h) => {
+            if (!ac.signal.aborted) setHealth(h);
+          })
+          .catch((err: unknown) => {
+            if ((err as { name?: string })?.name === "AbortError") return;
+          });
+      } catch (err: unknown) {
+        if ((err as { name?: string })?.name === "AbortError") return;
       } finally {
-        setLoading(false);
+        if (!ac.signal.aborted) setLoading(false);
       }
     },
     [token],
