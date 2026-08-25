@@ -346,3 +346,93 @@ def test_strip_pii_plus84():
     assert "primary_address" not in _strip_pii("123 Le Loi") # address not stripped, but phone inside address should be
     # address field itself should be stripped if contains phone
     assert "[redacted]" in _strip_pii("Dia chi: 123 Le Loi, LH 0912345678")
+
+
+@pytest.mark.asyncio
+async def test_health_llm_parallel(client, monkeypatch):
+    """Health must fetch jd + openai probes in parallel (audit D2 P2).
+
+    Two slow probes (0.2s each) sequentially would take ~0.4s; parallel must be <0.35s.
+    Mocks httpx.AsyncClient so test runs without network and without DB (auth + DB overridden).
+    """
+    import asyncio
+    import time
+
+    # Bypass Pro gate + DB user lookup — health requires require_pro
+    from app.api.pro import require_pro
+    from app.core.database import get_db
+    from app.main import app
+    from app.models.user import User
+    import uuid
+
+    mock_user = User(
+        id=uuid.uuid4(),
+        email="pro-parallel@test.local",
+        hashed_password="x",
+        full_name="Pro Parallel",
+        subscription_tier="pro",
+        is_admin=False,
+    )
+
+    async def _mock_require_pro():
+        return mock_user
+
+    app.dependency_overrides[require_pro] = _mock_require_pro
+
+    # Mock DB — avoid 10s pool_timeout per query when Postgres is down
+    class _FakeResult:
+        def scalar(self):
+            return 0
+
+        def mappings(self):
+            return []
+
+        def scalar_one_or_none(self):
+            return None
+
+    class _FakeSession:
+        async def execute(self, *a, **kw):
+            return _FakeResult()
+
+        async def rollback(self):
+            return None
+
+    async def _mock_get_db():
+        yield _FakeSession()
+
+    app.dependency_overrides[get_db] = _mock_get_db
+
+    # Slow httpx client: each probe sleeps 0.2s then returns 200
+    class _SlowResp:
+        status_code = 200
+
+    class _SlowClient:
+        def __init__(self, *a, **kw):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a, **kw):
+            return False
+
+        async def post(self, *a, **kw):
+            await asyncio.sleep(0.2)
+            return _SlowResp()
+
+    monkeypatch.setattr("app.api.pro.httpx.AsyncClient", _SlowClient)
+    # also patch global httpx in case import path differs
+    monkeypatch.setattr("httpx.AsyncClient", _SlowClient)
+
+    try:
+        start = time.perf_counter()
+        resp = await client.get("/api/pro/health")
+        elapsed = time.perf_counter() - start
+        assert resp.status_code == 200, f"health failed {resp.status_code} {resp.text}"
+        data = resp.json()
+        assert "llm" in data
+        # parallel must be <0.35s (sequential would be ~0.4s)
+        assert elapsed < 0.35, f"health parallel failed: took {elapsed:.3f}s >=0.35s (sequential?)"
+    finally:
+        app.dependency_overrides.pop(require_pro, None)
+        app.dependency_overrides.pop(get_db, None)

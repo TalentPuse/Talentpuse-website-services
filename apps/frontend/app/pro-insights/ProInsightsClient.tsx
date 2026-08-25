@@ -116,6 +116,7 @@ export default function ProInsightsClient() {
   const [benefits, setBenefits] = useState<ProBenefitRow[]>([]);
   const [experience, setExperience] = useState<ProExperienceRow[]>([]);
   const [health, setHealth] = useState<ProHealth | null>(null);
+  const [healthError, setHealthError] = useState<string | null>(null);
   const [report, setReport] = useState<ProReport | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -185,6 +186,7 @@ export default function ProInsightsClient() {
       const ac = new AbortController();
       abortRef.current = ac;
       setLoading(true);
+      setHealthError(null);
       try {
         const { dateFrom, dateTo } = getPeriodDates(per);
         const dateParams = {
@@ -242,10 +244,16 @@ export default function ProInsightsClient() {
         proApi
           .health(token, dateParams, ac.signal)
           .then((h) => {
-            if (!ac.signal.aborted) setHealth(h);
+            if (!ac.signal.aborted) {
+              setHealth(h);
+              setHealthError(null);
+            }
           })
           .catch((err: unknown) => {
             if ((err as { name?: string })?.name === "AbortError") return;
+            if (!ac.signal.aborted) {
+              setHealthError((err as { message?: string })?.message || "Không tải được health");
+            }
           });
       } catch (err: unknown) {
         if ((err as { name?: string })?.name === "AbortError") return;
@@ -459,6 +467,15 @@ export default function ProInsightsClient() {
           </div>
         </header>
       </ScrollReveal>
+
+      {healthError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          Không tải được health: {healthError}
+        </div>
+      )}
 
       {loading ? (
         <ProInsightsSkeleton />

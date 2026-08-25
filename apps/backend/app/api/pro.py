@@ -1,3 +1,4 @@
+import asyncio
 import re
 from io import BytesIO
 from datetime import datetime, timezone, date
@@ -240,18 +241,15 @@ async def health(
             except Exception as e:
                 return f"fail:{type(e).__name__}"
 
-        try:
-            jd_key = getattr(config, "JD_LLM_API_KEY", "")
-            jd_base = getattr(config, "JD_LLM_BASE_URL", "https://opencode.ai/zen/v1")
-            llm["jd"] = await _probe(jd_base, jd_key)
-        except Exception:
-            llm["jd"] = "unknown"
-        try:
-            oai_key = getattr(config, "OPENAI_API_KEY", "")
-            oai_base = getattr(config, "OPENAI_BASE_URL", "https://api.openai.com/v1")
-            llm["openai"] = await _probe(oai_base, oai_key)
-        except Exception:
-            llm["openai"] = "unknown"
+        jd_key = getattr(config, "JD_LLM_API_KEY", "")
+        jd_base = getattr(config, "JD_LLM_BASE_URL", "https://opencode.ai/zen/v1")
+        oai_key = getattr(config, "OPENAI_API_KEY", "")
+        oai_base = getattr(config, "OPENAI_BASE_URL", "https://api.openai.com/v1")
+        results = await asyncio.gather(
+            _probe(jd_base, jd_key), _probe(oai_base, oai_key), return_exceptions=True
+        )
+        llm["jd"] = results[0] if not isinstance(results[0], Exception) else f"fail:{type(results[0]).__name__}"
+        llm["openai"] = results[1] if not isinstance(results[1], Exception) else f"fail:{type(results[1]).__name__}"
     except Exception:
         pass
 
