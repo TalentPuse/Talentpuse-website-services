@@ -53,9 +53,13 @@ function formatLocal(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
-function getPeriodDates(period: Period): { dateFrom: string; dateTo: string } {
+export function getVNNow(): Date {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+}
+
+export function getPeriodDates(period: Period): { dateFrom: string; dateTo: string } {
   if (period === "all") return { dateFrom: "", dateTo: "" };
-  const now = new Date();
+  const now = getVNNow();
   if (period === "week") {
     const day = now.getDay(); // 0 Sun .. 6 Sat
     const diffToMonday = day === 0 ? -6 : 1 - day;
@@ -127,12 +131,48 @@ export default function ProInsightsClient() {
 
   const abortRef = useRef<AbortController | null>(null);
 
+  const [dynamicCities, setDynamicCities] = useState<string[]>(CITIES);
+
   useEffect(() => {
     dashboardApi
       .categories()
       .then(setCategories)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCities = async () => {
+      // Prefer proApi.cities (distinct city_canonical from jd_insight) if authenticated
+      try {
+        if (token) {
+          try {
+            const proCities = await proApi.cities(token);
+            if (!cancelled && Array.isArray(proCities) && proCities.length > 0) {
+              const names = (proCities as unknown[]).map((c: unknown) =>
+                typeof c === "string" ? (c as string) : ((c as { city?: string; name?: string })?.city || (c as { name?: string })?.name || "")
+              ).filter(Boolean) as string[];
+              if (names.length > 0) {
+                setDynamicCities(names);
+                return;
+              }
+            }
+          } catch {}
+        }
+      } catch {}
+      try {
+        const dCities = await dashboardApi.dashboardCities(50);
+        if (!cancelled && Array.isArray(dCities) && dCities.length > 0) {
+          const names = dCities.map((r) => r.name).filter(Boolean);
+          if (names.length > 0) setDynamicCities(names);
+        }
+      } catch {}
+    };
+    fetchCities();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   useEffect(() => {
     return () => abortRef.current?.abort();
@@ -360,7 +400,7 @@ export default function ProInsightsClient() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL}>Tất cả thành phố</SelectItem>
-                  {CITIES.map((c) => (
+                  {dynamicCities.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c}
                     </SelectItem>

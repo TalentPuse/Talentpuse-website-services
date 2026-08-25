@@ -1463,6 +1463,12 @@ export type ProJobRaw = {
 };
 
 export const proApi = {
+  cities: (token: string, signal?: AbortSignal) =>
+    clientFetch<string[]>(`/api/pro/cities`, {
+      headers: authHeaders(token),
+      signal,
+    }),
+
   health: (
     token: string,
     params: { date_from?: string | null; date_to?: string | null } = {},

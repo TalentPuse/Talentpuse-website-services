@@ -16,6 +16,7 @@ const mockHealth = jest.fn().mockResolvedValue({
   gap_days: 1,
   llm: { jd: "ok", openai: "ok" },
 });
+const mockCities = jest.fn().mockResolvedValue([]);
 const mockExportXlsx = jest.fn().mockResolvedValue(new Blob(["dummy"], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
 const mockReport = jest.fn().mockResolvedValue({
   generated_at: new Date().toISOString(),
@@ -30,6 +31,7 @@ const mockReport = jest.fn().mockResolvedValue({
 
 jest.mock("@/lib/api", () => ({
   proApi: {
+    cities: (...a: unknown[]) => mockCities(...a),
     skillsTop: (...a: unknown[]) => mockSkillsTop(...a),
     toolsTop: (...a: unknown[]) => mockToolsTop(...a),
     languagesTop: (...a: unknown[]) => mockLanguagesTop(...a),
@@ -41,6 +43,7 @@ jest.mock("@/lib/api", () => ({
   },
   dashboardApi: {
     categories: jest.fn().mockResolvedValue(["AI", "Data"]),
+    dashboardCities: jest.fn().mockResolvedValue([]),
   },
 }));
 
@@ -182,7 +185,9 @@ describe("Pro Insights", () => {
     render(<ProInsightsClient />);
 
     await waitFor(() => expect(mockSkillsTop).toHaveBeenCalled());
-    expect(mockSkillsTop).toHaveBeenCalledWith("test-token", expect.objectContaining({ category: null }));
+    // After Task 3 & 4, proApi methods accept optional AbortSignal as 3rd arg — allow it
+    const expectSkillsArgs = (cat: unknown) => ["test-token", expect.objectContaining({ category: cat }), expect.anything()] as const;
+    expect(mockSkillsTop).toHaveBeenCalledWith(...expectSkillsArgs(null));
 
     mockSkillsTop.mockClear();
     mockToolsTop.mockClear();
@@ -190,8 +195,8 @@ describe("Pro Insights", () => {
     const categorySelect = screen.getByTestId("category-select");
     await user.selectOptions(categorySelect, "AI");
 
-    await waitFor(() => expect(mockSkillsTop).toHaveBeenCalledWith("test-token", expect.objectContaining({ category: "AI" })));
-    expect(mockToolsTop).toHaveBeenCalledWith("test-token", expect.objectContaining({ category: "AI" }));
+    await waitFor(() => expect(mockSkillsTop).toHaveBeenCalledWith(...expectSkillsArgs("AI")));
+    expect(mockToolsTop).toHaveBeenCalledWith(...expectSkillsArgs("AI"));
   });
 
   test("renders five chart placeholders after load", async () => {

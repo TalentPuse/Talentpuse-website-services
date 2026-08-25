@@ -275,6 +275,60 @@ async def health(
     }
 
 
+@router.get("/cities")
+async def pro_cities(
+    user: User = Depends(require_pro),
+    db: AsyncSession = Depends(get_db),
+):
+    """Distinct city_canonical values for Pro filter (dynamic, fallback to hardcode).
+
+    Primary source is app.jd_insight (JSONB city_canonical). Falls back to
+    dbt gold/silver if jd_insight is empty or query fails, so the dropdown is
+    never empty in production. Protected by require_pro like other Pro endpoints.
+    """
+    try:
+        rows = await db.execute(
+            text(
+                "SELECT DISTINCT btrim(data->'job'->>'city_canonical') AS city "
+                "FROM app.jd_insight "
+                "WHERE data->'job'->>'city_canonical' IS NOT NULL "
+                "AND btrim(data->'job'->>'city_canonical') != '' "
+                "ORDER BY city"
+            )
+        )
+        cities = [r[0] for r in rows if r[0]]
+        if not cities:
+            try:
+                rows2 = await db.execute(
+                    text(
+                        "SELECT DISTINCT btrim(city_canonical) AS city "
+                        "FROM dbt_dev_gold.fct_jobs_daily "
+                        "WHERE city_canonical IS NOT NULL AND btrim(city_canonical) != '' "
+                        "ORDER BY city"
+                    )
+                )
+                cities = [r[0] for r in rows2 if r[0]]
+            except Exception:
+                await db.rollback()
+        if not cities:
+            try:
+                rows3 = await db.execute(
+                    text(
+                        "SELECT DISTINCT btrim(city_canonical) AS city "
+                        "FROM dbt_dev_silver.silver_job_detail "
+                        "WHERE city_canonical IS NOT NULL AND btrim(city_canonical) != '' "
+                        "ORDER BY city"
+                    )
+                )
+                cities = [r[0] for r in rows3 if r[0]]
+            except Exception:
+                await db.rollback()
+        return cities
+    except Exception:
+        await db.rollback()
+        return []
+
+
 @router.get("/skills/top")
 async def skills_top(
     category: str | None = None,
