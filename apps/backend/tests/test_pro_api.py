@@ -343,9 +343,18 @@ from app.api.pro import _strip_pii
 def test_strip_pii_plus84():
     assert "[redacted]" in _strip_pii("Lien he 0912345678 hoac +84912345678 email a@gmail.com")
     assert "[redacted]" in _strip_pii("SDT: 84912345678")
-    assert "primary_address" not in _strip_pii("123 Le Loi") # address not stripped, but phone inside address should be
+    assert _strip_pii("123 Le Loi") == "123 Le Loi"  # non-PII must not be over-redacted
+    assert "[redacted]" not in _strip_pii("123 Le Loi")
     # address field itself should be stripped if contains phone
     assert "[redacted]" in _strip_pii("Dia chi: 123 Le Loi, LH 0912345678")
+    # spaced/dashed variants must be fully redacted with no "+84 " leak (handover strict)
+    assert "[redacted]" == _strip_pii("+84 912 345 678")
+    assert "+84" not in _strip_pii("+84 912 345 678")
+    assert "[redacted]" == _strip_pii("0912 345 678")
+    assert "[redacted]" == _strip_pii("+84-912-345-678")
+    assert "[redacted]" == _strip_pii("0912-345-678")
+    assert "[redacted]" in _strip_pii("LH: +84 912 345 678 please")
+    assert "+84" not in _strip_pii("Contact +84 912 345 678 now")
 
 
 def test_norm_skill():

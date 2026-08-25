@@ -31,9 +31,13 @@ os.environ["TELEGRAM_WEBHOOK_SECRET"] = "test-only-webhook-secret-value"
 # bat ky loop nao. Tren Linux day la no-op.
 if sys.platform == "win32":
     import asyncio
-    import asyncio.windows_events
 
-    asyncio.set_event_loop_policy(asyncio.windows_events.WindowsSelectorEventLoopPolicy())
+    try:
+        import asyncio.windows_events
+
+        asyncio.set_event_loop_policy(asyncio.windows_events.WindowsSelectorEventLoopPolicy())
+    except (ImportError, AttributeError, NotImplementedError):
+        pass
 
 import pytest  # noqa: E402
 import pytest_asyncio  # noqa: E402
@@ -49,11 +53,15 @@ from app.models.user import User
 def setup_event_loop():
     """Set up event loop for the test session (cross-platform)."""
     import asyncio
-    # Only use WindowsSelectorEventLoopPolicy on Windows
+    # Only use WindowsSelectorEventLoopPolicy on Windows (py3.14: may be removed/deprecated)
     if sys.platform == "win32":
-        import asyncio.windows_events
-        policy = asyncio.windows_events.WindowsSelectorEventLoopPolicy()
-        asyncio.set_event_loop_policy(policy)
+        try:
+            import asyncio.windows_events
+
+            policy = asyncio.windows_events.WindowsSelectorEventLoopPolicy()
+            asyncio.set_event_loop_policy(policy)
+        except (ImportError, AttributeError, NotImplementedError):
+            pass
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     yield

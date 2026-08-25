@@ -106,7 +106,7 @@ def _date_filter_sql(
 
 
 _RE_EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
-_RE_PHONE_VN = re.compile(r"(?:\+84|84|0)\d{9,10}")
+_RE_PHONE_VN = re.compile(r"(?:\+84|84|0)[\s\-\.]*\d(?:[\s\-\.]*\d){8,9}")
 _RE_DIGITS_9_12 = re.compile(r"\b\d{9,12}\b")
 
 
