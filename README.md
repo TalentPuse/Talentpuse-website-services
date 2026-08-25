@@ -27,6 +27,8 @@ GET /api/pro/health — shows missing_pct, gap_days, llm health for handover.
 If missing >5% or gap_days >3: POST /api/admin/jd/extract -H X-Webhook-Secret
 ```
 
+Probe script (handover verification): `PRO_TOKEN=... FREE_TOKEN=... bash scripts/audit_pro_probe.sh` (BASE defaults to `https://talentpuse.io.vn`; checks health anon 401, pro health, free blocked, 5 Pro endpoints, export raw, report).
+
 Fallback extract (Prefect daily + manual):
 
 ```bash
